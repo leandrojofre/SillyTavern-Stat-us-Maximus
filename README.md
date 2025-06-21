@@ -1,11 +1,11 @@
-# SillyTavern - EXTENSION_NAME
+# Stat-us Maximus
 This is a simple extension that adds... that allows you to...
 ## Features
 - It will...
 ### Coming Soon
 - ...
 ## Installation
-Install the extension using this link: ```https://github.com/leandrojofre/SillyTavern-Extension-Template.git```
+Install the extension using this link: ```https://github.com/leandrojofre/SillyTavern-Stat-us-Maximus.git```
 ### Usage
 This extension is intended to be used...
 ### Compatibility
