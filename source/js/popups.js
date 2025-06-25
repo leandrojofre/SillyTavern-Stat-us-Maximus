@@ -184,7 +184,7 @@ async function formStatusSingleChar(char) {
 
     const container = document.createElement("div");
     container.id = "stat-us-max-popup-" + metadata.last_mes_id;
-    container.classList.add("stat-us-max-popup");
+    container.classList.add("stat-us-max-popup", "border");
     container.append(wrapper, content);
 
     /** Add listeners */
@@ -360,7 +360,6 @@ export async function popupStatusMultiChar(chars) {
 
     for (const char of chars) {
         const charForm = await formStatusSingleChar(char);
-        charForm.classList.add("border");
 
         content.append(charForm);
     }

@@ -29,7 +29,7 @@
     }
 }
 
-.popup:has(#stat-us-max-popup-multi-char) {
+.popup:has(.stat-us-max-popup) {
     background-color: var(--SmartThemeBotMesBlurTintColor);
 
     .stat-us-max-popup {
