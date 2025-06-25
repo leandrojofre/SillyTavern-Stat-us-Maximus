@@ -140,11 +140,6 @@ async function formStatusSingleChar(char) {
     warningAltKey.title = "This is not used in the prompt";
     warningAltKey.dataset.i18n = "This is not used in the prompt";
 
-    const refreshAltValuesBtn = document.createElement("div");
-    refreshAltValuesBtn.title = "Refresh the titles of the select";
-    refreshAltValuesBtn.dataset.i18n = "Refresh the titles of the select";
-    refreshAltValuesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-arrows-rotate", "interactable", "refresh_alt_value", "big-button");
-
     const addAltValues = document.createElement("div");
     addAltValues.title = "Add alt descriptions";
     addAltValues.dataset.i18n = "Add alt descriptions";
@@ -157,7 +152,7 @@ async function formStatusSingleChar(char) {
 
     const settingsInputs = document.createElement("div");
     settingsInputs.classList.add("d-flex", "flex-center-start");
-    settingsInputs.append(selectAltValues, textareaAltKey, warningAltKey, refreshAltValuesBtn, addAltValues, delAltValues);
+    settingsInputs.append(selectAltValues, textareaAltKey, warningAltKey, addAltValues, delAltValues);
 
     const textareaValue = document.createElement("textarea");
     textareaValue.name = "value";
@@ -189,7 +184,10 @@ async function formStatusSingleChar(char) {
 
     /** Add listeners */
     const DEBOUNCE_MS = 400;
-    let debounceTimer;
+    let formDebounceTimer;
+    let altKeyDebounceTimer;
+    let separatorDebounceTimer;
+
     const el = (target, class_name) => target.querySelector(class_name);
 
     /** @param {HTMLElement} el */
@@ -254,9 +252,9 @@ async function formStatusSingleChar(char) {
             });
 
             newRow.addEventListener("input", () => {
-                clearTimeout(debounceTimer);
+                clearTimeout(formDebounceTimer);
 
-                debounceTimer = window.setTimeout(() => {
+                formDebounceTimer = window.setTimeout(() => {
                     newRow.requestSubmit();
                 }, DEBOUNCE_MS);
             });
@@ -282,12 +280,16 @@ async function formStatusSingleChar(char) {
                 newRow.requestSubmit();
             });
 
-            el(newRow, ".refresh_alt_value").addEventListener("click", () => {
-                refreshAltValues(
-                    newRow,
-                    getCharEntry(char, data[i].uid).alt_values,
-                    el(newRow, 'select[name="value_uid"]').value
-                );
+            el(newRow, 'input[name="alt_key"]').addEventListener("keyup", () => {
+                clearTimeout(altKeyDebounceTimer);
+
+                altKeyDebounceTimer = window.setTimeout(() => {
+                    refreshAltValues(
+                        newRow,
+                        getCharEntry(char, data[i].uid).alt_values,
+                        el(newRow, 'select[name="value_uid"]').value
+                    );
+                }, DEBOUNCE_MS);
             });
 
             el(newRow, ".add_alt_value").addEventListener("click", () => {
@@ -332,7 +334,9 @@ async function formStatusSingleChar(char) {
     textareaStatusSeparator.addEventListener("input", () => {
         metadata.separator = un_escapeNewlines(textareaStatusSeparator.value);
 
-        debounceTimer = window.setTimeout(() => {
+        clearTimeout(separatorDebounceTimer);
+
+        separatorDebounceTimer = window.setTimeout(() => {
             saveMetadataDebounced();
         }, DEBOUNCE_MS);
     });
