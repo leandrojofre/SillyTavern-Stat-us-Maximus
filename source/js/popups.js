@@ -141,6 +141,9 @@ async function formStatusSingleChar(char) {
     warningAltKey.dataset.i18n = "This is not used in the prompt";
 
     const refreshAltValuesBtn = document.createElement("div");
+    refreshAltValuesBtn.title = "Refresh the titles of the select";
+    refreshAltValuesBtn.dataset.i18n = "Refresh the titles of the select";
+
     refreshAltValuesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-arrows-rotate", "interactable", "refresh_alt_value", "big-button");
 
     const addAltValues = document.createElement("div");
