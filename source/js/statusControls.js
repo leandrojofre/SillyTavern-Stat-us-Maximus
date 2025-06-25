@@ -14,16 +14,17 @@ export function getFreeDataUid(data) {
         if (!used.has(uid)) return uid;
 }
 
+/**
+    @param {Array} data
+*/
 export function getLastDisplayPosition(data) {
     if (!data?.length) return 0;
 
-    const used = new Set(
-        data
-            .sort((e_a, e_b) => e_a.display_position - e_b.display_position)
-            .map((e, i) => e.display_position = i)
-    );
+    data = data
+        .sort((e_a, e_b) => e_a.display_position - e_b.display_position)
+        .map((e, i) => e.display_position = i);
 
-    return used.size;
+    return data.length;
 }
 
 export function addCharAltValue(character, entry_uid, alt_value = "") {
@@ -115,6 +116,34 @@ export function addCharEntry(character, entry_key = "", entry_value = "") {
         saveMetadataDebounced();
 
         return newEntry;
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata`);
+        console.error(error);
+    }
+}
+
+/**
+    @param {object} character
+    @param {NodeListOf<HTMLFormElement>} display_order
+*/
+export function refreshCharEntryDisplay(character, display_order) {
+    try {
+        const char_status = getCharStatus(character);
+
+        if (!char_status) throw new Error(t`Char status not found for -${character?.name}-`);
+
+        const ordered_data = [];
+
+        for (const [i, form] of display_order.entries()) {
+            const entry = getCharEntry(character, form.dataset.uid);
+            entry.display_position = i;
+            ordered_data.push(entry);
+        }
+
+        char_status.entries = ordered_data;
+
+        saveMetadataDebounced();
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata`);

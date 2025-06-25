@@ -52,6 +52,9 @@ export function destroyElement(element) {
 
         // Destroy elements
         child.remove();
+
+        // @ts-ignore
+        if (child?.sortable('instance') !== undefined) child?.sortable('destroy');
     });
 
     const leftoversCount = elem.children().length;

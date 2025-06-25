@@ -2,8 +2,9 @@ import { characters, extension_prompt_roles } from "../../../../../../script.js"
 import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
+import { getSortableDelay } from "../../../../../utils.js";
 import { log, destroyElement } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue } from "./statusControls.js";
+import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay } from "./statusControls.js";
 
 function escapeNewlines(str) {
     return str
@@ -57,8 +58,8 @@ async function formStatusSingleChar(char) {
         - [X] Role button
         - [X] Confirm screen for delete
         - [ ] Setting to disable confirm delete
-        - [ ] Avatar before title
-        - [ ] Drag and drop for entries
+        - [X] Avatar before title
+        - [X] Drag and drop for entries
         - [ ] Wrappers for the whole stat block - only added if there are entries
     */
 
@@ -109,6 +110,10 @@ async function formStatusSingleChar(char) {
 
     /** Create input template */
     /** - Key */
+    const dragHandle = document.createElement("span");
+    dragHandle.textContent = "☰";
+    dragHandle.classList.add("drag-handle");
+
     const drawerToggle = document.createElement("div");
     drawerToggle.classList.add("inline-drawer-toggle", "fa-fw", "fa-solid", "fa-circle-chevron-down", "inline-drawer-icon", "down", "interactable");
 
@@ -138,7 +143,7 @@ async function formStatusSingleChar(char) {
 
     const drawerHeader = document.createElement("div");
     drawerHeader.classList.add("inline-drawer-header", "key", "w-100", "d-flex", "flex-center", "p-0");
-    drawerHeader.append(drawerToggle, enableRowToggle, enableRowBtn, textareaKey, textareaSeparator, deleteStatRowBtn);
+    drawerHeader.append(dragHandle, drawerToggle, enableRowToggle, enableRowBtn, textareaKey, textareaSeparator, deleteStatRowBtn);
 
     /** - Value */
     const selectAltValues = document.createElement("select");
@@ -190,7 +195,7 @@ async function formStatusSingleChar(char) {
 
     /** Assemble Popup */
     const content = document.createElement("div");
-    content.id = "stat-us-max-popup-form-" + metadata.last_mes_id;
+    content.id = "stat-us-max-popup-form-holder-" + metadata.last_mes_id;
     content.classList.add("d-flex", "flex-col", "gap-5px", "py-5px");
 
     const container = document.createElement("div");
@@ -355,6 +360,18 @@ async function formStatusSingleChar(char) {
         separatorDebounceTimer = window.setTimeout(() => {
             saveMetadataDebounced();
         }, DEBOUNCE_MS);
+    });
+
+    // @ts-ignore
+    $(content).sortable({
+        items: '.stat-us-max-popup-row',
+        delay: getSortableDelay(),
+        handle: '.drag-handle',
+        stop: async function (_event, _ui) {
+            const forms = content.querySelectorAll("form");
+
+            refreshCharEntryDisplay(char, forms);
+        },
     });
 
     /** Add def rows */
