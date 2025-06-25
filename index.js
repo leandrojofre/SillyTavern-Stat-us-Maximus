@@ -321,7 +321,7 @@ function initButtons() {
         const metadata = chat_metadata.stat_us_maximus;
 
         // @ts-ignore
-        if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit`);
+        if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit - You will have access to this option once the chat has messages`);
 
         for (const status of metadata) {
             const char = getParticipant(status.avatar, status.is_user);
@@ -330,7 +330,7 @@ function initButtons() {
         }
 
         // @ts-ignore
-        if (!chars.length) return toastr.warning(t`There's no metadata to edit`);
+        if (!chars.length) return toastr.warning(t`There's no metadata to edit - You will have access to this option once the chat has messages`);
 
         await popupStatusMultiChar(chars);
     });
