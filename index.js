@@ -1,11 +1,12 @@
 import {extension_settings, saveMetadataDebounced} from "../../../extensions.js";
 import {saveSettingsDebounced, event_types, eventSource, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar} from "../../../../script.js";
-import { groups, selected_group } from "../../../group-chats.js";
+import { getGroupMembers, groups, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
-import { formStatusPopup } from "./source/js/popups.js";
 import { createCharStatus, getCharStatus } from "./source/js/statusControls.js";
 import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
+import { commonEnumProviders } from "../../../slash-commands/SlashCommandCommonEnumsProvider.js";
+import { popupStatusMultiChar } from "./source/js/popups.js";
 
 // setExtensionPrompt
 // delete extension_prompts[key]
@@ -29,11 +30,7 @@ export const log = (...msg) => {
 };
 
 SillyTavern.StatusTest = async () => {
-	const group = groups.find((g) => g.id == selected_group);
-
-    log(group);
-    log(this_chid);
-    // formStatusPopup("Asami.png");
+	log(commonEnumProviders.messageNames());
 }
 
 // * Extension methods
@@ -66,6 +63,10 @@ export function destroyElement(element) {
 	elem.remove();
 }
 
+function getCharacter(value, search_key = "avatar") {
+    return characters.find(c => c[search_key] === value) ?? false;
+}
+
 function getUser(avatar = user_avatar) {
     if (!power_user.personas[avatar]) return false;
 
@@ -83,7 +84,7 @@ function getStatusDepth(chat, character, {search_key_a = "name", search_key_b = 
 
 function getParticipant(avatar, is_user) {
     if (is_user) return getUser(avatar);
-    else return characters.find(char => char.avatar === avatar) ?? false;
+    else return getCharacter(avatar);
 }
 
 function getActiveParticipants(discard) {
@@ -91,15 +92,11 @@ function getActiveParticipants(discard) {
     const chars = [];
 
     if (selected_group) {
-	    const group = groups.find((g) => g.id == selected_group);
-        const members = group.members;
+        const members = getGroupMembers();
 
         for (const member of members) {
-            if (discard.some(c => c.avatar === member)) continue;
-
-            const character = characters.find(char => char.avatar === member);
-
-            if (character) chars.push(character);
+            if (discard.some(c => c.avatar === member.avatar)) continue;
+            else chars.push(member);
         }
     }
     else if (this_chid !== undefined) {
@@ -130,15 +127,15 @@ function getAllParticipantsInChat(chat) {
             char = characters[this_chid];
 
         else if (selected_group && mess?.original_avatar !== undefined)
-            char = characters.find(char => char.avatar === mess.original_avatar);
+            char = getCharacter(mess.original_avatar);
 
         else if (selected_group && mess?.force_avatar !== undefined) {
             const charAvatar = mess.force_avatar.replace(/\/thumbnail\?type=avatar&file=/i, "");
-            char = characters.find(char => char.avatar === charAvatar);
+            char = getCharacter(charAvatar);
         }
 
         else if (mess?.name !== undefined)
-            char = characters.find(char => char.name === mess.name);
+            char = getCharacter(mess.name, "name");
 
         if (!char || chars.some(c => c.avatar === char.avatar)) continue;
 
@@ -168,8 +165,6 @@ function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (cha
 
     for (const key of Object.keys(extension_prompts))
         if (key.includes(extensionName.toLowerCase())) delete extension_prompts[key];
-
-    log(chars, statuses);
 
     for (let i = 0; i < statuses.length; i++) {
         const character = chars[i];
@@ -303,6 +298,45 @@ function setSettings() {
 
 // * Initialize Extension
 
+function initButtons() {
+    const statusButtonSpan = document.createElement("span");
+    statusButtonSpan.textContent = t`Open Stat-us Menu`;
+    statusButtonSpan.dataset.i18n = "Open Stat-us Menu";
+
+    const statusButtonIcon = document.createElement("div");
+    statusButtonIcon.classList.add("fa-fw", "fa-solid", "fa-table", "extensionsMenuExtensionButton");
+
+    const statusButton = document.createElement("div");
+    statusButton.id = "stat-us-max-manage-chars";
+    statusButton.classList.add("list-group-item", "flex-container", "flexGap5", "interactable");
+    statusButton.title = t`Manage the status of all characters`;
+    statusButton.append(statusButtonIcon, statusButtonSpan);
+
+    const statusMenu = document.createElement("div");
+    statusMenu.id = extensionName.toLowerCase().replace("-", "_") + "_wand_container";
+    statusMenu.classList.add("extension_container", "interactable");
+    statusMenu.append(statusButton);
+    statusMenu.addEventListener("click", async () => {
+        const chars = [];
+        const metadata = chat_metadata.stat_us_maximus;
+
+        if (!metadata || !metadata.length) return;
+
+        for (const status of metadata) {
+            const char = getParticipant(status.avatar, status.is_user);
+
+            if (char) chars.push(char);
+        }
+
+        if (!chars.length) return;
+
+        await popupStatusMultiChar(chars);
+    });
+
+    const extensionsMenu = document.getElementById("extensionsMenu");
+    extensionsMenu.append(statusMenu);
+}
+
 (async function initExtension() {
 
     if (!SillyTavern.getContext().extensionSettings[extensionName]) {
@@ -318,5 +352,5 @@ function setSettings() {
     await loadHTMLSettings();
     setSettings();
     registerSlashCommands();
-    // initButtons();
+    initButtons();
 })();

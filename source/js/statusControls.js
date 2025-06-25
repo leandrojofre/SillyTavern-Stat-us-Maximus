@@ -91,7 +91,7 @@ export function addCharEntry(character, entry_key = "", entry_value = "") {
     try {
         const char_status = getCharStatus(character);
 
-        if (!char_status) throw new Error(t`Char status not found for "${character}"`);
+        if (!char_status) throw new Error(t`Char status not found for -${character?.name}-`);
 
         const newEntry = {
             uid: getFreeDataUid(char_status.entries),
@@ -126,7 +126,7 @@ export function getCharEntry(character, entry_uid) {
     try {
         const char_status = getCharStatus(character);
 
-        if (!char_status) throw new Error(t`Char status not found for "${character?.name}"`);
+        if (!char_status) throw new Error(t`Char status not found for -${character?.name}-`);
 
         const entry = char_status
             .entries
@@ -166,9 +166,9 @@ export function updateCharEntry(character, entry_uid, formData) {
         for (const [key, value] of formData.entries()) {
             let parsedValue = parseValue(value);
 
-            if (key === "separator") parsedValue = un_escapeNewlines(parsedValue);
+            if (key.includes("separator")) parsedValue = un_escapeNewlines(parsedValue);
 
-            entry[key] = parsedValue;
+            entry[key.replace("entry_", "")] = parsedValue;
         }
 
         const altValue = entry
@@ -193,9 +193,9 @@ export function removeCharEntry(character, entry_uid = -1) {
         const char_status = getCharStatus(character);
 
         if (!char_status)
-            throw new Error(t`Char status not found for "${character?.name}"`);
+            throw new Error(t`Char status not found for -${character?.name}-`);
         if (typeof entry_uid !== "number" || entry_uid < 0)
-            throw new Error(t`Char status entry with uid=${entry_uid} not foudn`);
+            throw new Error(t`Char status entry with uid=${entry_uid} not found`);
 
         char_status.entries = char_status
             .entries

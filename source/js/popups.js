@@ -20,11 +20,27 @@ export function un_escapeNewlines(str) {
         .replace(/\\r/g, "\r");
 }
 
-export async function formStatusPopup(char) {
-    const metadata = getCharStatus(char.avatar);
+
+async function popupDeleteConfirm(del_name = "this") {
+    const delete_title = document.createElement("div");
+    delete_title.textContent = t`Are you sure want to delete ${del_name}?`;
+
+    const delete_container = document.createElement("div");
+    delete_container.classList.add("d-flex", "flex-center", "w-100", "mb-5px");
+    delete_container.append(delete_title);
+
+    return await callGenericPopup(delete_container, POPUP_TYPE.CONFIRM, "", {
+        okButton: t`Confirm`,
+        cancelButton: t`Cancel`,
+        onClose: () => destroyElement(delete_container)
+    });
+};
+
+async function formStatusSingleChar(char) {
+    const metadata = getCharStatus(char);
 
     // @ts-ignore
-    if (!metadata) return toastr.error(t`No metadata was found for the chat`);
+    if (!metadata) return toastr.error(t`No metadata was found for the character -${char?.name}-`);
 
     /*
         Missing
@@ -68,7 +84,7 @@ export async function formStatusPopup(char) {
     textareaStatusSeparator.classList.add("text_pole", "mw-15");
 
     const newStatBtn = document.createElement("div");
-    newStatBtn.id = "stat-us-max-new-btn";
+    newStatBtn.id = "stat-us-max-new-btn-" + metadata.last_mes_id;
     newStatBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable");
 
     const wrapper = document.createElement("div");
@@ -157,11 +173,12 @@ export async function formStatusPopup(char) {
 
     /** Assemble Popup */
     const content = document.createElement("div");
-    content.id = "stat-us-max-popup-form";
+    content.id = "stat-us-max-popup-form-" + metadata.last_mes_id;
     content.classList.add("d-flex", "flex-col", "gap-5px", "py-5px");
 
     const container = document.createElement("div");
-    container.id = "stat-us-max-popup";
+    container.id = "stat-us-max-popup-" + metadata.last_mes_id;
+    container.classList.add("stat-us-max-popup");
     container.append(wrapper, content);
 
     /** Add listeners */
@@ -176,21 +193,6 @@ export async function formStatusPopup(char) {
         el.classList.toggle("fa-toggle-off", !state);
         el.classList.toggle("fa-toggle-on", state);
         callback(state);
-    };
-
-    const deleteConfirmPopup = async (del_name = "this") => {
-        const delete_title = document.createElement("div");
-        delete_title.textContent = t`Are you sure want to delete ${del_name}?`;
-
-        const delete_container = document.createElement("div");
-        delete_container.classList.add("d-flex", "flex-center", "w-100", "mb-5px");
-        delete_container.append(delete_title);
-
-        return await callGenericPopup(delete_container, POPUP_TYPE.CONFIRM, "", {
-            okButton: t`Confirm`,
-            cancelButton: t`Cancel`,
-            onClose: () => destroyElement(delete_container)
-        });
     };
 
     const refreshAltValues = (target, alts, select_uid = 0) => {
@@ -227,7 +229,7 @@ export async function formStatusPopup(char) {
 
             // Set Values
             el(newRow, 'input[name="key"]').value = data[i].key;
-            el(newRow, 'input[name="separator"]').value = escapeNewlines(data[i].separator);
+            el(newRow, 'input[name="entry_separator"]').value = escapeNewlines(data[i].separator);
             el(newRow, 'textarea[name="value"]').value = data[i].value;
             el(newRow, 'input[name="enabled"]').value = data[i].enabled;
             refreshAltValues(newRow, data[i].alt_values, data[i].value_uid);
@@ -242,7 +244,7 @@ export async function formStatusPopup(char) {
 
                 const formData = new FormData(newRow);
 
-                updateCharEntry(char.avatar, data[i].uid, formData);
+                updateCharEntry(char, data[i].uid, formData);
             });
 
             newRow.addEventListener("input", () => {
@@ -254,7 +256,7 @@ export async function formStatusPopup(char) {
             });
 
             el(newRow, 'select[name="value_uid"]').addEventListener("change", () => {
-                const alt = getCharAltValue(char.avatar, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
+                const alt = getCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
 
                 el(newRow, 'input[name="alt_key"]').value = alt.key;
                 el(newRow, 'textarea[name="value"]').value = alt.value;
@@ -263,9 +265,9 @@ export async function formStatusPopup(char) {
             });
 
             el(newRow, ".delete-row").addEventListener("click", async () => {
-                if (await deleteConfirmPopup("the alt value") === 0) return;
+                if (await popupDeleteConfirm("the alt value") === 0) return;
 
-                removeCharEntry(char.avatar, data[i].uid);
+                removeCharEntry(char, data[i].uid);
                 destroyElement(newRow);
             });
 
@@ -277,25 +279,25 @@ export async function formStatusPopup(char) {
             el(newRow, ".refresh_alt_value").addEventListener("click", () => {
                 refreshAltValues(
                     newRow,
-                    getCharEntry(char.avatar, data[i].uid).alt_values,
+                    getCharEntry(char, data[i].uid).alt_values,
                     el(newRow, 'select[name="value_uid"]').value
                 );
             });
 
             el(newRow, ".add_alt_value").addEventListener("click", () => {
-                const newAlt = addCharAltValue(char.avatar, data[i].uid);
+                const newAlt = addCharAltValue(char, data[i].uid);
 
-                refreshAltValues(newRow, getCharEntry(char.avatar, data[i].uid).alt_values, newAlt.uid);
+                refreshAltValues(newRow, getCharEntry(char, data[i].uid).alt_values, newAlt.uid);
 
                 el(newRow, 'select[name="value_uid"]').value = String(newAlt.uid);
                 el(newRow, 'select[name="value_uid"]').dispatchEvent(evChange);
             });
 
             el(newRow, ".del_alt_value").addEventListener("click", async () => {
-                if (await deleteConfirmPopup("the alt value") === 0) return;
+                if (await popupDeleteConfirm("the alt value") === 0) return;
 
                 try {
-                    const new_alts = removeCharAltValue(char.avatar, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
+                    const new_alts = removeCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
 
                     refreshAltValues(newRow, new_alts);
 
@@ -311,7 +313,7 @@ export async function formStatusPopup(char) {
     }
 
     newStatBtn.addEventListener("click", () => {
-        const newEntry = addCharEntry(char.avatar, "", "");
+        const newEntry = addCharEntry(char, "", "");
         addRow({data: [newEntry]});
     });
 
@@ -332,10 +334,35 @@ export async function formStatusPopup(char) {
     /** Add def rows */
     if (metadata.entries.length > 0) addRow({amount: metadata.entries.length, data: metadata.entries});
 
+    return container;
+}
+
+export async function popupStatusSingleChar(char) {
+    const container = await formStatusSingleChar(char);
+
     await callGenericPopup(container, POPUP_TYPE.TEXT, "", {
         okButton: t`Close Status`,
         allowVerticalScrolling: true,
         wide: true,
-        onClose: () => destroyElement(container)
+        onClose: async () => destroyElement(container)
+    });
+}
+
+export async function popupStatusMultiChar(chars) {
+    const content = document.createElement("div");
+    content.id = "stat-us-max-popup-multi-char";
+
+    for (const char of chars) {
+        const charForm = await formStatusSingleChar(char);
+        charForm.classList.add("border");
+
+        content.append(charForm);
+    }
+
+    await callGenericPopup(content, POPUP_TYPE.TEXT, "", {
+        okButton: t`Close Status`,
+        allowVerticalScrolling: true,
+        wide: true,
+        onClose: async () => destroyElement(content)
     });
 }
