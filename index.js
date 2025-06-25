@@ -320,7 +320,8 @@ function initButtons() {
         const chars = [];
         const metadata = chat_metadata.stat_us_maximus;
 
-        if (!metadata || !metadata.length) return;
+        // @ts-ignore
+        if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit`);
 
         for (const status of metadata) {
             const char = getParticipant(status.avatar, status.is_user);
@@ -328,7 +329,8 @@ function initButtons() {
             if (char) chars.push(char);
         }
 
-        if (!chars.length) return;
+        // @ts-ignore
+        if (!chars.length) return toastr.warning(t`There's no metadata to edit`);
 
         await popupStatusMultiChar(chars);
     });
