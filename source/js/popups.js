@@ -143,13 +143,16 @@ async function formStatusSingleChar(char) {
     const refreshAltValuesBtn = document.createElement("div");
     refreshAltValuesBtn.title = "Refresh the titles of the select";
     refreshAltValuesBtn.dataset.i18n = "Refresh the titles of the select";
-
     refreshAltValuesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-arrows-rotate", "interactable", "refresh_alt_value", "big-button");
 
     const addAltValues = document.createElement("div");
+    addAltValues.title = "Add alt descriptions";
+    addAltValues.dataset.i18n = "Add alt descriptions";
     addAltValues.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable", "add_alt_value", "big-button");
 
     const delAltValues = document.createElement("div");
+    delAltValues.title = "Delete current alt description";
+    delAltValues.dataset.i18n = "Delete current alt description";
     delAltValues.classList.add("menu_button", "fa-fw", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "del_alt_value", "big-button");
 
     const settingsInputs = document.createElement("div");
