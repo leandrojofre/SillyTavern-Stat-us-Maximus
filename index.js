@@ -1,32 +1,47 @@
-import {extension_settings} from "../../../extensions.js";
-import {saveSettingsDebounced, event_types, eventSource} from "../../../../script.js";
-import {getLocalVariable, getGlobalVariable} from "../../../variables.js";
+import {extension_settings, saveMetadataDebounced} from "../../../extensions.js";
+import {saveSettingsDebounced, event_types, eventSource, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar} from "../../../../script.js";
+import { groups, selected_group } from "../../../group-chats.js";
+import { t } from "../../../i18n.js";
+import { formStatusPopup } from "./source/js/popups.js";
+import { createCharStatus, getCharStatus } from "./source/js/statusControls.js";
+import { power_user } from "../../../power-user.js";
+import { registerSlashCommands } from "./source/js/slashCommands.js";
+
+// setExtensionPrompt
+// delete extension_prompts[key]
 
 // * Extension variables
 
 const extensionName = "SillyTavern-Stat-us-Maximus";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
-const extensionSettings = extension_settings[extensionName];
 const defaultSettings = {
     enabled: true,
     debug: false
 };
 
-const context = SillyTavern.getContext();
+export const extensionSettings = extension_settings[extensionName];
 
 // * Debugs methods
 
-const log = (...msg) => {
+export const log = (...msg) => {
     if (!extensionSettings.enabled || !extensionSettings.debug) return;
     console.log("[" + extensionName + "]", ...msg);
 };
 
+SillyTavern.StatusTest = async () => {
+	const group = groups.find((g) => g.id == selected_group);
+
+    log(group);
+    log(this_chid);
+    // formStatusPopup("Asami.png");
+}
+
 // * Extension methods
 
 /** Destroys an element and all data associated with it
-    @param {String|HTMLElement|JQuery<any>} element
+    @param {string|HTMLElement|Node|JQuery<any>|HTMLElement[]|NodeList} element
 */
-function destroyElement(element) {
+export function destroyElement(element) {
     const elem = $(element);
 
     elem.find('*').each(function() {
@@ -50,6 +65,190 @@ function destroyElement(element) {
 
 	elem.remove();
 }
+
+function getUser(avatar = user_avatar) {
+    if (!power_user.personas[avatar]) return false;
+
+    return {
+        name: power_user.personas[avatar],
+        avatar: avatar,
+        description: power_user.persona_descriptions[avatar].description,
+        is_user: true
+    };
+}
+
+function getStatusDepth(chat, character, {search_key_a = "name", search_key_b = search_key_a} = {}) {
+    return chat.length - chat.findLastIndex((mes) => mes[search_key_a] === character[search_key_b]) - 1;
+}
+
+function getParticipant(avatar, is_user) {
+    if (is_user) return getUser(avatar);
+    else return characters.find(char => char.avatar === avatar) ?? false;
+}
+
+function getActiveParticipants(discard) {
+    const user = getUser();
+    const chars = [];
+
+    if (selected_group) {
+	    const group = groups.find((g) => g.id == selected_group);
+        const members = group.members;
+
+        for (const member of members) {
+            if (discard.some(c => c.avatar === member)) continue;
+
+            const character = characters.find(char => char.avatar === member);
+
+            if (character) chars.push(character);
+        }
+    }
+    else if (this_chid !== undefined) {
+        const character = characters[this_chid];
+
+        if (character && !discard.some(c => c.avatar === character.avatar))
+            chars.push(character);
+    }
+
+    if (user && !discard.some(c => c.avatar === user.avatar))
+        chars.push(user);
+
+    return chars;
+}
+
+function getAllParticipantsInChat(chat) {
+    const chars = [];
+
+    for (const mess of chat) {
+        let char
+
+        if (mess.is_user) {
+            const userAvatar = mess.force_avatar.replace(/user avatars\//i, "");
+            char = getUser(userAvatar);
+        }
+
+        else if (!selected_group && this_chid !== undefined)
+            char = characters[this_chid];
+
+        else if (selected_group && mess?.original_avatar !== undefined)
+            char = characters.find(char => char.avatar === mess.original_avatar);
+
+        else if (selected_group && mess?.force_avatar !== undefined) {
+            const charAvatar = mess.force_avatar.replace(/\/thumbnail\?type=avatar&file=/i, "");
+            char = characters.find(char => char.avatar === charAvatar);
+        }
+
+        else if (mess?.name !== undefined)
+            char = characters.find(char => char.name === mess.name);
+
+        if (!char || chars.some(c => c.avatar === char.avatar)) continue;
+
+        chars.push(char);
+    }
+
+    return chars;
+}
+
+function addTracker(status, mesID, character) {
+    status.last_mes_id = mesID - status.depth;
+    log("---UPDATE TRACKER---", character.name);
+}
+
+function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1)} = {}) {
+    if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
+
+    const startID = $('.mes.lastInContext').first().attr('mesid') ?? 0;
+    const realChat = chat.slice(Number(startID));
+    const metadata = chat_metadata.stat_us_maximus;
+    const chars = metadata.map(status => getParticipant(status.avatar, status.is_user));
+
+    if (!metadata?.length) chars.push(...getAllParticipantsInChat(realChat));
+    else chars.push(...getActiveParticipants(chars));
+
+    const statuses = chars.map(character => getCharStatus(character));
+
+    for (const key of Object.keys(extension_prompts))
+        if (key.includes(extensionName.toLowerCase())) delete extension_prompts[key];
+
+    log(chars, statuses);
+
+    for (let i = 0; i < statuses.length; i++) {
+        const character = chars[i];
+
+        // If chat is empty or character is not even in the context
+        if (!character) continue;
+        if (!realChat.length || !realChat.some((mes) => mes.name === character.name)) continue;
+
+        const char_depth = getStatusDepth(realChat, character) + depthModifier;
+
+        if (!statuses[i])
+            statuses[i] = createCharStatus(character, char_depth);
+        else
+            statuses[i].depth = char_depth;
+
+        const status = statuses[i];
+
+        if (forceUIUpdate || (status.last_mes_id + char_depth) !== newMessID)
+            addTracker(statuses[i], newMessID, character);
+
+        const promptKey = extensionName.toLowerCase() + "-" + char_depth;
+        let promptValue = "" + character.name;
+
+        for (const entry of status.entries) {
+            if (!entry.enabled) continue;
+            if (!promptValue) promptValue += status.separator;
+
+            promptValue += entry.key;
+            promptValue += entry.separator;
+            promptValue += entry.value;
+        };
+
+        promptValue = promptValue.replaceAll("{{char}}", character.name);
+
+        setExtensionPrompt(
+            promptKey,
+            promptValue,
+            extension_prompt_types.IN_CHAT,
+            char_depth,
+            true,
+            status.role
+        );
+    }
+
+    saveMetadataDebounced();
+}
+
+// ? event_types.GROUP_UPDATED doesn't matter, status will update when that character sends a message
+
+eventSource.on(event_types.CHAT_CHANGED, async (...args) => {
+    log("CHAT_CHANGED", args);
+
+    if (!args[0]) return;
+
+    fetchStatus({forceUIUpdate: true});
+});
+
+eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, async (...args) => {
+    log("CHARACTER_MESSAGE_RENDERED", args);
+    fetchStatus({newMessID: args[0]});
+});
+
+eventSource.on(event_types.USER_MESSAGE_RENDERED, async (...args) => {
+    log("USER_MESSAGE_RENDERED", args);
+    fetchStatus({newMessID: args[0]});
+});
+
+eventSource.on(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
+    log("GENERATION_AFTER_COMMANDS", args);
+    fetchStatus({newMessID: chat.length, depthModifier: 1});
+});
+
+eventSource.on(event_types.MESSAGE_DELETED, async (...args) => {
+    log("MESSAGE_DELETED", args);
+
+    const id = (args[0] ?? chat.length) - 1;
+
+    fetchStatus({newMessID: id});
+});
 
 // * Methods in charge of controlling the extension settings
 
@@ -100,24 +299,24 @@ async function loadHTMLSettings() {
 function setSettings() {
     $("#stat-us-max-activate-extension").prop("checked", extensionSettings.enabled).trigger("input");
     $("#stat-us-max-activate-debug").prop("checked", extensionSettings.debug).trigger("input");
-
-    log("setSettings", extensionSettings);
 }
 
 // * Initialize Extension
 
 (async function initExtension() {
 
-    if (!context.extensionSettings[extensionName]) {
-        context.extensionSettings[extensionName] = structuredClone(defaultSettings);
+    if (!SillyTavern.getContext().extensionSettings[extensionName]) {
+        SillyTavern.getContext().extensionSettings[extensionName] = structuredClone(defaultSettings);
     }
 
     for (const key of Object.keys(defaultSettings)) {
-        if (context.extensionSettings[extensionName][key] === undefined) {
-            context.extensionSettings[extensionName][key] = defaultSettings[key];
+        if (SillyTavern.getContext().extensionSettings[extensionName][key] === undefined) {
+            SillyTavern.getContext().extensionSettings[extensionName][key] = defaultSettings[key];
         }
     }
 
     await loadHTMLSettings();
     setSettings();
+    registerSlashCommands();
+    // initButtons();
 })();
