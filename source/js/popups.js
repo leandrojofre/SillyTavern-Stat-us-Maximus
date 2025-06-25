@@ -43,7 +43,7 @@ async function formStatusSingleChar(char) {
     if (!metadata) return toastr.error(t`No metadata was found for the character -${char?.name}-`);
 
     /*
-        Missing
+        #TODO
         - [X] Select for alt_values
         - [X] Add for alt_values
         - [X] Delete for alt_values
@@ -51,7 +51,8 @@ async function formStatusSingleChar(char) {
         - [X] Disable row btn
         - [X] Role button
         - [X] Confirm screen for delete
-        - [ ] Setting to disable ask
+        - [ ] Setting to disable confirm delete
+        - [ ] Drag and drop for entries
         - [ ] Wrappers for the whole stat block - only added if there are entries
     */
 
