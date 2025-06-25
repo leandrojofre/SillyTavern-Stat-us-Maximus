@@ -31,6 +31,9 @@
 
 .popup:has(.stat-us-max-popup) {
     --stat-us-border-color: var(--SmartThemeBorderColor);
+    --stat-us-avatar-height: var(--avatar-base-height);
+    --stat-us-avatar-border-radius: 50%;
+
     background-color: var(--SmartThemeBotMesBlurTintColor);
     border-color: var(--stat-us-border-color) !important;
 
@@ -53,6 +56,22 @@
 
     select {
         color: color-mix(in srgb, var(--SmartThemeBodyColor) 50%, transparent);
+    }
+
+    .avatar {
+        flex: 0;
+        aspect-ratio: 1 / 1;
+        width: auto;
+        height: var(--stat-us-avatar-height) !important;
+
+        img {
+            aspect-ratio: 1 / 1;
+            width: auto;
+            object-position: top;
+            height: var(--stat-us-avatar-height) !important;
+            border-color: var(--stat-us-border-color) !important;
+            border-radius: var(--stat-us-avatar-border-radius) !important;
+        }
     }
 
     .border {

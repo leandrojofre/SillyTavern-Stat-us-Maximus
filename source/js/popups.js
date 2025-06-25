@@ -36,6 +36,11 @@ async function popupDeleteConfirm(del_name = "this") {
     });
 };
 
+function getFullCharAvatar(status) {
+    if (status.is_user) return "User Avatars/" + status.avatar;
+    else return "/thumbnail?type=avatar&file=" + status.avatar;
+}
+
 async function formStatusSingleChar(char) {
     const metadata = getCharStatus(char);
 
@@ -52,11 +57,21 @@ async function formStatusSingleChar(char) {
         - [X] Role button
         - [X] Confirm screen for delete
         - [ ] Setting to disable confirm delete
+        - [ ] Avatar before title
         - [ ] Drag and drop for entries
         - [ ] Wrappers for the whole stat block - only added if there are entries
     */
 
     /** Create Popup container and title. */
+    const avatar = document.createElement("img");
+    avatar.alt = "Avatar";
+    avatar.title = metadata.avatar;
+    avatar.src = getFullCharAvatar(metadata);
+
+    const avatarContainer = document.createElement("div");
+    avatarContainer.classList.add("avatar");
+    avatarContainer.append(avatar);
+
     const title = document.createElement("div");
     title.textContent = t`Add an status to ${char.name}`;
 
@@ -89,8 +104,8 @@ async function formStatusSingleChar(char) {
     newStatBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable");
 
     const wrapper = document.createElement("div");
-    wrapper.classList.add("d-flex", "flex-center", "w-100", "mb-5px");
-    wrapper.append(title, selectEntryRole, textareaStatusSeparator, newStatBtn);
+    wrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px");
+    wrapper.append(avatarContainer, title, selectEntryRole, textareaStatusSeparator, newStatBtn);
 
     /** Create input template */
     /** - Key */
