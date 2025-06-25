@@ -16,3 +16,126 @@
 	margin-bottom: 1vh;
 	border-radius: 1vh;
 }
+
+@media screen and (max-width: 1000px) {
+    .popup.wide_dialogue_popup:has(#stat-us-max-popup) {
+        width: 97vw !important;
+    }
+}
+
+@media screen and (max-width: 1900px) {
+    .popup.wide_dialogue_popup:has(#stat-us-max-popup) {
+        width: 90vw;
+    }
+}
+
+#stat-us-max-popup {
+    select {
+        color: color-mix(in srgb, var(--SmartThemeBodyColor) 50%, transparent);
+    }
+
+    .d-flex {
+        display: flex;
+        gap: 10px;
+    }
+
+    .flex-center {
+        justify-content: center;
+        align-items: center;
+    }
+
+    .flex-center-start {
+        justify-content: flex-start;
+        align-items: center;
+    }
+
+    .flex-col {
+        flex-direction: column;
+    }
+
+    .w-100 {
+        width: 100%;
+    }
+
+    .mw-15 {
+        max-width: 15%;
+    }
+
+    .mw-25 {
+        max-width: 25%;
+    }
+
+    .big-button {
+        padding: 5px 20px;
+    }
+
+    .flex-grow-1 {
+        flex-grow: 1;
+    }
+
+    div.label {
+        flex-grow: 1;
+    }
+
+    .p-0 {
+        padding: 0;
+    }
+
+    .py-5px {
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+
+    .px-5px {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+    .m-0 {
+        margin: 0;
+    }
+
+    .gap-5px {
+        gap: 5px;
+    }
+
+    .inline-drawer {
+        border: 1px solid;
+        border-color: var(--SmartThemeBorderColor);
+        padding: 5px 10px;
+        background-color: var(--SmartThemeBotMesBlurTintColor);
+    }
+
+    .inline-drawer-header:hover {
+        filter: brightness(1.5) saturate(1.75) invert(25%);
+        border-color: invert(var(--SmartThemeBorderColor));
+    }
+
+    .kill-switch.fa-toggle-on {
+        color: var(--SmartThemeQuoteColor);
+    }
+
+    .kill-switch {
+        font-size: x-large;
+    }
+
+    .stat-us-max-popup-row {
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .flex-self-center {
+        align-self: center;
+    }
+
+    .mb-5px {
+        padding-bottom: 5px;
+    }
+
+    .separator-bottom {
+        border-bottom: 1px solid color-mix(in srgb, var(--SmartThemeBorderColor) 50%, transparent);
+        padding-bottom: 5px;
+        margin-bottom: 5px;
+        border-radius: 0;
+    }
+}
