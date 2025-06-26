@@ -52,6 +52,11 @@
 
 #stat-us-max-popup-multi-char,
 .stat-us-max-popup {
+    /*
+        - [ ] Shade closed entry drawers
+        filter: grayscale(0.5) brightness(0.6);
+    */
+    
     border-color: var(--stat-us-border-color) !important;
 
     select {

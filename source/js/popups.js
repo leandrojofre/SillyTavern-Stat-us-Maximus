@@ -57,14 +57,16 @@ async function formStatusSingleChar(char) {
         - [X] Disable row btn
         - [X] Role button
         - [X] Confirm screen for delete
-        - [ ] Setting to disable confirm delete
         - [X] Avatar before title
         - [X] Drag and drop for entries
+        - [ ] Setting to disable confirm delete
+        - [ ] Per-character menus
+        - [ ] Button to delete status metadata - per character
+        - [ ] Open/close all entries - per character
+        - [ ] Status transfer button
         - [ ] Entries block prefix/suffix
         - [ ] Custom depth buttons - dynamic depth if undefined
-        - [ ] Open/close all entries - per character
         - [ ] Fucking labels
-        - [ ] Status transfer button
     */
 
     /** Create Popup container and title. */

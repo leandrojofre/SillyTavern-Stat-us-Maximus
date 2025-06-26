@@ -82,7 +82,10 @@ function getUser(avatar = user_avatar) {
 }
 
 function getStatusDepth(chat, character, {search_key_a = "name", search_key_b = search_key_a} = {}) {
-    return chat.length - chat.findLastIndex((mes) => mes[search_key_a] === character[search_key_b]) - 1;
+    const lastIndex = chat.findLastIndex((mes) => mes[search_key_a] === character[search_key_b]);
+
+    if (lastIndex < 0) return lastIndex;
+    return chat.length - lastIndex - 1;
 }
 
 function getParticipant(avatar, is_user) {
@@ -90,7 +93,7 @@ function getParticipant(avatar, is_user) {
     else return getCharacter(avatar);
 }
 
-function getActiveParticipants(discard) {
+function getActiveParticipants(discard = []) {
     const user = getUser();
     const chars = [];
 
@@ -178,6 +181,8 @@ function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (cha
 
         const char_depth = getStatusDepth(realChat, character) + depthModifier;
 
+        if (char_depth < 0) continue;
+
         if (!statuses[i])
             statuses[i] = createCharStatus(character, char_depth);
         else
@@ -217,9 +222,19 @@ function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (cha
 
 // ? event_types.GROUP_UPDATED doesn't matter, status will update when that character sends a message
 /* Change of heart, maybe use GROUP_UPDATED for
-    - [ ] Check if the group member exists in metadata
-    - [ ] If it doesn't - add it
+    - [X] Check if the group member exists in metadata
+    - [X] If it doesn't - add it
 */
+
+eventSource.on(event_types.GROUP_UPDATED, async (...args) => {
+    log("GROUP_UPDATED", args);
+
+    for (const char of getActiveParticipants()) {
+        if (!getCharStatus(char)) createCharStatus(char, getStatusDepth(chat, char));
+    }
+
+    saveMetadataDebounced();
+});
 
 eventSource.on(event_types.CHAT_CHANGED, async (...args) => {
     log("CHAT_CHANGED", args);
