@@ -61,6 +61,7 @@ async function formStatusSingleChar(char) {
         - [X] Avatar before title
         - [X] Drag and drop for entries
         - [ ] Entries block prefix/suffix
+        - [ ] Custom depth buttons - dynamic depth if undefined
         - [ ] Open/close all entries - per character
         - [ ] Fucking labels
         - [ ] Status transfer button
