@@ -216,6 +216,10 @@ function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (cha
 }
 
 // ? event_types.GROUP_UPDATED doesn't matter, status will update when that character sends a message
+/* Change of heart, maybe use GROUP_UPDATED for
+    - [ ] Check if the group member exists in metadata
+    - [ ] If it doesn't - add it
+*/
 
 eventSource.on(event_types.CHAT_CHANGED, async (...args) => {
     log("CHAT_CHANGED", args);
@@ -238,6 +242,11 @@ eventSource.on(event_types.USER_MESSAGE_RENDERED, async (...args) => {
 eventSource.on(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
     log("GENERATION_AFTER_COMMANDS", args);
     fetchStatus({newMessID: chat.length, depthModifier: 1});
+});
+
+eventSource.on(event_types.MORE_MESSAGES_LOADED, async (...args) => {
+    log("MORE_MESSAGES_LOADED", args);
+    fetchStatus({forceUIUpdate: true});
 });
 
 eventSource.on(event_types.MESSAGE_DELETED, async (...args) => {

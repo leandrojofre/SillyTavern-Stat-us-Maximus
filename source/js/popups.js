@@ -60,7 +60,10 @@ async function formStatusSingleChar(char) {
         - [ ] Setting to disable confirm delete
         - [X] Avatar before title
         - [X] Drag and drop for entries
-        - [ ] Wrappers for the whole stat block - only added if there are entries
+        - [ ] Entries block prefix/suffix
+        - [ ] Open/close all entries - per character
+        - [ ] Fucking labels
+        - [ ] Status transfer button
     */
 
     /** Create Popup container and title. */
@@ -106,7 +109,7 @@ async function formStatusSingleChar(char) {
 
     const wrapper = document.createElement("div");
     wrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px");
-    wrapper.append(avatarContainer, title, selectEntryRole, textareaStatusSeparator, newStatBtn);
+    wrapper.append(avatarContainer, selectEntryRole, textareaStatusSeparator, newStatBtn, title);
 
     /** Create input template */
     /** - Key */

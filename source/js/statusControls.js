@@ -230,6 +230,7 @@ export function removeCharEntry(character, entry_uid = -1) {
             .entries
             .filter(s => s.uid !== Number(entry_uid));
 
+        getLastDisplayPosition(char_status.entries);
         saveMetadataDebounced();
     } catch (error) {
         // @ts-ignore
