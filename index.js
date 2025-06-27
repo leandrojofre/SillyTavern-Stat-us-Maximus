@@ -367,6 +367,46 @@ function initButtons() {
 
     const extensionsMenu = document.getElementById("extensionsMenu");
     extensionsMenu.append(globalStatusMenu);
+
+    /** Single Character menu */
+    const charStatusSpan = document.createElement("span");
+    charStatusSpan.textContent = "Character's Status";
+    charStatusSpan.dataset.i18n = "Character's Status";
+    charStatusSpan.classList.add("flex-grow-1");
+
+    const charStatusOpenPopupBtn = document.createElement("div");
+    charStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-table", "interactable", "m-0");
+    charStatusOpenPopupBtn.addEventListener("click", async () => {
+        const metadata = chat_metadata.stat_us_maximus;
+
+        // @ts-ignore
+        if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit, open a chat or refresh the current one`);
+
+        if (this_chid !== undefined) {
+            log("char")
+            const char = characters[this_chid];
+
+            // @ts-ignore
+            if (!char) return toastr.warning(t`The character could be found`);
+
+            return await popupStatusSingleChar(char);
+        }
+
+        // @ts-ignore
+        toastr.warning(t`An active character to edit could not be found`);
+    });
+
+    const charStatusMenu = document.createElement("div");
+    charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px");
+    charStatusMenu.append(charStatusSpan, charStatusOpenPopupBtn);
+
+    const charStatusContainer = document.createElement("div");
+    charStatusContainer.classList.add("stat-us-max-custom-css");
+    charStatusContainer.append(charStatusMenu);
+
+    const hr = document.createElement("hr");
+    const creatorNotesBlock = document.getElementById("spoiler_free_desc");
+    creatorNotesBlock.before(charStatusContainer, hr);
 }
 
 (async function initExtension() {
