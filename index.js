@@ -326,29 +326,32 @@ function setSettings() {
 // * Initialize Extension
 
 function initButtons() {
-    const statusButtonSpan = document.createElement("span");
-    statusButtonSpan.textContent = t`Open Stat-us Menu`;
-    statusButtonSpan.dataset.i18n = "Open Stat-us Menu";
+    /** Magic wand menu */
+    const globalStatusButtonSpan = document.createElement("span");
+    globalStatusButtonSpan.textContent = t`Open Stat-us Menu`;
+    globalStatusButtonSpan.dataset.i18n = "Open Stat-us Menu";
 
-    const statusButtonIcon = document.createElement("div");
-    statusButtonIcon.classList.add("fa-fw", "fa-solid", "fa-table", "extensionsMenuExtensionButton");
+    const globalStatusButtonIcon = document.createElement("div");
+    globalStatusButtonIcon.classList.add("fa-fw", "fa-solid", "fa-table", "extensionsMenuExtensionButton");
 
-    const statusButton = document.createElement("div");
-    statusButton.id = "stat-us-max-manage-chars";
-    statusButton.classList.add("list-group-item", "flex-container", "flexGap5", "interactable");
-    statusButton.title = t`Manage the status of all characters`;
-    statusButton.append(statusButtonIcon, statusButtonSpan);
+    const globalStatusButton = document.createElement("div");
+    globalStatusButton.id = "stat-us-max-manage-chars";
+    globalStatusButton.classList.add("list-group-item", "flex-container", "flexGap5", "interactable");
+    globalStatusButton.title = t`Manage the status of all characters`;
+    globalStatusButton.append(globalStatusButtonIcon, globalStatusButtonSpan);
 
-    const statusMenu = document.createElement("div");
-    statusMenu.id = extensionName.toLowerCase().replace("-", "_") + "_wand_container";
-    statusMenu.classList.add("extension_container", "interactable");
-    statusMenu.append(statusButton);
-    statusMenu.addEventListener("click", async () => {
-        const chars = [];
+    const globalStatusMenu = document.createElement("div");
+    globalStatusMenu.id = extensionName.toLowerCase().replace("-", "_") + "_wand_container";
+    globalStatusMenu.classList.add("extension_container", "interactable");
+    globalStatusMenu.append(globalStatusButton);
+    globalStatusMenu.addEventListener("click", async () => {
         const metadata = chat_metadata.stat_us_maximus;
 
         // @ts-ignore
-        if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit - You will have access to this option once the chat has messages`);
+        if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit, open a chat or refresh the current one`);
+
+        log("group")
+        const chars = [];
 
         for (const status of metadata) {
             const char = getParticipant(status.avatar, status.is_user);
@@ -357,13 +360,13 @@ function initButtons() {
         }
 
         // @ts-ignore
-        if (!chars.length) return toastr.warning(t`There's no metadata to edit - You will have access to this option once the chat has messages`);
+        if (!chars.length) return toastr.warning(t`No character could be found in the metadata`);
 
-        await popupStatusMultiChar(chars);
+        return await popupStatusMultiChar(chars);
     });
 
     const extensionsMenu = document.getElementById("extensionsMenu");
-    extensionsMenu.append(statusMenu);
+    extensionsMenu.append(globalStatusMenu);
 }
 
 (async function initExtension() {
