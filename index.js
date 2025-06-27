@@ -1,17 +1,18 @@
 import {extension_settings, saveMetadataDebounced} from "../../../extensions.js";
 import {saveSettingsDebounced, event_types, eventSource, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar} from "../../../../script.js";
-import { getGroupMembers, groups, selected_group } from "../../../group-chats.js";
+import { getGroupMembers, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
 import { createCharStatus, getCharStatus } from "./source/js/statusControls.js";
 import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
-import { commonEnumProviders } from "../../../slash-commands/SlashCommandCommonEnumsProvider.js";
-import { popupStatusMultiChar } from "./source/js/popups.js";
-
-// setExtensionPrompt
-// delete extension_prompts[key]
+import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups.js";
 
 // * Extension variables
+
+/*  # TODO
+    - [ ] Setting to disable confirm delete
+    - [ ] Setting for deff role
+*/
 
 const extensionName = "SillyTavern-Stat-us-Maximus";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
@@ -30,7 +31,8 @@ export const log = (...msg) => {
 };
 
 SillyTavern.StatusTest = async () => {
-	log(commonEnumProviders.messageNames());
+    log(this_chid, characters[this_chid]);
+    log(selected_group);
 }
 
 // * Extension methods
@@ -221,9 +223,11 @@ function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (cha
 }
 
 // ? event_types.GROUP_UPDATED doesn't matter, status will update when that character sends a message
-/* Change of heart, maybe use GROUP_UPDATED for
-    - [X] Check if the group member exists in metadata
-    - [X] If it doesn't - add it
+/*
+    # TODO
+    - Change of heart, maybe use GROUP_UPDATED for:
+        - [X] Check if the group member exists in metadata
+        - [X] If it doesn't - add it
 */
 
 function groupListAvatarsClick(e) {

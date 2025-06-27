@@ -56,8 +56,7 @@ async function formStatusSingleChar(char) {
     // @ts-ignore
     if (!metadata) return toastr.error(t`No metadata was found for the character -${char?.name}-`);
 
-    /*
-        #TODO
+    /*  # TODO
         - [X] Select for alt_values
         - [X] Add for alt_values
         - [X] Delete for alt_values
@@ -67,8 +66,7 @@ async function formStatusSingleChar(char) {
         - [X] Confirm screen for delete
         - [X] Avatar before title
         - [X] Drag and drop for entries
-        - [ ] Setting to disable confirm delete
-        - [ ] Per-character menus
+        - [X] Per-character menus on groups and button in right menu UI for solo chats
         - [ ] Button to delete status metadata - per character
         - [ ] Open/close all entries - per character
         - [ ] Status transfer button
@@ -77,7 +75,7 @@ async function formStatusSingleChar(char) {
         - [ ] Fucking labels
     */
 
-    /** Create Popup container and title. */
+    /** Create Menu header. */
     const avatar = document.createElement("img");
     avatar.alt = "Avatar";
     avatar.title = metadata.avatar;
