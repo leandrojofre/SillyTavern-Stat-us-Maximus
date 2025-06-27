@@ -1,11 +1,12 @@
 import {extension_settings, saveMetadataDebounced} from "../../../extensions.js";
-import {saveSettingsDebounced, event_types, eventSource, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar} from "../../../../script.js";
+import {saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar} from "../../../../script.js";
 import { getGroupMembers, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
 import { createCharStatus, getCharStatus } from "./source/js/statusControls.js";
 import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
 import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups.js";
+import { startListeners } from "./source/js/eventListeners.js";
 
 // * Extension variables
 
@@ -83,7 +84,7 @@ function getUser(avatar = user_avatar) {
     };
 }
 
-function getStatusDepth(chat, character, {search_key_a = "name", search_key_b = search_key_a} = {}) {
+export function getStatusDepth(chat, character, {search_key_a = "name", search_key_b = search_key_a} = {}) {
     const lastIndex = chat.findLastIndex((mes) => mes[search_key_a] === character[search_key_b]);
 
     if (lastIndex < 0) return lastIndex;
@@ -95,7 +96,7 @@ function getParticipant(avatar, is_user) {
     else return getCharacter(avatar);
 }
 
-function getActiveParticipants(discard = []) {
+export function getActiveParticipants(discard = []) {
     const user = getUser();
     const chars = [];
 
@@ -158,7 +159,7 @@ function addTracker(status, mesID, character) {
     log("---UPDATE TRACKER---", character.name);
 }
 
-function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1)} = {}) {
+export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1)} = {}) {
     if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
 
     const startID = $('.mes.lastInContext').first().attr('mesid') ?? 0;
@@ -222,16 +223,7 @@ function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (cha
     saveMetadataDebounced();
 }
 
-// ? event_types.GROUP_UPDATED doesn't matter, status will update when that character sends a message
-/*
-    # TODO
-    - Change of heart, maybe use GROUP_UPDATED for:
-        - [X] Check if the group member exists in metadata
-        - [X] If it doesn't - add it
-    - [ ] Display a table with statuses in the last message of each participant
-*/
-
-function groupListAvatarsClick(e) {
+export function groupListAvatarsClick(e) {
     const img = e.target;
     const char_avatar = img?.title;
 
@@ -246,7 +238,7 @@ function groupListAvatarsClick(e) {
     popupStatusSingleChar(char);
 }
 
-function addGroupStatusButtons(params) {
+export function addGroupStatusButtons() {
     const groupList = document.getElementById("currentGroupMembers");
     const avatars = groupList.querySelectorAll('.avatar');
 
@@ -255,54 +247,6 @@ function addGroupStatusButtons(params) {
         avatar.addEventListener("click", groupListAvatarsClick);
     }
 }
-
-eventSource.on(event_types.GROUP_UPDATED, async (...args) => {
-    log("GROUP_UPDATED", args);
-
-    for (const char of getActiveParticipants()) {
-        if (!getCharStatus(char)) createCharStatus(char, getStatusDepth(chat, char));
-    }
-
-    saveMetadataDebounced();
-    addGroupStatusButtons();
-});
-
-eventSource.on(event_types.CHAT_CHANGED, async (...args) => {
-    log("CHAT_CHANGED", args);
-
-    if (!args[0]) return;
-    if (selected_group) addGroupStatusButtons();
-
-    fetchStatus({forceUIUpdate: true});
-});
-
-eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, async (...args) => {
-    log("CHARACTER_MESSAGE_RENDERED", args);
-    fetchStatus({newMessID: args[0]});
-});
-
-eventSource.on(event_types.USER_MESSAGE_RENDERED, async (...args) => {
-    log("USER_MESSAGE_RENDERED", args);
-    fetchStatus({newMessID: args[0]});
-});
-
-eventSource.on(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
-    log("GENERATION_AFTER_COMMANDS", args);
-    fetchStatus({newMessID: chat.length, depthModifier: 1});
-});
-
-eventSource.on(event_types.MORE_MESSAGES_LOADED, async (...args) => {
-    log("MORE_MESSAGES_LOADED", args);
-    fetchStatus({forceUIUpdate: true});
-});
-
-eventSource.on(event_types.MESSAGE_DELETED, async (...args) => {
-    log("MESSAGE_DELETED", args);
-
-    const id = (args[0] ?? chat.length) - 1;
-
-    fetchStatus({newMessID: id});
-});
 
 // * Methods in charge of controlling the extension settings
 
@@ -457,4 +401,5 @@ function initButtons() {
     setSettings();
     registerSlashCommands();
     initButtons();
+    startListeners();
 })();
