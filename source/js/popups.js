@@ -140,7 +140,7 @@ async function formStatusSingleChar(char) {
 
     const textareaSeparator = document.createElement("input");
     textareaSeparator.type = "text";
-    textareaSeparator.name = "entry_separator";
+    textareaSeparator.name = "separator";
     textareaSeparator.placeholder = t`Title/value separator...`;
     textareaSeparator.classList.add("text_pole", "mw-25", "m-0");
 
@@ -260,7 +260,7 @@ async function formStatusSingleChar(char) {
 
             // Set Values
             el(newRow, 'input[name="key"]').value = data[i].key;
-            el(newRow, 'input[name="entry_separator"]').value = escapeNewlines(data[i].separator);
+            el(newRow, 'input[name="separator"]').value = escapeNewlines(data[i].separator);
             el(newRow, 'textarea[name="value"]').value = data[i].value;
             el(newRow, 'input[name="enabled"]').value = data[i].enabled;
             refreshAltValues(newRow, data[i].alt_values, data[i].value_uid);

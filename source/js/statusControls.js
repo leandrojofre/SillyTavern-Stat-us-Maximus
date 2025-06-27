@@ -197,7 +197,7 @@ export function updateCharEntry(character, entry_uid, formData) {
 
             if (key.includes("separator")) parsedValue = un_escapeNewlines(parsedValue);
 
-            entry[key.replace("entry_", "")] = parsedValue;
+            entry[key] = parsedValue;
         }
 
         const altValue = entry
