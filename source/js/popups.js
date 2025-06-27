@@ -207,14 +207,14 @@ async function formStatusSingleChar(char) {
     formRow.classList.add("stat-us-max-popup-row", "d-flex", "flex-col", "inline-drawer");
     formRow.append(drawerHeader, drawerContent);
 
-    /** Assemble Popup */
+    /** Create Menu container and assemble Menu */
     const content = document.createElement("div");
     content.id = "stat-us-max-popup-form-holder-" + metadata.last_mes_id;
-    content.classList.add("d-flex", "flex-col", "gap-5px", "py-5px");
+    content.classList.add("d-flex", "flex-col", "gap-5px", "pt-5px");
 
     const container = document.createElement("div");
     container.id = "stat-us-max-popup-" + metadata.last_mes_id;
-    container.classList.add("stat-us-max-popup", "border");
+    container.classList.add("stat-us-max-popup");
     container.append(wrapper, content);
 
     /** Add listeners */
@@ -411,7 +411,7 @@ export async function popupStatusMultiChar(chars) {
 
     for (const char of chars) {
         const charForm = await formStatusSingleChar(char);
-
+        charForm.classList.add("multi-char-popup");
         content.append(charForm);
     }
 
