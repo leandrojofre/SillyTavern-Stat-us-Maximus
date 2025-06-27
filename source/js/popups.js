@@ -66,7 +66,8 @@ async function formStatusSingleChar(char) {
         - [X] Confirm screen for delete
         - [X] Avatar before title
         - [X] Drag and drop for entries
-        - [X] Per-character menus on groups and button in right menu UI for solo chats
+        - [X] Per-character open menu buttons on group list and in right nav UI for solo chats
+        - [ ] Per-user open menu buttons
         - [ ] Button to delete status metadata - per character
         - [ ] Open/close all entries - per character
         - [ ] Status transfer button

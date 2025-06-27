@@ -228,6 +228,7 @@ function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (cha
     - Change of heart, maybe use GROUP_UPDATED for:
         - [X] Check if the group member exists in metadata
         - [X] If it doesn't - add it
+    - [ ] Display a table with statuses in the last message of each participant
 */
 
 function groupListAvatarsClick(e) {
