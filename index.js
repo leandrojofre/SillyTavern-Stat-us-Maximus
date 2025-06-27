@@ -119,7 +119,7 @@ function getActiveParticipants(discard = []) {
 }
 
 function getAllParticipantsInChat(chat) {
-    const chars = [];
+    const chars = getActiveParticipants();
 
     for (const mess of chat) {
         let char
@@ -129,7 +129,7 @@ function getAllParticipantsInChat(chat) {
             char = getUser(userAvatar);
         }
 
-        else if (!selected_group && this_chid !== undefined)
+        else if (this_chid !== undefined)
             char = characters[this_chid];
 
         else if (selected_group && mess?.original_avatar !== undefined)
@@ -175,18 +175,18 @@ function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (cha
     for (let i = 0; i < statuses.length; i++) {
         const character = chars[i];
 
-        // If chat is empty or character is not even in the context
         if (!character) continue;
-        if (!realChat.length || !realChat.some((mes) => mes.name === character.name)) continue;
 
         const char_depth = getStatusDepth(realChat, character) + depthModifier;
-
-        if (char_depth < 0) continue;
 
         if (!statuses[i])
             statuses[i] = createCharStatus(character, char_depth);
         else
             statuses[i].depth = char_depth;
+
+        // If chat is empty or character is not even in the context
+        if (char_depth < 0) continue;
+        if (!realChat.length || !realChat.some((mes) => mes.name === character.name)) continue;
 
         const status = statuses[i];
 
