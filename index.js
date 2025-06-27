@@ -226,6 +226,31 @@ function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (cha
     - [X] If it doesn't - add it
 */
 
+function groupListAvatarsClick(e) {
+    const img = e.target;
+    const char_avatar = img?.title;
+
+    // @ts-ignore
+    if (!char_avatar) return toastr.warning(t`Avatar could not be recognized`);
+
+    const char = getCharacter(char_avatar);
+
+    // @ts-ignore
+    if (!char) return toastr.warning(t`The character could be found`);
+
+    popupStatusSingleChar(char);
+}
+
+function addGroupStatusButtons(params) {
+    const groupList = document.getElementById("currentGroupMembers");
+    const avatars = groupList.querySelectorAll('.avatar');
+
+    for (const avatar of avatars) {
+        avatar.removeEventListener("click", groupListAvatarsClick);
+        avatar.addEventListener("click", groupListAvatarsClick);
+    }
+}
+
 eventSource.on(event_types.GROUP_UPDATED, async (...args) => {
     log("GROUP_UPDATED", args);
 
@@ -234,12 +259,14 @@ eventSource.on(event_types.GROUP_UPDATED, async (...args) => {
     }
 
     saveMetadataDebounced();
+    addGroupStatusButtons();
 });
 
 eventSource.on(event_types.CHAT_CHANGED, async (...args) => {
     log("CHAT_CHANGED", args);
 
     if (!args[0]) return;
+    if (selected_group) addGroupStatusButtons();
 
     fetchStatus({forceUIUpdate: true});
 });

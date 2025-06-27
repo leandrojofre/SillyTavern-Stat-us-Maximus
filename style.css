@@ -42,6 +42,10 @@
     padding-bottom: 5px;
 }
 
+.group_member .avatar {
+    cursor: pointer;
+}
+
 #stat-us-max-popup-multi-char,
 .popup:has(.stat-us-max-popup),
 .stat-us-max-custom-css {
