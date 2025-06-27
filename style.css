@@ -51,10 +51,10 @@
 }
 
 #stat-us-max-popup-multi-char,
-.stat-us-max-popup {
-    /*
-        - [ ] Shade closed entry drawers
-        filter: grayscale(0.5) brightness(0.6);
+.popup:has(.stat-us-max-popup),
+.stat-us-max-custom-css {
+    /*  # TODO
+        - [ ] Shade closed entry drawers - filter: grayscale(0.5) brightness(0.6);
     */
     
     border-color: var(--stat-us-border-color) !important;
@@ -108,6 +108,10 @@
 
     .flex-col {
         flex-direction: column;
+    }
+
+    .fw-bolder {
+        font-weight: bolder;
     }
 
     .w-100 {

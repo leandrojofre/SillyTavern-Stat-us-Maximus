@@ -24,16 +24,24 @@ export function un_escapeNewlines(str) {
 
 async function popupDeleteConfirm(del_name = "this") {
     const delete_title = document.createElement("div");
-    delete_title.textContent = t`Are you sure want to delete ${del_name}?`;
+    delete_title.textContent = t`WARNING`;
+    delete_title.classList.add("fw-bolder");
+
+    const delete_text = document.createElement("div");
+    delete_text.textContent = t`Are you sure want to delete ${del_name}?`;
 
     const delete_container = document.createElement("div");
-    delete_container.classList.add("d-flex", "flex-center", "w-100", "mb-5px");
-    delete_container.append(delete_title);
+    delete_container.classList.add("d-flex", "flex-col", "flex-center", "w-100", "mb-5px", "gap-5px");
+    delete_container.append(delete_title, delete_text);
 
-    return await callGenericPopup(delete_container, POPUP_TYPE.CONFIRM, "", {
+    const delete_css_block = document.createElement("div");
+    delete_css_block.classList.add("stat-us-max-custom-css");
+    delete_css_block.append(delete_container);
+
+    return await callGenericPopup(delete_css_block, POPUP_TYPE.CONFIRM, "", {
         okButton: t`Confirm`,
         cancelButton: t`Cancel`,
-        onClose: () => destroyElement(delete_container)
+        onClose: () => destroyElement(delete_css_block)
     });
 };
 
