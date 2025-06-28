@@ -197,18 +197,18 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
             addTracker(statuses[i], newMessID, character);
 
         const promptKey = extensionName.toLowerCase() + "-" + char_depth;
-        let promptValue = "" + character.name;
+        let promptValue = "";
 
         for (const entry of status.entries) {
             if (!entry.enabled) continue;
-            if (!promptValue) promptValue += status.separator;
+            if (promptValue !== "") promptValue += status.separator;
 
             promptValue += entry.key;
             promptValue += entry.separator;
             promptValue += entry.value;
         };
 
-        promptValue = promptValue.replaceAll("{{char}}", character.name);
+        promptValue = promptValue.replaceAll("{{name}}", character.name);
 
         setExtensionPrompt(
             promptKey,
