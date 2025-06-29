@@ -42,11 +42,11 @@ This extension adds a menu per character to have your notes, it is basically a s
 Install the extension using this link: ```https://github.com/leandrojofre/SillyTavern-Stat-us-Maximus.git```
 
 ### Compatibility
-- This extension might not work with kaldigo's Tracker - Is not that it **won't** because it probably does, but the UI might get cluttered (I don't use tracker and this was not tested with its UI).
-- The same as above with cierru's Stepped Thinking.
+- This extension might not work with **kaldigo**'s Tracker - Is not that it **won't** because it probably does, but the UI might get cluttered (I don't use tracker and this was not tested with its UI).
+- The same as above with **cierru**'s Stepped Thinking.
 
 ## Support and Contributions
-- My to-do list is overflowing, feel free to submit a PR with the feature you want.
+- My to-do list is overflowing, feel free to submit a PR with the feature you want! Make sure to read the **rules**.
 
 ## Contribution Rules
 - Always PR to the `staging` branch.
