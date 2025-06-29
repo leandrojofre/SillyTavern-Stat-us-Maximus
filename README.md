@@ -2,6 +2,8 @@
 Have you ever wanted to keep track of your characters' status? Like...whatever you need. Here's the solution!
 This extension adds a menu per character to have your notes, it is basically a shortcut for lorebooks (it even has a similar menu), but it gets saved per chat file and has a little more features than lorebooks.
 
+**This is still in development! Please submit any bug you find and feature you want!**
+
 <img width="100%" src="https://github.com/user-attachments/assets/66bb967f-76b7-4b32-a0ce-bebbe818abe9">
 <img width="100%" src="https://github.com/user-attachments/assets/bca7f694-d641-4278-87e1-d095590404e3">
 <img width="100%" src="https://github.com/user-attachments/assets/7c41659b-3c4c-4844-86fb-cb25284c59d7">
