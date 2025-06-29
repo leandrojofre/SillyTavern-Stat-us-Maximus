@@ -20,7 +20,7 @@ This extension adds a menu per character to have your notes, it is basically a s
 - Every character status is sent to the chat in a dynamic depth that will adjust to be on top of the last character message.
 - The status can be send as system, user or assistant - default system.
 
-## Slash Commands
+### Slash Commands
 - `/stumDeleteChatStatus` It will wipe all status stored in the chat metadata - only applies to open chat.
 - `/stumFillMissingMetadata` It will missing values in the metadata structure - WARN This is a dev command used for bug fixing, only use it if instructed to do so by a developer.
 
