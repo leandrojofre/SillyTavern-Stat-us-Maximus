@@ -84,8 +84,19 @@ function getUser(avatar = user_avatar) {
     };
 }
 
-export function getStatusDepth(chat, character, {search_key_a = "name", search_key_b = search_key_a} = {}) {
-    const lastIndex = chat.findLastIndex((mes) => mes[search_key_a] === character[search_key_b]);
+export function getStatusDepth(chat, character) {
+    const lastIndex = chat.findLastIndex((mess) =>{
+        if (mess.is_user)
+            return mess.force_avatar.replace(/user avatars\//i, "") === character.avatar;
+
+        if (mess?.original_avatar !== undefined)
+            return mess.original_avatar === character.avatar;
+
+        if (mess?.force_avatar !== undefined)
+            return mess.force_avatar.replace(/\/thumbnail\?type=avatar&file=/i, "") === character.avatar;
+
+        return mess.name === character.name;
+    });
 
     if (lastIndex < 0) return lastIndex;
     return chat.length - lastIndex - 1;
