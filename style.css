@@ -98,6 +98,10 @@
         padding-right: 20px;
     }
 
+    span {
+        white-space: pre-line;
+    }
+
     .d-contents {
         display: contents;
     }
