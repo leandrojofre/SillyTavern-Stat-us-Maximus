@@ -22,11 +22,12 @@ This extension adds a menu per character to have your notes, it is basically a s
 
 ### Slash Commands
 - `/stumDeleteChatStatus` It will wipe all status stored in the chat metadata - only applies to open chat.
-- `/stumFillMissingMetadata` It will missing values in the metadata structure - WARN This is a dev command used for bug fixing, only use it if instructed to do so by a developer.
+- `/stumFillMissingMetadata` It will fill missing values in the metadata structure - WARN This is a dev command used for bug fixing, only use it if instructed to do so by a developer.
 
 ### Coming Soon
 - [ ] Slash commands for adding/updating/deleting status entries.
 - [ ] Slash command for switching between entries alt values.
+- [ ] Update ugly chat UI.
 - [ ] Shade closed entry drawers in popup menus.
 - [ ] Setting to disable confirm deletion popups.
 - [ ] Setting for default status role.

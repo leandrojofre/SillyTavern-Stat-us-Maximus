@@ -30,10 +30,10 @@ export const log = (...msg) => {
     console.log("[" + extensionName + "]", ...msg);
 };
 
-SillyTavern.StatusTest = async () => {
-    log(this_chid, characters[this_chid]);
-    log(selected_group);
-}
+// SillyTavern.StatusTest = async () => {
+//     log(this_chid, characters[this_chid]);
+//     log(selected_group);
+// }
 
 // * Extension methods
 
@@ -86,7 +86,7 @@ function getUser(avatar = user_avatar) {
 export function getStatusDepth(chat, character) {
     const lastIndex = chat.findLastIndex((mess) =>{
         if (mess.is_user)
-            return mess.force_avatar.replace(/user avatars\//i, "") === character.avatar;
+            return mess.force_avatar.replace(/(user avatars\/)|(\/thumbnail\?type=persona&file=)/i, "") === character.avatar;
 
         if (mess?.original_avatar !== undefined)
             return mess.original_avatar === character.avatar;
@@ -432,7 +432,7 @@ export function groupListAvatarsClick(e) {
 }
 
 export function addGroupStatusButtons() {
-    const groupList = document.getElementById("currentGroupMembers");
+    const groupList = document.getElementById("rm_group_members");
     const avatars = groupList.querySelectorAll('.avatar');
 
     for (const avatar of avatars) {

@@ -25,6 +25,11 @@ export function startListeners() {
         addGroupStatusButtons();
     });
 
+    eventSource.on(event_types.GROUP_WRAPPER_FINISHED, async (...args) => {
+        log("GROUP_WRAPPER_FINISHED", args);
+        addGroupStatusButtons();
+    });
+
     eventSource.on(event_types.CHAT_CHANGED, async (...args) => {
         log("CHAT_CHANGED", args);
 
@@ -46,7 +51,7 @@ export function startListeners() {
 
     eventSource.on(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
         log("GENERATION_AFTER_COMMANDS", args);
-        fetchStatus({newMessID: chat.length, depthModifier: 1});
+        fetchStatus();
     });
 
     eventSource.on(event_types.MORE_MESSAGES_LOADED, async (...args) => {
