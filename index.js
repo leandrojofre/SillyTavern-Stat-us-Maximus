@@ -204,9 +204,13 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
             if (promptValue !== "") promptValue += status.separator;
 
             promptValue += entry.key;
-            promptValue += entry.separator;
+
+            if (entry.key !== "" && entry.value !== "") promptValue += entry.separator;
+
             promptValue += entry.value;
         };
+
+        if (!promptValue) continue;
 
         promptValue = promptValue.replaceAll("{{name}}", character.name);
 
