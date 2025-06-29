@@ -1,12 +1,12 @@
-import { characters, extension_prompt_roles } from "../../../../../../script.js";
+import { extension_prompt_roles } from "../../../../../../script.js";
 import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { getSortableDelay } from "../../../../../utils.js";
-import { log, destroyElement } from "../../index.js";
+import { log, destroyElement, fetchStatus } from "../../index.js";
 import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay } from "./statusControls.js";
 
-function escapeNewlines(str) {
+export function escapeNewlines(str) {
     return str
         .replace(/\\/g, "\\\\")
         .replace(/\r\n/g, "\\r\\n")
@@ -46,6 +46,7 @@ async function popupDeleteConfirm(del_name = "this") {
 };
 
 function getFullCharAvatar(status) {
+    // TODO getThumbnailUrl - on next release
     if (status.is_user) return "User Avatars/" + status.avatar;
     else return "/thumbnail?type=avatar&file=" + status.avatar;
 }
@@ -402,6 +403,8 @@ export async function popupStatusSingleChar(char) {
         wide: true,
         onClose: async () => destroyElement(container)
     });
+
+    fetchStatus({forceUIUpdate: true});
 }
 
 export async function popupStatusMultiChar(chars) {
@@ -420,4 +423,6 @@ export async function popupStatusMultiChar(chars) {
         wide: true,
         onClose: async () => destroyElement(content)
     });
+
+    fetchStatus({forceUIUpdate: true});
 }

@@ -248,6 +248,7 @@ export function createCharStatus(character, depth) {
         depth: depth,
         last_mes_id: chat.length - depth - 1,
         is_user: character.is_user ?? false,
+        is_collapsed: false,
         entries: []
     };
 

@@ -2,7 +2,7 @@ import {extension_settings, saveMetadataDebounced} from "../../../extensions.js"
 import {saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar} from "../../../../script.js";
 import { getGroupMembers, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
-import { createCharStatus, getCharStatus } from "./source/js/statusControls.js";
+import { createCharStatus, getCharAltValue, getCharStatus, updateCharEntry } from "./source/js/statusControls.js";
 import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
 import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups.js";
@@ -155,8 +155,190 @@ function getAllParticipantsInChat(chat) {
 }
 
 function addTracker(status, mesID, character) {
+    const $chat = document.getElementById("chat");
+    const prevLastMessID = structuredClone(status.last_mes_id);
+    const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
+
     status.last_mes_id = mesID - status.depth;
-    log("---UPDATE TRACKER---", character.name);
+
+    destroyElement(`.mes[mesid="${prevLastMessID}"] .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
+    destroyElement(`.mes[mesid="${status.last_mes_id}"] .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
+
+    if (!entriesText) return;
+
+    /** Create Status form template */
+    const statusRow = document.createElement("tr");
+    statusRow.innerHTML = `
+        <th scope="row">
+            <form>
+                <input type="hidden" name="enabled">
+                <input type="hidden" name="key">
+                <input type="hidden" name="value">
+                <input type="hidden" name="value_uid">
+            </form>
+            <div class="d-flex flex-col flex-center p-10px">
+                <div class="d-flex w-100 flex-center-between">
+                    <div class="d-flex flex-center">
+                        <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state." data-i18n="Toggle entry's active state."></div>
+                        <span class="status-title"></span>
+                    </div>
+                    <select class="status-value-uid m-0"></select>
+                </div>
+                <div class="separator-x d-none"></div>
+                <span class="status-description text-left w-100 d-none"></span>
+            </div>
+        </th>
+    `;
+
+    /** Create table */
+    const statusTableBody = document.createElement("tbody");
+    const statusTableHead = document.createElement("thead");
+    statusTableHead.innerHTML = `
+        <tr>
+            <th scope="col">
+                <div class="d-flex w-100 flex-center-between p-10px">
+                    <span>Status - ${character.name}</span>
+                    <div class="d-flex flex-center">
+                        <div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0" tabindex="0"></div>
+                        <div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0" tabindex="0"></div>
+                    </div>
+                </div>
+            </th>
+        </tr>
+    `;
+
+    const statusTable = document.createElement("table");
+    statusTable.append(statusTableHead, statusTableBody);
+
+    const statusTableContainer = document.createElement("div");
+    statusTableContainer.classList.add("stat-us-max-custom-css", "table-container");
+    statusTableContainer.setAttribute("avatar-target", character.avatar);
+    statusTableContainer.append(statusTable);
+
+    /** Event listeners */
+    const DEBOUNCE_MS = 400;
+    let formDebounceTimer;
+
+    const el = (target, class_name) => target.querySelector(class_name);
+
+    /** @param {HTMLElement} el */
+    const toggleSwitch = (el, callback = (param) => {}) => {
+        // True if the final state is on
+        const state = !el.classList.contains("fa-toggle-on");
+        el.classList.toggle("fa-toggle-off", !state);
+        el.classList.toggle("fa-toggle-on", state);
+        callback(state);
+    };
+
+    /** @param {HTMLElement} el */
+    const toggleVisibility = (el, state) => {
+        el.classList.toggle("d-none", state);
+    }
+
+    statusTable.querySelector(".menu_button.fa-pen").addEventListener("click", async () => {
+        const metadata = chat_metadata.stat_us_maximus;
+
+        // @ts-ignore
+        if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit, open a chat or refresh the current one`);
+
+        return await popupStatusSingleChar(character);
+    });
+
+    statusTable.querySelector(".menu_button.fa-eye").addEventListener("click", async () => {
+        const collapse = !statusTableBody.classList.contains("d-none");
+        status.is_collapsed = collapse;
+
+        toggleVisibility(statusTableBody, collapse);
+        saveMetadataDebounced();
+    });
+
+    const evInput = new Event('input', { bubbles: true, cancelable: true });
+
+    /** Add table rows */
+    for (const entry of status.entries) {
+        if (entry.key + entry.value === "") continue;
+
+        const toggleDescription = (state) => {
+            toggleVisibility(el(newRow, '.status-description'), state);
+            toggleVisibility(el(newRow, '.separator-x'), state);
+        }
+
+        // Vars
+        const newRow = /** @type {HTMLFormElement} */ (statusRow.cloneNode(true));
+        const form = newRow.querySelector("form");
+        form.id = `stat-us-max-table-form-${entry.uid}`;
+        form.dataset.uid = entry.uid;
+        form.removeAttribute('action');
+
+        const killSwitch = el(newRow, ".kill-switch");
+        const selectValueUID = el(newRow, 'select.status-value-uid');
+
+        // Set Values
+        el(form, 'input[name="key"]').value = entry.key;
+        el(form, 'input[name="value"]').value = entry.value;
+        el(form, 'input[name="enabled"]').value = entry.enabled;
+        el(form, 'input[name="value_uid"]').value = entry.value_uid;
+
+        el(newRow, '.status-title').textContent = entry.key;
+        el(newRow, '.status-description').textContent = entry.value;
+
+        toggleDescription(entry.value === "");
+
+        for (const alt_val of entry.alt_values) {
+            const option = document.createElement("option");
+            option.value = String(alt_val.uid);
+            option.text = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
+
+            if (entry.value_uid === alt_val.uid) {
+                option.selected = true;
+            }
+
+           selectValueUID.append(option);
+        }
+
+        selectValueUID.value = String(entry.value_uid);
+
+        if (!entry.enabled) toggleSwitch(killSwitch);
+
+        // Add listeners
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+
+            updateCharEntry(character, entry.uid, formData);
+        });
+
+        form.addEventListener("input", () => {
+            clearTimeout(formDebounceTimer);
+
+            formDebounceTimer = window.setTimeout(() => form.requestSubmit(), DEBOUNCE_MS);
+        });
+
+        killSwitch.addEventListener("click", (e) => {
+            toggleSwitch(killSwitch, (state) => el(form, 'input[name="enabled"]').value = state);
+
+            form.dispatchEvent(evInput);
+        });
+
+        selectValueUID.addEventListener("change", () => {
+            const alt = getCharAltValue(character, entry.uid, selectValueUID.value);
+
+            el(form, 'input[name="value"]').value = alt.value;
+            el(form, 'input[name="value_uid"]').value = alt.uid;
+            el(newRow, '.status-description').textContent = alt.value;
+
+            toggleDescription(alt.value === "");
+            form.dispatchEvent(evInput);
+        });
+
+        statusTableBody.append(newRow);
+    }
+
+    /** Insert table in chat */
+    const messText = $chat.querySelector(`.mes[mesid="${status.last_mes_id}"] .mes_text`);
+    messText.parentNode.insertBefore(statusTableContainer, messText);
+    toggleVisibility(statusTableBody, status.is_collapsed ?? false);
 }
 
 export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1)} = {}) {
@@ -187,15 +369,12 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
         else
             statuses[i].depth = char_depth;
 
-        // If chat is empty or character is not even in the context
+        // If chat/status is empty or character is not even in the context
         if (char_depth < 0) continue;
-        if (!realChat.length || !realChat.some((mes) => mes.name === character.name)) continue;
+        if (forceUIUpdate || (statuses[i].last_mes_id + char_depth) !== newMessID) addTracker(statuses[i], newMessID, character);
+        if (!statuses[i].entries.length) continue;
 
         const status = statuses[i];
-
-        if (forceUIUpdate || (status.last_mes_id + char_depth) !== newMessID)
-            addTracker(statuses[i], newMessID, character);
-
         const promptKey = extensionName.toLowerCase() + "-" + char_depth;
         let promptValue = "";
 
@@ -330,7 +509,6 @@ function initButtons() {
         // @ts-ignore
         if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit, open a chat or refresh the current one`);
 
-        log("group")
         const chars = [];
 
         for (const status of metadata) {
@@ -363,7 +541,6 @@ function initButtons() {
         if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit, open a chat or refresh the current one`);
 
         if (this_chid !== undefined) {
-            log("char")
             const char = characters[this_chid];
 
             // @ts-ignore

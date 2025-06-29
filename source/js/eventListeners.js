@@ -10,7 +10,7 @@ import { createCharStatus, getCharStatus } from "./statusControls.js";
     - Change of heart, maybe use GROUP_UPDATED for:
         - [X] Check if the group member exists in metadata
         - [X] If it doesn't - add it
-    - [ ] Display a table with statuses in the last message of each participant
+    - [X] Display a table with statuses in the last message of each participant
 */
 
 export function startListeners() {
@@ -52,6 +52,11 @@ export function startListeners() {
     eventSource.on(event_types.MORE_MESSAGES_LOADED, async (...args) => {
         log("MORE_MESSAGES_LOADED", args);
         fetchStatus({forceUIUpdate: true});
+    });
+
+    eventSource.on(event_types.MESSAGE_EDITED, async (...args) => {
+        log("MESSAGE_EDITED", args);
+        fetchStatus();
     });
 
     eventSource.on(event_types.MESSAGE_DELETED, async (...args) => {
