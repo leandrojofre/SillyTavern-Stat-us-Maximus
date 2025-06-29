@@ -269,3 +269,58 @@ export function getCharStatus(character) {
     else
         return false;
 }
+
+const statusTemplate = {
+    avatar: "",
+    role: extension_prompt_roles.SYSTEM,
+    separator: "\n",
+    depth: -1,
+    last_mes_id: -1,
+    is_user: false,
+    is_collapsed: false,
+    entries: []
+};
+
+const entryTemplate = {
+    uid: 0,
+    enabled: true,
+    key: "",
+    value: "",
+    separator: "",
+    value_uid: 0,
+    display_position: 0,
+    alt_values: []
+};
+
+const altEntryTemplate = {
+    uid: 0,
+    key: "",
+    value: ""
+};
+
+export function fillMissingMetadata() {
+    try {
+        for (const status of chat_metadata.stat_us_maximus) {
+            for (const key in statusTemplate)
+                if (status[key] === undefined) status[key] = statusTemplate[key];
+
+            for (const entry of status.entries) {
+                for (const entry_key in entryTemplate)
+                    if (entry[entry_key] === undefined) entry[entry_key] = entryTemplate[entry_key];
+
+                for (const alt_entry of entry.alt_values) {
+                    for (const alt_entry_key in altEntryTemplate)
+                        if (alt_entry[alt_entry_key] === undefined) entry[alt_entry_key] = altEntryTemplate[alt_entry_key];
+                }
+            }
+        }
+
+        saveMetadataDebounced();
+
+        return "true";
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to fill Status Metadata`);
+        return "false";
+    }
+}
