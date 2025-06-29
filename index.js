@@ -18,7 +18,6 @@ import { startListeners } from "./source/js/eventListeners.js";
 const extensionName = "SillyTavern-Stat-us-Maximus";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const defaultSettings = {
-    enabled: true,
     debug: false
 };
 
@@ -468,7 +467,6 @@ function settingsBooleanButton(event) {
 
 /**	Logs setting's values. */
 function displaySettings() {
-    console.debug("[" + extensionName + "]", `The extension is ${extensionSettings.enabled ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Debug mode is ${extensionSettings.debug ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", structuredClone(extensionSettings));
 }
@@ -480,7 +478,6 @@ async function loadHTMLSettings() {
     $("#extensions_settings2").append(settingsHtml);
 
     // Event Listeners for the extension HTML
-    $("#stat-us-max-activate-extension").on("input", settingsBooleanButton);
     $("#stat-us-max-activate-debug").on("input", settingsBooleanButton);
     $("#stat-us-max-check-configuration").on("click", displaySettings);
 
@@ -489,7 +486,6 @@ async function loadHTMLSettings() {
 
 /** Init setting values on the menu */
 function setSettings() {
-    $("#stat-us-max-activate-extension").prop("checked", extensionSettings.enabled).trigger("input");
     $("#stat-us-max-activate-debug").prop("checked", extensionSettings.debug).trigger("input");
 }
 
