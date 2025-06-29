@@ -46,7 +46,7 @@ export function registerSlashCommands() {
             },
             helpString: `
             <div>
-                Fills the metadata in case an update adds more values or properties - should not be used normally.
+                Fills the metadata in case an update adds more values or properties - WARN This is a dev command used for bug fixing, only use it if instructed to do so by a developer.
             </div>
             <div>
                 <strong>Example:</strong>
