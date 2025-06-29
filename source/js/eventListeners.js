@@ -25,6 +25,11 @@ export function startListeners() {
         addGroupStatusButtons();
     });
 
+    eventSource.on(event_types.GROUP_WRAPPER_FINISHED, async (...args) => {
+        log("GROUP_WRAPPER_FINISHED", args);
+        addGroupStatusButtons();
+    });
+
     eventSource.on(event_types.CHAT_CHANGED, async (...args) => {
         log("CHAT_CHANGED", args);
 

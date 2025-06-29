@@ -432,7 +432,7 @@ export function groupListAvatarsClick(e) {
 }
 
 export function addGroupStatusButtons() {
-    const groupList = document.getElementById("currentGroupMembers");
+    const groupList = document.getElementById("rm_group_members");
     const avatars = groupList.querySelectorAll('.avatar');
 
     for (const avatar of avatars) {
