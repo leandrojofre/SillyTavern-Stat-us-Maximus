@@ -195,6 +195,7 @@ export function updateCharEntry(character, entry_uid, formData) {
         for (const [key, value] of formData.entries()) {
             let parsedValue = parseValue(value);
 
+            if (key === "alt_key") continue;
             if (key.includes("separator")) parsedValue = un_escapeNewlines(parsedValue);
 
             entry[key] = parsedValue;
@@ -205,7 +206,7 @@ export function updateCharEntry(character, entry_uid, formData) {
             .find(v => v.uid === entry.value_uid)
 
         altValue.value = entry.value;
-        altValue.key = formData.get("alt_key");
+        altValue.key = formData.get("alt_key") ?? altValue.key;
 
         saveMetadataDebounced();
 
