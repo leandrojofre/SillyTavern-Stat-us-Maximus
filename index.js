@@ -372,7 +372,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
         if (!character) continue;
 
-        const char_depth = getStatusDepth(realChat, character) + depthModifier;
+        const char_depth = getStatusDepth(realChat, character);
 
         if (!statuses[i])
             statuses[i] = createCharStatus(character, char_depth);
@@ -407,7 +407,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
             promptKey,
             promptValue,
             extension_prompt_types.IN_CHAT,
-            char_depth,
+            char_depth + depthModifier,
             true,
             status.role
         );

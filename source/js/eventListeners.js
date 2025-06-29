@@ -46,12 +46,12 @@ export function startListeners() {
 
     eventSource.on(event_types.USER_MESSAGE_RENDERED, async (...args) => {
         log("USER_MESSAGE_RENDERED", args);
-        fetchStatus({newMessID: args[0]});
+        fetchStatus({newMessID: args[0], depthModifier: 1});
     });
 
     eventSource.on(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
         log("GENERATION_AFTER_COMMANDS", args);
-        fetchStatus();
+        fetchStatus({depthModifier: 1});
     });
 
     eventSource.on(event_types.MORE_MESSAGES_LOADED, async (...args) => {
