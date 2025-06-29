@@ -27,6 +27,7 @@ This extension adds a menu per character to have your notes, it is basically a s
 ### Coming Soon
 - [ ] Slash commands for adding/updating/deleting status entries.
 - [ ] Slash command for switching between entries alt values.
+- [ ] Update ugly chat UI.
 - [ ] Shade closed entry drawers in popup menus.
 - [ ] Setting to disable confirm deletion popups.
 - [ ] Setting for default status role.
