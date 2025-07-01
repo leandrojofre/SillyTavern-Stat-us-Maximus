@@ -19,7 +19,7 @@ function commandDeleteChatStatus() {
 export function registerSlashCommands() {
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stumDeleteChatStatus",
+            name: "stum-delete-chat-status",
             callback: async (args, value) => {
                 return commandDeleteChatStatus();
             },
@@ -31,7 +31,7 @@ export function registerSlashCommands() {
                 <strong>Example:</strong>
                 <ul>
                     <li>
-                        <pre><code>/stumDeleteChatStatus</code></pre>
+                        <pre><code>/stum-delete-chat-status</code></pre>
                     </li>
                 </ul>
             </div>`,
@@ -40,7 +40,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stumFillMissingMetadata",
+            name: "stum-fill-missing-metadata",
             callback: async (args, value) => {
                 return fillMissingMetadata();
             },
@@ -52,7 +52,7 @@ export function registerSlashCommands() {
                 <strong>Example:</strong>
                 <ul>
                     <li>
-                        <pre><code>/stumFillMissingMetadata</code></pre>
+                        <pre><code>/stum-fill-missing-metadata</code></pre>
                     </li>
                 </ul>
             </div>`,
