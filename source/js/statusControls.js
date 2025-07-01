@@ -31,7 +31,7 @@ export function addCharAltValue(character, entry_uid, alt_value = "") {
     try {
         const entry = getCharEntry(character, entry_uid);
 
-        if (!entry) throw new Error(t`Entry with uid=${entry_uid} could not be found`);
+        if (!entry) throw new Error(`Entry with uid=${entry_uid} could not be found`);
 
         const newAlt = {
             uid: getFreeDataUid(entry.alt_values),
@@ -44,8 +44,8 @@ export function addCharAltValue(character, entry_uid, alt_value = "") {
         return newAlt;
     } catch (error) {
         // @ts-ignore
-        toastr.error(t`Failed to save Status Metadata`);
-        console.error(error);
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        console.error(`${error.name}: ${error.message}`);
     }
 }
 
@@ -53,7 +53,7 @@ export function getCharAltValue(character, entry_uid, alt_uid) {
     try {
         const entry = getCharEntry(character, entry_uid);
 
-        if (!entry) throw new Error(t`Entry with uid=${entry_uid} could not be found`);
+        if (!entry) throw new Error(`Entry with uid=${entry_uid} could not be found`);
 
         const alt = entry
             .alt_values
@@ -62,8 +62,8 @@ export function getCharAltValue(character, entry_uid, alt_uid) {
         return alt;
     } catch (error) {
         // @ts-ignore
-        toastr.error(t`Failed to save Status Metadata`);
-        console.error(error);
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        console.error(`${error.name}: ${error.message}`);
     }
 }
 
@@ -71,8 +71,8 @@ export function removeCharAltValue(character, entry_uid, alt_uid) {
     try {
         const entry = getCharEntry(character, entry_uid);
 
-        if (!entry) throw new Error(t`Entry with uid=${entry_uid} could not be found`);
-        if (entry.alt_values.length <= 1) throw new Error(t`You can't delete all alt descriptions`);
+        if (!entry) throw new Error(`Entry with uid=${entry_uid} could not be found`);
+        if (entry.alt_values.length <= 1) throw new Error("You can't delete all alt descriptions");
 
         entry.alt_values = entry
             .alt_values
@@ -83,8 +83,8 @@ export function removeCharAltValue(character, entry_uid, alt_uid) {
         return entry.alt_values
     } catch (error) {
         // @ts-ignore
-        toastr.error(t`Failed to delete Status Metadata: ` + error.message);
-        console.error(error);
+        toastr.error(t`Failed to delete Status Metadata: ${error.message}`);
+        console.error(`${error.name}: ${error.message}`);
     }
 }
 
@@ -92,7 +92,7 @@ export function addCharEntry(character, entry_key = "", entry_value = "") {
     try {
         const char_status = getCharStatus(character);
 
-        if (!char_status) throw new Error(t`Char status not found for -${character?.name}-`);
+        if (!char_status) throw new Error(`Char status not found for -${character?.name}-`);
 
         const newEntry = {
             uid: getFreeDataUid(char_status.entries),
@@ -118,8 +118,10 @@ export function addCharEntry(character, entry_key = "", entry_value = "") {
         return newEntry;
     } catch (error) {
         // @ts-ignore
-        toastr.error(t`Failed to save Status Metadata`);
-        console.error(error);
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        console.error(`${error.name}: ${error.message}`);
+
+        return false;
     }
 }
 
@@ -131,7 +133,7 @@ export function refreshCharEntryDisplay(character, display_order) {
     try {
         const char_status = getCharStatus(character);
 
-        if (!char_status) throw new Error(t`Char status not found for -${character?.name}-`);
+        if (!char_status) throw new Error(`Char status not found for -${character?.name}-`);
 
         const ordered_data = [];
 
@@ -146,8 +148,8 @@ export function refreshCharEntryDisplay(character, display_order) {
         saveMetadataDebounced();
     } catch (error) {
         // @ts-ignore
-        toastr.error(t`Failed to save Status Metadata`);
-        console.error(error);
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        console.error(`${error.name}: ${error.message}`);
     }
 }
 
@@ -155,7 +157,7 @@ export function getCharEntry(character, entry_uid) {
     try {
         const char_status = getCharStatus(character);
 
-        if (!char_status) throw new Error(t`Char status not found for -${character?.name}-`);
+        if (!char_status) throw new Error(`Char status not found for -${character?.name}-`);
 
         const entry = char_status
             .entries
@@ -164,8 +166,8 @@ export function getCharEntry(character, entry_uid) {
         return entry ?? false;
     } catch (error) {
         // @ts-ignore
-        toastr.error(t`Failed to save Status Metadata`);
-        console.error(error);
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        console.error(`${error.name}: ${error.message}`);
     }
 }
 
@@ -189,8 +191,8 @@ export function updateCharEntry(character, entry_uid, formData) {
     try {
         const entry = getCharEntry(character, entry_uid);
 
-        if (!entry) throw new Error(t`Entry with uid=${entry_uid} could not be found`);
-        if (!formData) throw new Error(t`Data sent is not valid`);
+        if (!entry) throw new Error(`Entry with uid=${entry_uid} could not be found`);
+        if (!formData) throw new Error("Data sent is not valid");
 
         for (const [key, value] of formData.entries()) {
             let parsedValue = parseValue(value);
@@ -213,8 +215,8 @@ export function updateCharEntry(character, entry_uid, formData) {
         return entry ?? false;
     } catch (error) {
         // @ts-ignore
-        toastr.error(t`Failed to save Status Metadata`);
-        console.error(error);
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        console.error(`${error.name}: ${error.message}`);
     }
 }
 
@@ -223,9 +225,9 @@ export function removeCharEntry(character, entry_uid = -1) {
         const char_status = getCharStatus(character);
 
         if (!char_status)
-            throw new Error(t`Char status not found for -${character?.name}-`);
+            throw new Error(`Char status not found for -${character?.name}-`);
         if (typeof entry_uid !== "number" || entry_uid < 0)
-            throw new Error(t`Char status entry with uid=${entry_uid} not found`);
+            throw new Error(`Char status entry with uid=${entry_uid} not found`);
 
         char_status.entries = char_status
             .entries
@@ -235,8 +237,8 @@ export function removeCharEntry(character, entry_uid = -1) {
         saveMetadataDebounced();
     } catch (error) {
         // @ts-ignore
-        toastr.error(t`Failed to delete Status Metadata`);
-        console.error(error);
+        toastr.error(t`Failed to delete Status Metadata: ${error.message}`);
+        console.error(`${error.name}: ${error.message}`);
     }
 }
 
@@ -317,10 +319,12 @@ export function fillMissingMetadata() {
 
         saveMetadataDebounced();
 
-        return "true";
+        return true;
     } catch (error) {
         // @ts-ignore
-        toastr.error(t`Failed to fill Status Metadata`);
-        return "false";
+        toastr.error(t`Failed to fill Status Metadata: ${error.message}`);
+        console.error(`${error.name}: ${error.message}`);
+
+        return false;
     }
 }
