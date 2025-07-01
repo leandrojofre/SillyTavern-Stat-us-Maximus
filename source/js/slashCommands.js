@@ -39,10 +39,13 @@ function commandCreateEntry(args, value) {
 
         const entry = addCharEntry(character);
 
-        if (!entry || entry?.uid < 0) return false;
+        if (!entry) return false;
 
         return entry.uid;
     } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
         return false;
     }
 }
