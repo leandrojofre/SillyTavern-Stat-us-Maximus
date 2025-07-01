@@ -74,6 +74,7 @@ function getCharacter(value, search_key = "avatar") {
 
 function getUser(avatar = user_avatar) {
     if (!power_user.personas[avatar]) return false;
+    if (!avatar) return false;
 
     return {
         name: power_user.personas[avatar],
@@ -101,7 +102,7 @@ export function getStatusDepth(chat, character) {
     return chat.length - lastIndex - 1;
 }
 
-function getParticipant(avatar, is_user) {
+export function getParticipant(avatar, is_user) {
     if (is_user) return getUser(avatar);
     else return getCharacter(avatar);
 }
