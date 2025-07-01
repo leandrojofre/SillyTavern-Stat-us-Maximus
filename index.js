@@ -426,7 +426,7 @@ export function groupListAvatarsClick(e) {
     const char = getCharacter(char_avatar);
 
     // @ts-ignore
-    if (!char) return toastr.warning(t`The character could be found`);
+    if (!char) return toastr.warning(t`The character could not be found`);
 
     popupStatusSingleChar(char);
 }
@@ -525,7 +525,7 @@ function initButtons() {
         }
 
         // @ts-ignore
-        if (!chars.length) return toastr.warning(t`No character could be found in the metadata`);
+        if (!chars.length) return toastr.warning(t`The character could not be found in the metadata`);
 
         return await popupStatusMultiChar(chars);
     });
@@ -551,7 +551,7 @@ function initButtons() {
             const char = characters[this_chid];
 
             // @ts-ignore
-            if (!char) return toastr.warning(t`The character could be found`);
+            if (!char) return toastr.warning(t`The character could not be found`);
 
             return await popupStatusSingleChar(char);
         }
