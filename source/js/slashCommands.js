@@ -12,7 +12,7 @@ import { addCharEntry, fillMissingMetadata, getCharEntry } from "./statusControl
 
 const customEnumProviders = {
     /** All possible char entities within the chat status metadata.
-        @returns {() => SlashCommandEnumValue[]}
+        @returns {SlashCommandEnumValue[]}
     */
     participants: () => {
         const metadata = chat_metadata.stat_us_maximus ?? [];
@@ -28,53 +28,49 @@ const customEnumProviders = {
     @param {object} args
     @param {string | SlashCommandClosure | (string | SlashCommandClosure)[]} value
  */
-function commandCreateEntry(args, value) {
+async function commandCreateEntry(args, value) {
     try {
-        const metadata = chat_metadata.stat_us_maximus ?? [];
         const avatar = args.char;
-        const status = metadata.find(status => status.avatar === avatar) ?? {};
-        const character = getParticipant(status?.avatar, status?.is_user);
+        const character = getParticipantFromAvatar(avatar);
 
         if (!character) throw new Error(`The character -${args?.char}- could not be found in the metadata`);
 
         const entry = addCharEntry(character);
 
-        if (!entry) return false;
+        if (!entry) return "false";
 
-        return entry.uid;
+        return String(entry.uid);
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
 
-        return false;
+        return "false";
     }
 }
 
-function commandDeleteChatStatus() {
+async function commandDeleteChatStatus() {
     try {
         delete SillyTavern.getContext().chatMetadata.stat_us_maximus;
         saveMetadataDebounced();
     } catch (error) {
-        return false;
+        return "false";
     }
 
-    return true;
+    return "true";
 }
 
 export function registerSlashCommands() {
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
             name: "stum-create-entry",
-            callback: async (args, value) => {
-                return String(commandCreateEntry(args, value));
-            },
+            callback: commandCreateEntry,
+            returns: 'Status entry uid',
             namedArgumentList: [
                 SlashCommandNamedArgument.fromProps({
                     name: 'char',
                     description: 'Avatar of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    // @ts-ignore
                     enumProvider: customEnumProviders.participants,
                 })
             ],
@@ -96,9 +92,7 @@ export function registerSlashCommands() {
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
             name: "stum-delete-chat-status",
-            callback: async (args, value) => {
-                return String(commandDeleteChatStatus());
-            },
+            callback: commandDeleteChatStatus,
             helpString: `
             <div>
                 Wipes all character status in the chat, has no confirm screen and can not be undone.
@@ -118,7 +112,7 @@ export function registerSlashCommands() {
         SlashCommand.fromProps({
             name: "stum-fill-missing-metadata",
             callback: async (args, value) => {
-                return String(fillMissingMetadata());
+                return String(await fillMissingMetadata());
             },
             helpString: `
             <div>
