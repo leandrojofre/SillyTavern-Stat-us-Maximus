@@ -283,7 +283,7 @@ const statusTemplate = {
     entries: []
 };
 
-const entryTemplate = {
+export const entryTemplate = {
     uid: 0,
     enabled: true,
     key: "",
@@ -300,7 +300,7 @@ const altEntryTemplate = {
     value: ""
 };
 
-export function fillMissingMetadata() {
+export async function fillMissingMetadata() {
     try {
         for (const status of chat_metadata.stat_us_maximus) {
             for (const key in statusTemplate)
