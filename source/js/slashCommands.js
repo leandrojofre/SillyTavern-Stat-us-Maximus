@@ -115,9 +115,9 @@ async function commandCreateEntry(args, value) {
     }
 }
 
-async function commandGetEntryUID(args, value) {
+async function commandGetEntryUID(args, value = "") {
     try {
-        const {char = "", field = "key", value = "", fuzzy = false} = args;
+        const {char = "", field = "key", fuzzy = false} = args;
 
         const metadata = chat_metadata.stat_us_maximus ?? [];
         const status = metadata.find(status => status.avatar === char);
@@ -243,12 +243,13 @@ export function registerSlashCommands() {
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
                     enumProvider: commonEnumProviders.boolean(),
-                }),
-                SlashCommandNamedArgument.fromProps({
-                    name: 'value',
+                })
+            ],
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
                     description: 'Value to match against field - case sensitive',
-                    typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
+                    typeList: [ARGUMENT_TYPE.STRING]
                 })
             ],
             helpString: `
@@ -299,7 +300,7 @@ export function registerSlashCommands() {
                     description: 'New value of the field - default to empty text',
                     isRequired: true,
                     typeList: [ARGUMENT_TYPE.STRING]
-                }),
+                })
             ],
             helpString: `
             <div>
