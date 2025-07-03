@@ -23,8 +23,7 @@ function buildUIDsComment(entry) {
     return comment;
 }
 
-const entryKeysDescriptions = {
-    uid: "Unique identifier of the entry (starts at 0)",
+const acceptedEntryFields = {
     enabled: "Determines if the entry gets added to the prompt",
     key: "Title of the entry",
     value: "Value of the entry",
@@ -61,8 +60,8 @@ const customEnumProviders = {
     */
     entryFields: () => Object
         .keys(entryTemplate)
-        .filter(key => key !== "alt_values")
-        .map(key => new SlashCommandEnumValue(key, entryKeysDescriptions[key] ?? null, enumTypes.enum, enumIcons.enum)),
+        .filter(key => Object.keys(acceptedEntryFields).includes(key))
+        .map(key => new SlashCommandEnumValue(key, acceptedEntryFields[key] ?? null, enumTypes.enum, enumIcons.enum)),
 
     /** All entry UIDs within a character's status.
         @returns {SlashCommandEnumValue[]}
@@ -180,9 +179,9 @@ function commandGetEntryField(args, value) {
     try {
         const {char = "", uid = -1, field = "key"} = args;
         const character = getParticipantFromAvatar(char);
-        const acceptedFields = Object.keys(entryTemplate).filter(key => key !== "alt_values");
+        const acceptedFields = Object.keys(acceptedEntryFields);
 
-        if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid field "${field}"`);
+        if (!acceptedFields.includes(field)) throw new Error(`Invalid field "${field}"`);
         if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
         if (isNaN(Number(uid)) || Number(uid) < 0) throw new Error(`Invalid UID "${uid}"`);
 
