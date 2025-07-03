@@ -8,8 +8,16 @@ import { SlashCommandClosure } from "../../../../../slash-commands/SlashCommandC
 import { commonEnumProviders, enumIcons } from "../../../../../slash-commands/SlashCommandCommonEnumsProvider.js";
 import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/SlashCommandEnumValue.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
-import { getParticipant, log } from "../../index.js";
-import { addCharEntry, entryTemplate, fillMissingMetadata, getCharEntry } from "./statusControls.js";
+
+const entryKeysDescriptions = {
+    uid: "Unique identifier of the entry (starts at 0)",
+    enabled: "Determines if the entry gets added to the prompt",
+    key: "Title of the entry",
+    value: "Value of the entry",
+    separator: "Separator between the key and value",
+    value_uid: "Unique identifier of the selected alt value (select menu of the entry - starts at 0)",
+    display_position: "Order at which the entry gets inserted (starts at 0)"
+}
 
 const customEnumProviders = {
     /** All possible char entities within the chat status metadata.
@@ -29,7 +37,7 @@ const customEnumProviders = {
     entryFields: () => Object
         .keys(entryTemplate)
         .filter(key => key !== "alt_values")
-        .map(key => new SlashCommandEnumValue(key, null, enumTypes.enum, enumIcons.enum))
+        .map(key => new SlashCommandEnumValue(key, entryKeysDescriptions[key] ?? null, enumTypes.enum, enumIcons.enum)),
 }
 
 function getParticipantFromAvatar(avatar = "") {
