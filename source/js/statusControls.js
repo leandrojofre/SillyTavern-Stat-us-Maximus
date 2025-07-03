@@ -182,11 +182,11 @@ function parseValue(val) {
 }
 
 /**
-    @param {String} character
+    @param {object} character
     @param {Number|String} entry_uid
     @param {FormData} formData
-    @returns {Object|Boolean}
- */
+    @returns {object|Boolean}
+*/
 export function updateCharEntry(character, entry_uid, formData) {
     try {
         const entry = getCharEntry(character, entry_uid);
@@ -212,11 +212,13 @@ export function updateCharEntry(character, entry_uid, formData) {
 
         saveMetadataDebounced();
 
-        return entry ?? false;
+        return entry;
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         console.error(`${error.name}: ${error.message}`);
+
+        return false;
     }
 }
 
