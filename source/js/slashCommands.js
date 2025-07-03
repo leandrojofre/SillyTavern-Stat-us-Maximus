@@ -58,7 +58,7 @@ async function commandCreateEntry(args, value) {
         const avatar = args.char;
         const character = getParticipantFromAvatar(avatar);
 
-        if (!character) throw new Error(`The character -${args?.char}- could not be found in the metadata`);
+        if (!character) throw new Error(`The character "${args?.char}" could not be found in the metadata`);
 
         const entry = addCharEntry(character);
 
@@ -80,10 +80,7 @@ async function commandGetEntryUID(args, value) {
         const metadata = chat_metadata.stat_us_maximus ?? [];
         const status = metadata.find(status => status.avatar === char);
 
-        log(char, field, value, fuzzy);
-        log(metadata, status);
-
-        if (!status) return "";
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
 
         let uid = "";
 
@@ -175,7 +172,7 @@ export function registerSlashCommands() {
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'fuzzy',
-                    description: 'Do an exact match or a fuzzy match - exact by default',
+                    description: 'Do an exact match or a fuzzy match - exact (fuzzy:false) by default',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
                     enumProvider: commonEnumProviders.boolean(),
