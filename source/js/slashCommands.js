@@ -7,7 +7,21 @@ import { ARGUMENT_TYPE, SlashCommandArgument, SlashCommandNamedArgument } from "
 import { SlashCommandClosure } from "../../../../../slash-commands/SlashCommandClosure.js";
 import { commonEnumProviders, enumIcons } from "../../../../../slash-commands/SlashCommandCommonEnumsProvider.js";
 import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/SlashCommandEnumValue.js";
+import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
+import { fetchStatus, getParticipant, log } from "../../index.js";
+import { addCharEntry, entryTemplate, fillMissingMetadata, getCharEntry, updateCharEntry } from "./statusControls.js";
+
+function buildUIDsComment(entry) {
+    let comment = "";
+
+    if (entry?.key !== undefined) comment += entry.key;
+    if (comment.length > 0 && entry?.value) comment += " - ";
+    if (entry?.value) comment += entry.value.slice(0, 20).trim();
+    if (entry?.value?.length > 20) comment += "...";
+
+    return comment;
+}
 
 const entryKeysDescriptions = {
     uid: "Unique identifier of the entry (starts at 0)",
@@ -23,7 +37,18 @@ const customEnumProviders = {
     /** All possible char entities within the chat status metadata.
         @returns {SlashCommandEnumValue[]}
     */
-    participants: () => {
+    participantsName: () => {
+        const metadata = chat_metadata.stat_us_maximus ?? [];
+        const chars = metadata.map(status => getParticipant(status.avatar, status.is_user));
+        const chars_filtered = chars.filter(char => !!char);
+
+        return chars_filtered.map(char => new SlashCommandEnumValue(char.name, char.avatar, enumTypes.name, enumIcons.character));
+    },
+
+    /** All possible char entities within the chat status metadata.
+        @returns {SlashCommandEnumValue[]}
+    */
+    participantsAvatar: () => {
         const metadata = chat_metadata.stat_us_maximus ?? [];
         const chars = metadata.map(status => getParticipant(status.avatar, status.is_user));
         const chars_filtered = chars.filter(char => !!char);
@@ -38,6 +63,23 @@ const customEnumProviders = {
         .keys(entryTemplate)
         .filter(key => key !== "alt_values")
         .map(key => new SlashCommandEnumValue(key, entryKeysDescriptions[key] ?? null, enumTypes.enum, enumIcons.enum)),
+
+    /** All entry UIDs within a character's status.
+        @returns {SlashCommandEnumValue[]}
+    */
+    entryUIDs:  (/** @type {SlashCommandExecutor} */ executor) => {
+        const avatar = executor.namedArgumentList.find(it => it.name == 'char')?.value ?? "";
+
+        if (!avatar) return [];
+
+        const metadata = chat_metadata.stat_us_maximus ?? [];
+        const status = metadata.find(status => status.avatar === avatar) ?? {};
+        const entries = status?.entries ?? [];
+
+        if (entries.length < 1) return [];
+
+        return entries.map(entry => new SlashCommandEnumValue(String(entry.uid), buildUIDsComment(entry), enumTypes.number, enumIcons.key));
+    },
 }
 
 function getParticipantFromAvatar(avatar = "") {
@@ -109,6 +151,31 @@ async function commandGetEntryUID(args, value) {
     }
 }
 
+function commandSetEntryField(args, value) {
+    try {
+        const {char = "", uid = -1, field = "key"} = args;
+        const character = getParticipantFromAvatar(char);
+        const acceptedFields = Object.keys(entryTemplate).filter(key => key !== "alt_values");
+
+        if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid field "${field}"`);
+        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(Number(uid)) || Number(uid) < 0) throw new Error(`Invalid UID "${uid}"`);
+
+        const formData = new FormData();
+        formData.set(field, value);
+
+        updateCharEntry(character, Number(uid), formData);
+        fetchStatus({forceUIUpdate: true});
+
+        return "";
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
+        return "";
+    }
+}
+
 async function commandDeleteChatStatus() {
     try {
         delete SillyTavern.getContext().chatMetadata.stat_us_maximus;
@@ -132,7 +199,7 @@ export function registerSlashCommands() {
                     description: 'Avatar of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participants,
+                    enumProvider: customEnumProviders.participantsAvatar,
                 })
             ],
             helpString: `
@@ -161,7 +228,7 @@ export function registerSlashCommands() {
                     description: 'Avatar of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participants,
+                    enumProvider: customEnumProviders.participantsAvatar,
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
@@ -193,6 +260,56 @@ export function registerSlashCommands() {
                 <ul>
                     <li>
                         <pre><code>/stum-get-entry-uid char="Tom.png" field="key" value="Clothes"</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-set-entry-field",
+            callback: commandSetEntryField,
+            returns: 'Status entry uid',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Avatar of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.participantsAvatar,
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'uid',
+                    description: 'UID of the status entry',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.entryUIDs,
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'field',
+                    description: 'Field to update - default value',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: customEnumProviders.entryFields,
+                })
+            ],
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'New value of the field - default to empty text',
+                    isRequired: true,
+                    typeList: [ARGUMENT_TYPE.STRING]
+                }),
+            ],
+            helpString: `
+            <div>
+                Get an entry uid by pairing a Character status field against a value, returning the uid of the first match. If no match is found, an empty string is returned.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-set-entry-field char="Tom.png" field="value" uid=7 "- A red hoodie"</code></pre>
                     </li>
                 </ul>
             </div>`,
