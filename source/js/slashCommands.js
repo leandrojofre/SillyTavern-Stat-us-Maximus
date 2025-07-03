@@ -176,6 +176,29 @@ function commandSetEntryField(args, value) {
     }
 }
 
+function commandGetEntryField(args, value) {
+    try {
+        const {char = "", uid = -1, field = "key"} = args;
+        const character = getParticipantFromAvatar(char);
+        const acceptedFields = Object.keys(entryTemplate).filter(key => key !== "alt_values");
+
+        if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid field "${field}"`);
+        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(Number(uid)) || Number(uid) < 0) throw new Error(`Invalid UID "${uid}"`);
+
+        const entry = getCharEntry(character, Number(uid));
+
+        if (!entry) return "";
+
+        return String(entry[field] ?? "");
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
+        return "";
+    }
+}
+
 async function commandDeleteChatStatus() {
     try {
         delete SillyTavern.getContext().chatMetadata.stat_us_maximus;
@@ -271,7 +294,7 @@ export function registerSlashCommands() {
         SlashCommand.fromProps({
             name: "stum-set-entry-field",
             callback: commandSetEntryField,
-            returns: 'Status entry uid',
+            returns: 'Empty string',
             namedArgumentList: [
                 SlashCommandNamedArgument.fromProps({
                     name: 'char',
@@ -304,13 +327,56 @@ export function registerSlashCommands() {
             ],
             helpString: `
             <div>
-                Get an entry uid by pairing a Character status field against a value, returning the uid of the first match. If no match is found, an empty string is returned.
+                Set the value of the Status Entry field of a Character.
             </div>
             <div>
                 <strong>Example</strong>
                 <ul>
                     <li>
                         <pre><code>/stum-set-entry-field char="Tom.png" field="value" uid=7 "- A red hoodie"</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-get-entry-field",
+            callback: commandGetEntryField,
+            returns: 'Entry field value',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Avatar of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.participantsAvatar,
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'uid',
+                    description: 'UID of the status entry',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.entryUIDs,
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'field',
+                    description: 'Field to update - default value',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: customEnumProviders.entryFields,
+                })
+            ],
+            helpString: `
+            <div>
+                Get the value of the Status Entry field of a Character. If no match is found, an empty string is returned.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-get-entry-field char="Tom.png" field="separator" uid=7</code></pre>
                     </li>
                 </ul>
             </div>`,
