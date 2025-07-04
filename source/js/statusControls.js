@@ -59,11 +59,15 @@ export function getCharAltValue(character, entry_uid, alt_uid) {
             .alt_values
             .find(v => v.uid === Number(alt_uid));
 
+        if (!alt) throw new Error(`Alt entry with uid=${alt_uid} not found`);
+
         return alt;
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         console.error(error.message);
+
+        return false;
     }
 }
 

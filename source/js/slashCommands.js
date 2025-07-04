@@ -10,7 +10,7 @@ import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { fetchStatus, getParticipant, log } from "../../index.js";
-import { addCharEntry, entryTemplate, fillMissingMetadata, getCharEntry, getCharStatus, updateCharEntry } from "./statusControls.js";
+import { addCharEntry, entryTemplate, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, updateCharEntry } from "./statusControls.js";
 
 function buildUIDsComment(entry) {
     let comment = "";
@@ -80,14 +80,28 @@ const customEnumProviders = {
 
         return entries.map(entry => new SlashCommandEnumValue(String(entry.uid), buildUIDsComment(entry), enumTypes.number, enumIcons.key));
     },
-}
 
-function getParticipantFromAvatar(avatar = "") {
-    const metadata = chat_metadata.stat_us_maximus ?? [];
-    const status = metadata.find(status => status.avatar === avatar) ?? {};
-    const character = getParticipant(status?.avatar, status?.is_user);
+    /** All entry UIDs within a character's status.
+        @returns {SlashCommandEnumValue[]}
+    */
+    altEntryUIDs:  (/** @type {SlashCommandExecutor} */ executor) => {
+        const name = executor.namedArgumentList.find(it => it.name == 'char')?.value ?? "";
+        const entry_uid = executor.namedArgumentList.find(it => it.name == 'uid')?.value ?? "";
 
-    return character;
+        if (name instanceof SlashCommandClosure) return [];
+        if (entry_uid instanceof SlashCommandClosure) return [];
+        if (!name || !entry_uid) return [];
+
+        const character = getParticipantFromName(String(name));
+
+        if (!character) return [];
+
+        const entry = getCharEntry(character, Number(entry_uid));
+
+        if (!entry || !entry?.alt_values?.length) return [];
+
+        return entry.alt_values.map(alt => new SlashCommandEnumValue(String(alt.uid), buildUIDsComment(alt), enumTypes.number, enumIcons.key));
+    },
 }
 
 /**
@@ -193,6 +207,36 @@ function commandGetEntryField(args, value) {
         if (!entry) return "";
 
         return String(entry[field] ?? "");
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
+        return "";
+    }
+}
+
+function commandSwitchEntryValue(args, value) {
+    try {
+        const {char = "", uid = -1, altuid = -1} = args;
+
+        const character = getParticipantFromName(char);
+
+        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(Number(uid)) || Number(uid) < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (isNaN(Number(altuid)) || Number(altuid) < 0) throw new Error(`Invalid alt UID "${altuid}"`);
+
+        const alt = getCharAltValue(character, Number(uid), Number(altuid));
+
+        if (!alt) return "";
+
+        const formData = new FormData();
+        formData.set("value", alt.value);
+        formData.set("value_uid", alt.uid);
+
+        updateCharEntry(character, Number(uid), formData);
+        fetchStatus({forceUIUpdate: true});
+
+        return "";
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
@@ -379,6 +423,49 @@ export function registerSlashCommands() {
                 <ul>
                     <li>
                         <pre><code>/stum-get-entry-field char="Tom" field="separator" uid=7</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-switch-entry-value",
+            callback: commandSwitchEntryValue,
+            returns: 'Empty String',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.participantsName
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'uid',
+                    description: 'UID of the status entry',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.entryUIDs
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'altuid',
+                    description: 'UID of the status entry alternative value',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.altEntryUIDs
+                })
+            ],
+            helpString: `
+            <div>
+                Switches the entry value by one of the entry alt values.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-switch-entry-value char="Tom" uid=7 altuid=2</code></pre>
                     </li>
                 </ul>
             </div>`,
