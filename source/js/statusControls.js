@@ -339,16 +339,22 @@ const altEntryTemplate = {
     value: ""
 };
 
+/** I hate this code */
 export async function fillMissingMetadata() {
     try {
+        // For each status...
         for (const status of chat_metadata.stat_us_maximus) {
+            // Backfill missing properties
             for (const key in statusTemplate)
                 if (status[key] === undefined) status[key] = statusTemplate[key];
 
+            // Fill each status entry...
             for (const entry of status.entries) {
+                // Missing properties
                 for (const entry_key in entryTemplate)
                     if (entry[entry_key] === undefined) entry[entry_key] = entryTemplate[entry_key];
 
+                // Missing properties in the alt values
                 for (const alt_entry of entry.alt_values) {
                     for (const alt_entry_key in altEntryTemplate)
                         if (alt_entry[alt_entry_key] === undefined) entry[alt_entry_key] = altEntryTemplate[alt_entry_key];
