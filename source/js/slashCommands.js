@@ -12,6 +12,9 @@ import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandPa
 import { fetchStatus, getParticipant, log } from "../../index.js";
 import { addCharEntry, entryTemplate, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, updateCharEntry } from "./statusControls.js";
 
+/** Takes an object with a key and value and generates a comment
+    @param {object} entry
+*/
 function buildUIDsComment(entry) {
     let comment = "";
 
@@ -23,6 +26,9 @@ function buildUIDsComment(entry) {
     return comment;
 }
 
+/** Gets an active chat participant by its name
+    @param {String} name - Character name
+*/
 function getParticipantFromName(name = "") {
     const metadata = chat_metadata.stat_us_maximus ?? [];
     const chars = metadata.map(status => getParticipant(status.avatar, status.is_user));
@@ -31,6 +37,7 @@ function getParticipantFromName(name = "") {
     return character;
 }
 
+/** Accepted key values and their descriptions */
 const acceptedEntryFields = {
     enabled: "Determines if the entry gets added to the prompt",
     key: "Title of the entry",
@@ -40,6 +47,7 @@ const acceptedEntryFields = {
     display_position: "Order at which the entry gets inserted (starts at 0)"
 }
 
+/** Enum providers for slash commands autocomplete */
 const customEnumProviders = {
     /** All possible char entities within the chat status metadata.
         @returns {SlashCommandEnumValue[]}
@@ -104,11 +112,11 @@ const customEnumProviders = {
     },
 }
 
-/**
-
+/** Creates a new entry for a character
     @param {object} args
-    @param {string | SlashCommandClosure | (string | SlashCommandClosure)[]} value
- */
+    @param {String} args.char - Character name
+    @returns {Promise<String>}
+*/
 async function commandCreateEntry(args, value) {
     try {
         const name = args.char;
@@ -129,9 +137,17 @@ async function commandCreateEntry(args, value) {
     }
 }
 
+/** Gets an entry uid by searching for a value trough its fields
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.field - Field to search
+    @param {String} args.fuzzy - Wether to do a fuzzy match or exact math
+    @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - Value to match against field
+    @returns {Promise<String>}
+*/
 async function commandGetEntryUID(args, value = "") {
     try {
-        const {char = "", field = "key", fuzzy = false} = args;
+        const {char = "", field = "key", fuzzy = "false"} = args;
 
         const character = getParticipantFromName(char);
         const status = getCharStatus(character);
@@ -140,13 +156,13 @@ async function commandGetEntryUID(args, value = "") {
 
         let uid = "";
 
-        if (String(fuzzy) === "true") {
+        if (fuzzy === "true") {
             const fuse = new Fuse(status.entries, {
                 keys: [{ name: field, weight: 1 }],
                 includeScore: true,
                 threshold: 0.3,
             });
-            const results = fuse.search(value);
+            const results = fuse.search(String(value));
 
             if (!results || results.length === 0) return "";
 
@@ -165,44 +181,59 @@ async function commandGetEntryUID(args, value = "") {
     }
 }
 
+/** Updates the value of an entry field
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.uid - Entry UID
+    @param {String} args.field - Field to search
+    @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - New value of the selected field
+    @returns {String}
+*/
 function commandSetEntryField(args, value) {
     try {
-        const {char = "", uid = -1, field = "key"} = args;
+        const {char = "", uid = "-1", field = "key"} = args;
 
+        const parsed_uid = Number(uid);
         const character = getParticipantFromName(char);
         const acceptedFields = Object.keys(entryTemplate).filter(key => key !== "alt_values");
 
         if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid field "${field}"`);
         if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
-        if (isNaN(Number(uid)) || Number(uid) < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
 
         const formData = new FormData();
-        formData.set(field, value);
+        formData.set(field, String(value));
 
-        updateCharEntry(character, Number(uid), formData);
+        updateCharEntry(character, parsed_uid, formData);
         fetchStatus({forceUIUpdate: true});
-
-        return "";
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
-
+    } finally {
         return "";
     }
 }
 
+/** Gets the value of an entry field
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.uid - Entry UID
+    @param {String} args.field - Field to search
+    @returns {String}
+*/
 function commandGetEntryField(args, value) {
     try {
-        const {char = "", uid = -1, field = "key"} = args;
+        const {char = "", uid = "-1", field = "key"} = args;
 
+        const parsed_uid = Number(uid);
         const character = getParticipantFromName(char);
         const acceptedFields = Object.keys(acceptedEntryFields);
 
         if (!acceptedFields.includes(field)) throw new Error(`Invalid field "${field}"`);
         if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
-        if (isNaN(Number(uid)) || Number(uid) < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
 
-        const entry = getCharEntry(character, Number(uid));
+        const entry = getCharEntry(character, parsed_uid);
 
         if (!entry) return "";
 
@@ -215,17 +246,26 @@ function commandGetEntryField(args, value) {
     }
 }
 
+/** Switches the value of an entry by one of its alt values
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.uid - Entry UID
+    @param {String} args.altuid - UID of the entry alt value
+    @returns {String}
+*/
 function commandSwitchEntryValue(args, value) {
     try {
-        const {char = "", uid = -1, altuid = -1} = args;
+        const {char = "", uid = "-1", altuid = "-1"} = args;
 
+        const parsed_uid = Number(uid);
+        const parsed_altuid = Number(altuid);
         const character = getParticipantFromName(char);
 
         if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
-        if (isNaN(Number(uid)) || Number(uid) < 0) throw new Error(`Invalid UID "${uid}"`);
-        if (isNaN(Number(altuid)) || Number(altuid) < 0) throw new Error(`Invalid alt UID "${altuid}"`);
+        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (isNaN(parsed_altuid) || parsed_altuid < 0) throw new Error(`Invalid alt UID "${altuid}"`);
 
-        const alt = getCharAltValue(character, Number(uid), Number(altuid));
+        const alt = getCharAltValue(character, parsed_uid, parsed_altuid);
 
         if (!alt) return "";
 
@@ -233,7 +273,7 @@ function commandSwitchEntryValue(args, value) {
         formData.set("value", alt.value);
         formData.set("value_uid", alt.uid);
 
-        updateCharEntry(character, Number(uid), formData);
+        updateCharEntry(character, parsed_uid, formData);
         fetchStatus({forceUIUpdate: true});
 
         return "";
@@ -245,6 +285,9 @@ function commandSwitchEntryValue(args, value) {
     }
 }
 
+/** Wipes all status metadata in the active chat file
+    @returns {Promise<String>}
+*/
 async function commandDeleteChatStatus() {
     try {
         delete SillyTavern.getContext().chatMetadata.stat_us_maximus;
@@ -256,6 +299,7 @@ async function commandDeleteChatStatus() {
     return "true";
 }
 
+/** Register all slash commands into SillyTavern */
 export function registerSlashCommands() {
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
@@ -475,7 +519,7 @@ export function registerSlashCommands() {
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
             name: "stum-delete-chat-status",
-            callback: commandDeleteChatStatus,
+            callback: async (args, value) => await commandDeleteChatStatus(),
             helpString: `
             <div>
                 Wipes all character status in the chat, has no confirm screen and can not be undone.
@@ -494,9 +538,7 @@ export function registerSlashCommands() {
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
             name: "stum-fill-missing-metadata",
-            callback: async (args, value) => {
-                return String(await fillMissingMetadata());
-            },
+            callback: async (args, value) => String(await fillMissingMetadata()),
             helpString: `
             <div>
                 Fills the metadata in case an update adds more values or properties - WARN This is a dev command used for bug fixing, only use it if instructed to do so by a developer.
