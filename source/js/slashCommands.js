@@ -115,7 +115,7 @@ const customEnumProviders = {
 /** Creates a new entry for a character
     @param {object} args
     @param {String} args.char - Character name
-    @returns {Promise<String>}
+    @returns {Promise<String>} UID of the new entry or empty string
 */
 async function commandCreateEntry(args, value) {
     try {
@@ -126,14 +126,14 @@ async function commandCreateEntry(args, value) {
 
         const entry = addCharEntry(character);
 
-        if (!entry) return "false";
+        if (!entry) return "";
 
         return String(entry.uid);
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
 
-        return "false";
+        return "";
     }
 }
 
@@ -143,7 +143,7 @@ async function commandCreateEntry(args, value) {
     @param {String} args.field - Field to search
     @param {String} args.fuzzy - Wether to do a fuzzy match or exact math
     @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - Value to match against field
-    @returns {Promise<String>}
+    @returns {Promise<String>} UID of the entry or empty string
 */
 async function commandGetEntryUID(args, value = "") {
     try {
@@ -187,9 +187,9 @@ async function commandGetEntryUID(args, value = "") {
     @param {String} args.uid - Entry UID
     @param {String} args.field - Field to search
     @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - New value of the selected field
-    @returns {String}
+    @returns {String} Empty string
 */
-function commandSetEntryField(args, value) {
+function commandSetEntryField(args, value = "") {
     try {
         const {char = "", uid = "-1", field = "key"} = args;
 
@@ -219,7 +219,7 @@ function commandSetEntryField(args, value) {
     @param {String} args.char - Character name
     @param {String} args.uid - Entry UID
     @param {String} args.field - Field to search
-    @returns {String}
+    @returns {String} Value of the field or empty string
 */
 function commandGetEntryField(args, value) {
     try {
@@ -251,7 +251,7 @@ function commandGetEntryField(args, value) {
     @param {String} args.char - Character name
     @param {String} args.uid - Entry UID
     @param {String} args.altuid - UID of the entry alt value
-    @returns {String}
+    @returns {String} Empty string
 */
 function commandSwitchEntryValue(args, value) {
     try {
@@ -286,7 +286,7 @@ function commandSwitchEntryValue(args, value) {
 }
 
 /** Wipes all status metadata in the active chat file
-    @returns {Promise<String>}
+    @returns {Promise<String>} True or False
 */
 async function commandDeleteChatStatus() {
     try {
@@ -317,7 +317,7 @@ export function registerSlashCommands() {
             ],
             helpString: `
             <div>
-                Creates an entry in the status of a character and returns its UID. If the character is not found in the metadata, it returns false.
+                Creates an entry in the status of a character and returns its UID. If the character is not found in the metadata, it returns an empty string.
             </div>
             <div>
                 <strong>Example</strong>
@@ -503,7 +503,7 @@ export function registerSlashCommands() {
             ],
             helpString: `
             <div>
-                Switches the entry value by one of the entry alt values.
+                Switches the Status Entry value by one of the entry alt values.
             </div>
             <div>
                 <strong>Example</strong>
