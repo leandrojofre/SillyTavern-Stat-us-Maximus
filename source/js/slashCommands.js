@@ -10,7 +10,7 @@ import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { fetchStatus, getParticipant, log } from "../../index.js";
-import { addCharEntry, entryTemplate, fillMissingMetadata, getCharEntry, updateCharEntry } from "./statusControls.js";
+import { addCharEntry, entryTemplate, fillMissingMetadata, getCharEntry, getCharStatus, updateCharEntry } from "./statusControls.js";
 
 function buildUIDsComment(entry) {
     let comment = "";
@@ -21,6 +21,14 @@ function buildUIDsComment(entry) {
     if (entry?.value?.length > 20) comment += "...";
 
     return comment;
+}
+
+function getParticipantFromName(name = "") {
+    const metadata = chat_metadata.stat_us_maximus ?? [];
+    const chars = metadata.map(status => getParticipant(status.avatar, status.is_user));
+    const character = chars.find(char => char.name === name) ?? false;
+
+    return character;
 }
 
 const acceptedEntryFields = {
@@ -47,17 +55,6 @@ const customEnumProviders = {
     /** All possible char entities within the chat status metadata.
         @returns {SlashCommandEnumValue[]}
     */
-    participantsAvatar: () => {
-        const metadata = chat_metadata.stat_us_maximus ?? [];
-        const chars = metadata.map(status => getParticipant(status.avatar, status.is_user));
-        const chars_filtered = chars.filter(char => !!char);
-
-        return chars_filtered.map(char => new SlashCommandEnumValue(char.avatar, char.name, enumTypes.name, enumIcons.character));
-    },
-
-    /** All possible char entities within the chat status metadata.
-        @returns {SlashCommandEnumValue[]}
-    */
     entryFields: () => Object
         .keys(entryTemplate)
         .filter(key => Object.keys(acceptedEntryFields).includes(key))
@@ -67,13 +64,17 @@ const customEnumProviders = {
         @returns {SlashCommandEnumValue[]}
     */
     entryUIDs:  (/** @type {SlashCommandExecutor} */ executor) => {
-        const avatar = executor.namedArgumentList.find(it => it.name == 'char')?.value ?? "";
+        const name = executor.namedArgumentList.find(it => it.name == 'char')?.value ?? "";
 
-        if (!avatar) return [];
+        if (name instanceof SlashCommandClosure) return [];
+        if (!name) return [];
 
-        const metadata = chat_metadata.stat_us_maximus ?? [];
-        const status = metadata.find(status => status.avatar === avatar) ?? {};
-        const entries = status?.entries ?? [];
+        const character = getParticipantFromName(name);
+        const status = getCharStatus(character);
+
+        if (!status) return [];
+
+        const entries = status.entries;
 
         if (entries.length < 1) return [];
 
@@ -96,8 +97,8 @@ function getParticipantFromAvatar(avatar = "") {
  */
 async function commandCreateEntry(args, value) {
     try {
-        const avatar = args.char;
-        const character = getParticipantFromAvatar(avatar);
+        const name = args.char;
+        const character = getParticipantFromName(name);
 
         if (!character) throw new Error(`The character "${args?.char}" could not be found in the metadata`);
 
@@ -118,8 +119,8 @@ async function commandGetEntryUID(args, value = "") {
     try {
         const {char = "", field = "key", fuzzy = false} = args;
 
-        const metadata = chat_metadata.stat_us_maximus ?? [];
-        const status = metadata.find(status => status.avatar === char);
+        const character = getParticipantFromName(char);
+        const status = getCharStatus(character);
 
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
 
@@ -153,7 +154,8 @@ async function commandGetEntryUID(args, value = "") {
 function commandSetEntryField(args, value) {
     try {
         const {char = "", uid = -1, field = "key"} = args;
-        const character = getParticipantFromAvatar(char);
+
+        const character = getParticipantFromName(char);
         const acceptedFields = Object.keys(entryTemplate).filter(key => key !== "alt_values");
 
         if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid field "${field}"`);
@@ -178,7 +180,8 @@ function commandSetEntryField(args, value) {
 function commandGetEntryField(args, value) {
     try {
         const {char = "", uid = -1, field = "key"} = args;
-        const character = getParticipantFromAvatar(char);
+
+        const character = getParticipantFromName(char);
         const acceptedFields = Object.keys(acceptedEntryFields);
 
         if (!acceptedFields.includes(field)) throw new Error(`Invalid field "${field}"`);
@@ -218,10 +221,10 @@ export function registerSlashCommands() {
             namedArgumentList: [
                 SlashCommandNamedArgument.fromProps({
                     name: 'char',
-                    description: 'Avatar of the character',
+                    description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantsAvatar,
+                    enumProvider: customEnumProviders.participantsName
                 })
             ],
             helpString: `
@@ -232,7 +235,7 @@ export function registerSlashCommands() {
                 <strong>Example</strong>
                 <ul>
                     <li>
-                        <pre><code>/stum-create-entry char="Tom.png"</code></pre>
+                        <pre><code>/stum-create-entry char="Tom"</code></pre>
                     </li>
                 </ul>
             </div>`,
@@ -247,24 +250,24 @@ export function registerSlashCommands() {
             namedArgumentList: [
                 SlashCommandNamedArgument.fromProps({
                     name: 'char',
-                    description: 'Avatar of the character',
+                    description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantsAvatar,
+                    enumProvider: customEnumProviders.participantsName
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
                     description: 'Field to match - default key',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: customEnumProviders.entryFields,
+                    enumProvider: customEnumProviders.entryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'fuzzy',
                     description: 'Do an exact match or a fuzzy match - exact (fuzzy:false) by default',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: commonEnumProviders.boolean(),
+                    enumProvider: commonEnumProviders.boolean()
                 })
             ],
             unnamedArgumentList: [
@@ -282,7 +285,7 @@ export function registerSlashCommands() {
                 <strong>Example</strong>
                 <ul>
                     <li>
-                        <pre><code>/stum-get-entry-uid char="Tom.png" field="key" value="Clothes"</code></pre>
+                        <pre><code>/stum-get-entry-uid char="Tom" field="key" value="Clothes"</code></pre>
                     </li>
                 </ul>
             </div>`,
@@ -297,24 +300,24 @@ export function registerSlashCommands() {
             namedArgumentList: [
                 SlashCommandNamedArgument.fromProps({
                     name: 'char',
-                    description: 'Avatar of the character',
+                    description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantsAvatar,
+                    enumProvider: customEnumProviders.participantsName
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
                     description: 'UID of the status entry',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.entryUIDs,
+                    enumProvider: customEnumProviders.entryUIDs
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
                     description: 'Field to update - default value',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: customEnumProviders.entryFields,
+                    enumProvider: customEnumProviders.entryFields
                 })
             ],
             unnamedArgumentList: [
@@ -332,7 +335,7 @@ export function registerSlashCommands() {
                 <strong>Example</strong>
                 <ul>
                     <li>
-                        <pre><code>/stum-set-entry-field char="Tom.png" field="value" uid=7 "- A red hoodie"</code></pre>
+                        <pre><code>/stum-set-entry-field char="Tom" field="value" uid=7 "- A red hoodie"</code></pre>
                     </li>
                 </ul>
             </div>`,
@@ -347,24 +350,24 @@ export function registerSlashCommands() {
             namedArgumentList: [
                 SlashCommandNamedArgument.fromProps({
                     name: 'char',
-                    description: 'Avatar of the character',
+                    description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantsAvatar,
+                    enumProvider: customEnumProviders.participantsName
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
                     description: 'UID of the status entry',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.entryUIDs,
+                    enumProvider: customEnumProviders.entryUIDs
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
                     description: 'Field to update - default value',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: customEnumProviders.entryFields,
+                    enumProvider: customEnumProviders.entryFields
                 })
             ],
             helpString: `
@@ -375,7 +378,7 @@ export function registerSlashCommands() {
                 <strong>Example</strong>
                 <ul>
                     <li>
-                        <pre><code>/stum-get-entry-field char="Tom.png" field="separator" uid=7</code></pre>
+                        <pre><code>/stum-get-entry-field char="Tom" field="separator" uid=7</code></pre>
                     </li>
                 </ul>
             </div>`,
