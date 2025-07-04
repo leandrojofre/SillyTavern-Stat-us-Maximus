@@ -40,12 +40,15 @@ export function addCharAltValue(character, entry_uid, alt_value = "") {
         };
 
         entry.alt_values.push(newAlt);
+        saveMetadataDebounced();
 
         return newAlt;
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         console.error(error.message);
+
+        return false;
     }
 }
 
@@ -60,6 +63,32 @@ export function getCharAltValue(character, entry_uid, alt_uid) {
             .find(v => v.uid === Number(alt_uid));
 
         if (!alt) throw new Error(`Alt entry with uid=${alt_uid} not found`);
+
+        return alt;
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        console.error(error.message);
+
+        return false;
+    }
+}
+
+export function updateCharAltValue(character, entry_uid, alt_uid, formData) {
+    try {
+        const entry = getCharEntry(character, entry_uid);
+
+        if (!entry) throw new Error(`Entry with uid=${entry_uid} could not be found`);
+
+        const alt = entry
+            .alt_values
+            .find(v => v.uid === Number(alt_uid));
+
+        if (!alt) throw new Error(`Alt entry with uid=${alt_uid} not found`);
+
+        for (const [key, value] of formData.entries()) alt[key] = String(value);
+
+        saveMetadataDebounced();
 
         return alt;
     } catch (error) {

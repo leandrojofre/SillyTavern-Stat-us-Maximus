@@ -10,7 +10,7 @@ import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { fetchStatus, getParticipant, log } from "../../index.js";
-import { addCharEntry, entryTemplate, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, updateCharEntry } from "./statusControls.js";
+import { addCharAltValue, addCharEntry, entryTemplate, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, updateCharAltValue, updateCharEntry } from "./statusControls.js";
 
 /** Takes an object with a key and value and generates a comment
     @param {object} entry
@@ -285,6 +285,45 @@ function commandSwitchEntryValue(args, value) {
     }
 }
 
+/** Creates a new entry for a character
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.uid - Entry UID
+    @param {String} args.key - Title of the alt value
+    @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - New value of the selected field
+    @returns {String} UID of the new alt value or empty string
+*/
+function commandCreateEntryAltValue(args, value = "") {
+    try {
+        const {char = "", uid = "-1", key = ""} = args;
+
+        const parsed_uid = Number(uid);
+        const character = getParticipantFromName(char);
+
+        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
+
+        const alt = addCharAltValue(character, parsed_uid, String(value));
+
+        if (!alt) return "";
+        if (Boolean(key)) {
+            const formData = new FormData();
+            formData.set("key", key);
+
+            updateCharAltValue(character, parsed_uid, alt.uid, formData);
+        }
+
+        fetchStatus({forceUIUpdate: true});
+
+        return String(alt.uid ?? "");
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
+        return "";
+    }
+}
+
 /** Wipes all status metadata in the active chat file
     @returns {Promise<String>} True or False
 */
@@ -510,6 +549,58 @@ export function registerSlashCommands() {
                 <ul>
                     <li>
                         <pre><code>/stum-switch-entry-value char="Tom" uid=7 altuid=2</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-create-alt-entry-value",
+            callback: commandCreateEntryAltValue,
+            returns: 'UID of the alternative entry value',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.participantsName
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'uid',
+                    description: 'UID of the status entry',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.entryUIDs
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'key',
+                    description: 'Title of the alt value',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false
+                })
+            ],
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'Content of the new alt value',
+                    isRequired: false,
+                    typeList: [ARGUMENT_TYPE.STRING]
+                })
+            ],
+            helpString: `
+            <div>
+                Creates a new Status Entry alternative value and returns its UID. If it fails an empty string is returned.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-create-alt-entry-value char="Tom" uid=7 "Content of the entry"</code></pre>
+                    </li>
+                    <li>
+                        <pre><code>/stum-create-alt-entry-value char="Tom" uid=7 key="Title of the entry" "Content of the entry"</code></pre>
                     </li>
                 </ul>
             </div>`,

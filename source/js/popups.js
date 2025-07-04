@@ -330,6 +330,8 @@ async function formStatusSingleChar(char) {
             el(newRow, ".add_alt_value").addEventListener("click", () => {
                 const newAlt = addCharAltValue(char, data[i].uid);
 
+                if (!newAlt) return;
+
                 refreshAltValues(newRow, getCharEntry(char, data[i].uid).alt_values, newAlt.uid);
 
                 el(newRow, 'select[name="value_uid"]').value = String(newAlt.uid);
