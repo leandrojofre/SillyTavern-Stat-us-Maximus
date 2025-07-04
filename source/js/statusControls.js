@@ -88,6 +88,8 @@ export function updateCharAltValue(character, entry_uid, alt_uid, formData) {
 
         for (const [key, value] of formData.entries()) alt[key] = String(value);
 
+        if (entry.value_uid === alt.uid) entry.value = alt.value;
+
         saveMetadataDebounced();
 
         return alt;
@@ -322,7 +324,7 @@ const statusTemplate = {
     entries: []
 };
 
-export const entryTemplate = {
+const entryTemplate = {
     uid: 0,
     enabled: true,
     key: "",

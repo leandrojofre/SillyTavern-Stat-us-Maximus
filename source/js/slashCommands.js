@@ -10,7 +10,7 @@ import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { fetchStatus, getParticipant, log } from "../../index.js";
-import { addCharAltValue, addCharEntry, entryTemplate, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, updateCharAltValue, updateCharEntry } from "./statusControls.js";
+import { addCharAltValue, addCharEntry, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, updateCharAltValue, updateCharEntry } from "./statusControls.js";
 
 /** Takes an object with a key and value and generates a comment
     @param {object} entry
@@ -47,6 +47,12 @@ const acceptedEntryFields = {
     display_position: "Order at which the entry gets inserted (starts at 0)"
 }
 
+/** Accepted alt key values and their descriptions */
+const acceptedAltEntryFields = {
+    key: "Nickname of the alt entry - only used in the select button",
+    value: "Value of the alt entry"
+}
+
 /** Enum providers for slash commands autocomplete */
 const customEnumProviders = {
     /** All possible char entities within the chat status metadata.
@@ -60,13 +66,12 @@ const customEnumProviders = {
         return chars_filtered.map(char => new SlashCommandEnumValue(char.name, char.avatar, enumTypes.name, enumIcons.character));
     },
 
-    /** All possible char entities within the chat status metadata.
+    /** All modifiable entry fields.
         @returns {SlashCommandEnumValue[]}
     */
     entryFields: () => Object
-        .keys(entryTemplate)
-        .filter(key => Object.keys(acceptedEntryFields).includes(key))
-        .map(key => new SlashCommandEnumValue(key, acceptedEntryFields[key] ?? null, enumTypes.enum, enumIcons.enum)),
+        .entries(acceptedEntryFields)
+        .map(([key, value]) => new SlashCommandEnumValue(key, value, enumTypes.enum, enumIcons.enum)),
 
     /** All entry UIDs within a character's status.
         @returns {SlashCommandEnumValue[]}
@@ -88,6 +93,13 @@ const customEnumProviders = {
 
         return entries.map(entry => new SlashCommandEnumValue(String(entry.uid), buildUIDsComment(entry), enumTypes.number, enumIcons.key));
     },
+
+    /** All modifiable alt entry fields.
+        @returns {SlashCommandEnumValue[]}
+    */
+    altEntryFields: () => Object
+        .entries(acceptedAltEntryFields)
+        .map(([key, value]) => new SlashCommandEnumValue(key, value, enumTypes.enum, enumIcons.enum)),
 
     /** All entry UIDs within a character's status.
         @returns {SlashCommandEnumValue[]}
@@ -185,7 +197,7 @@ async function commandGetEntryUID(args, value = "") {
     @param {object} args
     @param {String} args.char - Character name
     @param {String} args.uid - Entry UID
-    @param {String} args.field - Field to search
+    @param {String} args.field - Field to modify
     @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - New value of the selected field
     @returns {String} Empty string
 */
@@ -195,7 +207,7 @@ function commandSetEntryField(args, value = "") {
 
         const parsed_uid = Number(uid);
         const character = getParticipantFromName(char);
-        const acceptedFields = Object.keys(entryTemplate).filter(key => key !== "alt_values");
+        const acceptedFields = Object.keys(acceptedEntryFields);
 
         if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid field "${field}"`);
         if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
@@ -320,6 +332,43 @@ function commandCreateEntryAltValue(args, value = "") {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
 
+        return "";
+    }
+}
+
+/** Updates the selected field of the entry alt value
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.uid - Entry UID
+    @param {String} args.altuid - UID of the entry alt value
+    @param {String} args.field - Field to modify
+    @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - New value of the selected field
+    @returns {String} Empty string
+*/
+function commandSetAltEntryField(args, value = "") {
+    try {
+        const {char = "", uid = "-1", altuid = "-1", field = "key"} = args;
+
+        const parsed_uid = Number(uid);
+        const parsed_altuid = Number(altuid);
+        const character = getParticipantFromName(char);
+        const acceptedFields = Object.keys(acceptedAltEntryFields);
+
+        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (isNaN(parsed_altuid) || parsed_altuid < 0) throw new Error(`Invalid alt UID "${altuid}"`);
+        if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid alt field "${field}"`);
+
+
+        const formData = new FormData();
+        formData.set(field, String(value));
+
+        updateCharAltValue(character, parsed_uid, parsed_altuid, formData);
+        fetchStatus({forceUIUpdate: true});
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+    } finally {
         return "";
     }
 }
@@ -601,6 +650,63 @@ export function registerSlashCommands() {
                     </li>
                     <li>
                         <pre><code>/stum-create-alt-entry-value char="Tom" uid=7 key="Title of the entry" "Content of the entry"</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-set-alt-entry-field",
+            callback: commandSetAltEntryField,
+            returns: 'Empty string',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.participantsName
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'uid',
+                    description: 'UID of the status entry',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.entryUIDs
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'altuid',
+                    description: 'UID of the status entry alternative value',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.altEntryUIDs
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'field',
+                    description: 'Field to update - default value',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: customEnumProviders.altEntryFields
+                })
+            ],
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'New value of the field - default to empty text',
+                    isRequired: true,
+                    typeList: [ARGUMENT_TYPE.STRING]
+                })
+            ],
+            helpString: `
+            <div>
+                Updates the field value of one of the Status Entry alt descriptions.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-set-alt-entry-field char="Tom" field="key" uid=7 altuid=2 "- A red hoodie"</code></pre>
                     </li>
                 </ul>
             </div>`,
