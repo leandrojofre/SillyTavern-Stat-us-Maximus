@@ -74,6 +74,7 @@ function getCharacter(value, search_key = "avatar") {
 
 function getUser(avatar = user_avatar) {
     if (!power_user.personas[avatar]) return false;
+    if (!avatar) return false;
 
     return {
         name: power_user.personas[avatar],
@@ -101,7 +102,7 @@ export function getStatusDepth(chat, character) {
     return chat.length - lastIndex - 1;
 }
 
-function getParticipant(avatar, is_user) {
+export function getParticipant(avatar, is_user) {
     if (is_user) return getUser(avatar);
     else return getCharacter(avatar);
 }
@@ -426,7 +427,7 @@ export function groupListAvatarsClick(e) {
     const char = getCharacter(char_avatar);
 
     // @ts-ignore
-    if (!char) return toastr.warning(t`The character could be found`);
+    if (!char) return toastr.warning(t`The character could not be found`);
 
     popupStatusSingleChar(char);
 }
@@ -525,7 +526,7 @@ function initButtons() {
         }
 
         // @ts-ignore
-        if (!chars.length) return toastr.warning(t`No character could be found in the metadata`);
+        if (!chars.length) return toastr.warning(t`The character could not be found in the metadata`);
 
         return await popupStatusMultiChar(chars);
     });
@@ -551,7 +552,7 @@ function initButtons() {
             const char = characters[this_chid];
 
             // @ts-ignore
-            if (!char) return toastr.warning(t`The character could be found`);
+            if (!char) return toastr.warning(t`The character could not be found`);
 
             return await popupStatusSingleChar(char);
         }
