@@ -154,7 +154,7 @@ async function commandCreateEntry(args, value) {
     @param {String} args.char - Character name
     @param {String} args.field - Field to search
     @param {String} args.fuzzy - Wether to do a fuzzy match or exact math
-    @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - Value to match against field
+    @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - Value to match against field
     @returns {Promise<String>} UID of the entry or empty string
 */
 async function commandGetEntryUID(args, value = "") {
@@ -200,7 +200,7 @@ async function commandGetEntryUID(args, value = "") {
     @param {String} args.char - Character name
     @param {String} args.uid - Entry UID
     @param {String} args.field - Field to modify
-    @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - New value of the selected field
+    @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
     @returns {String} Empty string
 */
 function commandSetEntryField(args, value = "") {
@@ -333,7 +333,7 @@ function commandSwitchEntryValue(args, value) {
     @param {String} args.char - Character name
     @param {String} args.uid - Entry UID
     @param {String} args.key - Title of the alt value
-    @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - New value of the selected field
+    @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
     @returns {String} UID of the new alt value or empty string
 */
 function commandCreateEntryAltValue(args, value = "") {
@@ -373,7 +373,7 @@ function commandCreateEntryAltValue(args, value = "") {
     @param {String} args.uid - Entry UID
     @param {String} args.field - Field to search
     @param {String} args.fuzzy - Wether to do a fuzzy match or exact math
-    @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - Value to match against field
+    @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - Value to match against field
     @returns {String} UID of the entry or empty string
 */
 function commandGetAltEntryUID(args, value = "") {
@@ -424,7 +424,7 @@ function commandGetAltEntryUID(args, value = "") {
     @param {String} args.uid - Entry UID
     @param {String} args.altuid - UID of the entry alt value
     @param {String} args.field - Field to modify
-    @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - New value of the selected field
+    @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
     @returns {String} Empty string
 */
 function commandSetAltEntryField(args, value = "") {
