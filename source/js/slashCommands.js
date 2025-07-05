@@ -58,7 +58,7 @@ const customEnumProviders = {
     /** All possible char entities within the chat status metadata.
         @returns {SlashCommandEnumValue[]}
     */
-    participantsName: () => {
+    participantNames: () => {
         const metadata = chat_metadata.stat_us_maximus ?? [];
         const chars = metadata.map(status => getParticipant(status.avatar, status.is_user));
         const chars_filtered = chars.filter(char => !!char);
@@ -163,7 +163,9 @@ async function commandGetEntryUID(args, value = "") {
 
         const character = getParticipantFromName(char);
         const status = getCharStatus(character);
+        const acceptedFields = Object.keys(acceptedEntryFields);
 
+        if (!acceptedFields.includes(field)) throw new Error(`Invalid field "${field}"`);
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
 
         let uid = "";
@@ -336,6 +338,57 @@ function commandCreateEntryAltValue(args, value = "") {
     }
 }
 
+/** Gets the UID of an entry alt value by searching for a match trough its fields
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.uid - Entry UID
+    @param {String} args.field - Field to search
+    @param {String} args.fuzzy - Wether to do a fuzzy match or exact math
+    @param {String | SlashCommandClosure | (String | SlashCommandClosure)[]} value - Value to match against field
+    @returns {String} UID of the entry or empty string
+*/
+function commandGetAltEntryUID(args, value = "") {
+    try {
+        const {char = "", uid = "-1", field = "key", fuzzy = "false"} = args;
+
+        const character = getParticipantFromName(char);
+        const parsed_uid = Number(uid);
+        const acceptedFields = Object.keys(acceptedAltEntryFields);
+
+        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid alt field "${field}"`);
+
+        let alt_uid = "";
+        const entry = getCharEntry(character, parsed_uid);
+
+        if (!entry) return "";
+
+        if (fuzzy === "true") {
+            const fuse = new Fuse(entry.alt_values, {
+                keys: [{ name: field, weight: 1 }],
+                includeScore: true,
+                threshold: 0.3,
+            });
+            const results = fuse.search(String(value));
+
+            if (!results || results.length === 0) return "";
+
+            alt_uid = results[0]?.item?.uid;
+        } else {
+            const altEntry = entry?.alt_values?.find(entry => String(entry[field]) === value);
+            alt_uid = altEntry?.uid;
+        }
+
+        return String(alt_uid ?? "");
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to fetch Status Metadata: ${error.message}`);
+
+        return "";
+    }
+}
+
 /** Updates the selected field of the entry alt value
     @param {object} args
     @param {String} args.char - Character name
@@ -400,7 +453,7 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantsName
+                    enumProvider: customEnumProviders.participantNames
                 })
             ],
             helpString: `
@@ -429,7 +482,7 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantsName
+                    enumProvider: customEnumProviders.participantNames
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
@@ -440,7 +493,7 @@ export function registerSlashCommands() {
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'fuzzy',
-                    description: 'Do an exact match or a fuzzy match - exact (fuzzy:false) by default',
+                    description: 'Do an exact match or a fuzzy match - exact by default (fuzzy:false)',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
                     enumProvider: commonEnumProviders.boolean()
@@ -461,7 +514,10 @@ export function registerSlashCommands() {
                 <strong>Example</strong>
                 <ul>
                     <li>
-                        <pre><code>/stum-get-entry-uid char="Tom" field="key" value="Clothes"</code></pre>
+                        <pre><code>/stum-get-entry-uid char="Tom" field="key" "Clothes"</code></pre>
+                    </li>
+                    <li>
+                        <pre><code>/stum-get-entry-uid char="Tom" field="key" fuzzy=true "Clothes"</code></pre>
                     </li>
                 </ul>
             </div>`,
@@ -479,7 +535,7 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantsName
+                    enumProvider: customEnumProviders.participantNames
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
@@ -529,7 +585,7 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantsName
+                    enumProvider: customEnumProviders.participantNames
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
@@ -572,7 +628,7 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantsName
+                    enumProvider: customEnumProviders.participantNames
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
@@ -615,7 +671,7 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantsName
+                    enumProvider: customEnumProviders.participantNames
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
@@ -658,6 +714,66 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
+            name: "stum-get-alt-entry-uid",
+            callback: commandGetAltEntryUID,
+            returns: 'Status entry uid',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.participantNames
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'uid',
+                    description: 'UID of the status entry',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.entryUIDs
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'field',
+                    description: 'Field to match - default key',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: customEnumProviders.altEntryFields
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'fuzzy',
+                    description: 'Do an exact match or a fuzzy match - exact by default (fuzzy:false)',
+                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    isRequired: false,
+                    enumProvider: commonEnumProviders.boolean()
+                })
+            ],
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'Value to match against field - case sensitive if',
+                    isRequired: true,
+                    typeList: [ARGUMENT_TYPE.STRING]
+                })
+            ],
+            helpString: `
+            <div>
+                Get the UID of an alt entry value by pairing a field against a value, returning the uid of the first match. If no match is found, an empty string is returned.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-get-alt-entry-uid char="Tom" field="key" "Summer Clothes"</code></pre>
+                    </li>
+                    <li>
+                        <pre><code>/stum-get-alt-entry-uid char="Tom" field="key" fuzzy=true "Summer Clothes"</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
             name: "stum-set-alt-entry-field",
             callback: commandSetAltEntryField,
             returns: 'Empty string',
@@ -667,7 +783,7 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantsName
+                    enumProvider: customEnumProviders.participantNames
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
