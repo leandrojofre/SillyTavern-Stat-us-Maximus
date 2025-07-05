@@ -1,5 +1,7 @@
 {
 	"scripts": {
-		"release": "standard-version --release-as"
+		"release": "standard-version --release-as",
+        "docs:build": "jsdoc -c jsdoc.conf.json",
+        "docs:deploy": "npm run docs:build && gh-pages -d docs"
 	}
 }
