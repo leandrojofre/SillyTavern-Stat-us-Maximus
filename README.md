@@ -64,5 +64,4 @@ Is not that it **won't** because it probably does work, but the UI might get clu
 ## Contribution Rules
 - Always PR to the `staging` branch.
 - Use the `staging` branch as the source of you working branch.
-- If you write [JSDocs](https://jsdoc.app/), make sure to run `generate-doc.sh` and make a commit with the generated docs. Don't do this if you don't have JSDocs and you don't want to install it (using `npm install -g jsdoc`), but make a comment in your PR telling me to generate docs.
 - Nothing else really, enjoy.
