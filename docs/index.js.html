@@ -46,7 +46,6 @@ import { startListeners } from "./source/js/eventListeners.js";
 const extensionName = "SillyTavern-Stat-us-Maximus";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const defaultSettings = {
-    enabled: true,
     debug: false
 };
 
@@ -59,10 +58,10 @@ export const log = (...msg) => {
     console.log("[" + extensionName + "]", ...msg);
 };
 
-SillyTavern.StatusTest = async () => {
-    log(this_chid, characters[this_chid]);
-    log(selected_group);
-}
+// SillyTavern.StatusTest = async () => {
+//     log(this_chid, characters[this_chid]);
+//     log(selected_group);
+// }
 
 // * Extension methods
 
@@ -103,6 +102,7 @@ function getCharacter(value, search_key = "avatar") {
 
 function getUser(avatar = user_avatar) {
     if (!power_user.personas[avatar]) return false;
+    if (!avatar) return false;
 
     return {
         name: power_user.personas[avatar],
@@ -115,7 +115,7 @@ function getUser(avatar = user_avatar) {
 export function getStatusDepth(chat, character) {
     const lastIndex = chat.findLastIndex((mess) =>{
         if (mess.is_user)
-            return mess.force_avatar.replace(/user avatars\//i, "") === character.avatar;
+            return mess.force_avatar.replace(/(user avatars\/)|(\/thumbnail\?type=persona&amp;file=)/i, "") === character.avatar;
 
         if (mess?.original_avatar !== undefined)
             return mess.original_avatar === character.avatar;
@@ -130,7 +130,7 @@ export function getStatusDepth(chat, character) {
     return chat.length - lastIndex - 1;
 }
 
-function getParticipant(avatar, is_user) {
+export function getParticipant(avatar, is_user) {
     if (is_user) return getUser(avatar);
     else return getCharacter(avatar);
 }
@@ -401,7 +401,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
         if (!character) continue;
 
-        const char_depth = getStatusDepth(realChat, character) + depthModifier;
+        const char_depth = getStatusDepth(realChat, character);
 
         if (!statuses[i])
             statuses[i] = createCharStatus(character, char_depth);
@@ -436,7 +436,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
             promptKey,
             promptValue,
             extension_prompt_types.IN_CHAT,
-            char_depth,
+            char_depth + depthModifier,
             true,
             status.role
         );
@@ -455,13 +455,13 @@ export function groupListAvatarsClick(e) {
     const char = getCharacter(char_avatar);
 
     // @ts-ignore
-    if (!char) return toastr.warning(t`The character could be found`);
+    if (!char) return toastr.warning(t`The character could not be found`);
 
     popupStatusSingleChar(char);
 }
 
 export function addGroupStatusButtons() {
-    const groupList = document.getElementById("currentGroupMembers");
+    const groupList = document.getElementById("rm_group_members");
     const avatars = groupList.querySelectorAll('.avatar');
 
     for (const avatar of avatars) {
@@ -496,7 +496,6 @@ function settingsBooleanButton(event) {
 
 /**	Logs setting's values. */
 function displaySettings() {
-    console.debug("[" + extensionName + "]", `The extension is ${extensionSettings.enabled ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Debug mode is ${extensionSettings.debug ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", structuredClone(extensionSettings));
 }
@@ -508,7 +507,6 @@ async function loadHTMLSettings() {
     $("#extensions_settings2").append(settingsHtml);
 
     // Event Listeners for the extension HTML
-    $("#stat-us-max-activate-extension").on("input", settingsBooleanButton);
     $("#stat-us-max-activate-debug").on("input", settingsBooleanButton);
     $("#stat-us-max-check-configuration").on("click", displaySettings);
 
@@ -517,7 +515,6 @@ async function loadHTMLSettings() {
 
 /** Init setting values on the menu */
 function setSettings() {
-    $("#stat-us-max-activate-extension").prop("checked", extensionSettings.enabled).trigger("input");
     $("#stat-us-max-activate-debug").prop("checked", extensionSettings.debug).trigger("input");
 }
 
@@ -557,7 +554,7 @@ function initButtons() {
         }
 
         // @ts-ignore
-        if (!chars.length) return toastr.warning(t`No character could be found in the metadata`);
+        if (!chars.length) return toastr.warning(t`The character could not be found in the metadata`);
 
         return await popupStatusMultiChar(chars);
     });
@@ -583,7 +580,7 @@ function initButtons() {
             const char = characters[this_chid];
 
             // @ts-ignore
-            if (!char) return toastr.warning(t`The character could be found`);
+            if (!char) return toastr.warning(t`The character could not be found`);
 
             return await popupStatusSingleChar(char);
         }
@@ -639,7 +636,7 @@ function initButtons() {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sun Jun 29 2025 01:53:02 GMT-0300 (GMT-03:00)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jul 05 2025 16:04:08 GMT-0300 (GMT-03:00)
 </footer>
 
 <script> prettyPrint(); </script>
