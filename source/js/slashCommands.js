@@ -10,7 +10,7 @@ import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { fetchStatus, getParticipant, log } from "../../index.js";
-import { addCharAltValue, addCharEntry, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, updateCharAltValue, updateCharEntry } from "./statusControls.js";
+import { addCharAltValue, addCharEntry, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharEntry, updateCharAltValue, updateCharEntry } from "./statusControls.js";
 
 /** Takes an object with a key and value and generates a comment
     @param {object} entry
@@ -257,6 +257,34 @@ function commandGetEntryField(args, value) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
 
         return "";
+    }
+}
+
+/** Deletes an status entry from a character
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.uid - Entry UID
+*/
+function commandDeleteEntry(args, value) {
+    try {
+        const {char = "", uid = "-1"} = args;
+
+        const parsed_uid = Number(uid);
+        const character = getParticipantFromName(char);
+
+        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
+
+        const deletionSucced = removeCharEntry(character, parsed_uid);
+
+        if (deletionSucced) fetchStatus({forceUIUpdate: true});
+
+        return String(deletionSucced ?? false);
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
+        return "false";
     }
 }
 
@@ -646,6 +674,42 @@ export function registerSlashCommands() {
                 <ul>
                     <li>
                         <pre><code>/stum-get-entry-field char="Tom" field="separator" uid=7</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-delete-entry",
+            callback: commandDeleteEntry,
+            returns: 'True or False',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.participantNames
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'uid',
+                    description: 'UID of the status entry',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.entryUIDs
+                })
+            ],
+            helpString: `
+            <div>
+                Deletes an entry from the status of a character. Returns true if the deletion was a success, and false otherwise.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-delete-entry char="Tom" uid=5</code></pre>
                     </li>
                 </ul>
             </div>`,

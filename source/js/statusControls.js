@@ -276,10 +276,14 @@ export function removeCharEntry(character, entry_uid = -1) {
 
         getLastDisplayPosition(char_status.entries);
         saveMetadataDebounced();
+
+        return true;
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to delete Status Metadata: ${error.message}`);
         console.error(error.message);
+
+        return false;
     }
 }
 
