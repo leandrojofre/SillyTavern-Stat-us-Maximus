@@ -62,7 +62,7 @@ export function getCharAltValue(character, entry_uid, alt_uid) {
             .alt_values
             .find(v => v.uid === Number(alt_uid));
 
-        if (!alt) throw new Error(`Alt entry with uid=${alt_uid} not found`);
+        if (!alt) throw new Error(`Alt entry with uid=${alt_uid} could not be found`);
 
         return alt;
     } catch (error) {

@@ -121,7 +121,7 @@ const customEnumProviders = {
         if (!entry || !entry?.alt_values?.length) return [];
 
         return entry.alt_values.map(alt => new SlashCommandEnumValue(String(alt.uid), buildUIDsComment(alt), enumTypes.number, enumIcons.key));
-    },
+    }
 }
 
 /** Creates a new entry for a character
@@ -426,6 +426,41 @@ function commandSetAltEntryField(args, value = "") {
     }
 }
 
+/** Gets the value of an alt entry field
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.uid - Entry UID
+    @param {String} args.altuid - UID of the entry alt value
+    @param {String} args.field - Field to search
+    @returns {String} Field value of the alt entry or empty string
+*/
+function commandGetAltEntryField(args, value) {
+    try {
+        const {char = "", uid = "-1", altuid = "-1", field = "key"} = args;
+
+        const parsed_uid = Number(uid);
+        const parsed_altuid = Number(altuid);
+        const character = getParticipantFromName(char);
+        const acceptedFields = Object.keys(acceptedEntryFields);
+
+        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (isNaN(parsed_altuid) || parsed_altuid < 0) throw new Error(`Invalid alt UID "${altuid}"`);
+        if (!acceptedFields.includes(field)) throw new Error(`Invalid field "${field}"`);
+
+        const alt = getCharAltValue(character, parsed_uid, parsed_altuid);
+
+        if (!alt) return "";
+
+        return String(alt[field] ?? "");
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
+        return "";
+    }
+}
+
 /** Wipes all status metadata in the active chat file
     @returns {Promise<String>} True or False
 */
@@ -475,7 +510,7 @@ export function registerSlashCommands() {
         SlashCommand.fromProps({
             name: "stum-get-entry-uid",
             callback: commandGetEntryUID,
-            returns: 'Status entry uid',
+            returns: 'UID of the entry',
             namedArgumentList: [
                 SlashCommandNamedArgument.fromProps({
                     name: 'char',
@@ -596,7 +631,7 @@ export function registerSlashCommands() {
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
-                    description: 'Field to update - default value',
+                    description: 'Field to match - default key',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
                     enumProvider: customEnumProviders.entryFields
@@ -716,7 +751,7 @@ export function registerSlashCommands() {
         SlashCommand.fromProps({
             name: "stum-get-alt-entry-uid",
             callback: commandGetAltEntryUID,
-            returns: 'Status entry uid',
+            returns: 'UID of the alt entry',
             namedArgumentList: [
                 SlashCommandNamedArgument.fromProps({
                     name: 'char',
@@ -823,6 +858,56 @@ export function registerSlashCommands() {
                 <ul>
                     <li>
                         <pre><code>/stum-set-alt-entry-field char="Tom" field="key" uid=7 altuid=2 "- A red hoodie"</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-get-alt-entry-field",
+            callback: commandGetAltEntryField,
+            returns: 'Alt entry field value',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.participantNames
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'uid',
+                    description: 'UID of the status entry',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.entryUIDs
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'altuid',
+                    description: 'UID of the status entry alternative value',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.altEntryUIDs
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'field',
+                    description: 'Field to match - default key',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: customEnumProviders.altEntryFields
+                })
+            ],
+            helpString: `
+            <div>
+                Get the field value of one of the alt entry values. If no match is found, an empty string is returned.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-get-alt-entry-field char="Tom" field="value" uid=7 altuid=2</code></pre>
                     </li>
                 </ul>
             </div>`,
