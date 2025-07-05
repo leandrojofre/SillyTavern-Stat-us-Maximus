@@ -1,4 +1,32 @@
-import { extension_prompt_roles } from "../../../../../../script.js";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: source/js/popups.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: source/js/popups.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { extension_prompt_roles } from "../../../../../../script.js";
 import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
@@ -48,7 +76,7 @@ async function popupDeleteConfirm(del_name = "this") {
 function getFullCharAvatar(status) {
     // TODO getThumbnailUrl - on next release
     if (status.is_user) return "User Avatars/" + status.avatar;
-    else return "/thumbnail?type=avatar&file=" + status.avatar;
+    else return "/thumbnail?type=avatar&amp;file=" + status.avatar;
 }
 
 async function formStatusSingleChar(char) {
@@ -256,7 +284,7 @@ async function formStatusSingleChar(char) {
     const evInput = new Event('input', { bubbles: true, cancelable: true });
 
     const addRow = ({amount = 1, data = []} = {}) => {
-        for (let i = 0; i < amount; i++) {
+        for (let i = 0; i &lt; amount; i++) {
             const newRow = /** @type {HTMLFormElement} */ (formRow.cloneNode(true));
 
             // @ts-ignore
@@ -273,7 +301,7 @@ async function formStatusSingleChar(char) {
             el(newRow, 'input[name="enabled"]').value = data[i].enabled;
             refreshAltValues(newRow, data[i].alt_values, data[i].value_uid);
             el(newRow, 'select[name="value_uid"]').value = String(data[i].value_uid);
-            el(newRow, 'input[name="alt_key"]').value = data[i].alt_values[data[i].value_uid].key;
+            el(newRow, 'input[name="alt_key"]').value = data[i].alt_values.find(alt => alt.uid === data[i].value_uid).key;
 
             if (!data[i].enabled) toggleSwitch(el(newRow, ".kill-switch"));
 
@@ -330,6 +358,8 @@ async function formStatusSingleChar(char) {
             el(newRow, ".add_alt_value").addEventListener("click", () => {
                 const newAlt = addCharAltValue(char, data[i].uid);
 
+                if (!newAlt) return;
+
                 refreshAltValues(newRow, getCharEntry(char, data[i].uid).alt_values, newAlt.uid);
 
                 el(newRow, 'select[name="value_uid"]').value = String(newAlt.uid);
@@ -340,7 +370,11 @@ async function formStatusSingleChar(char) {
                 if (await popupDeleteConfirm("the alt value") === 0) return;
 
                 try {
-                    const new_alts = removeCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
+                    const success = removeCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
+
+                    if (!success) return;
+
+                    const new_alts = getCharEntry(char, data[i].uid).alt_values;
 
                     refreshAltValues(newRow, new_alts);
 
@@ -426,3 +460,26 @@ export async function popupStatusMultiChar(chars) {
 
     fetchStatus({forceUIUpdate: true});
 }
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#acceptedAltEntryFields">acceptedAltEntryFields</a></li><li><a href="global.html#acceptedEntryFields">acceptedEntryFields</a></li><li><a href="global.html#buildUIDsComment">buildUIDsComment</a></li><li><a href="global.html#commandCreateEntry">commandCreateEntry</a></li><li><a href="global.html#commandCreateEntryAltValue">commandCreateEntryAltValue</a></li><li><a href="global.html#commandDeleteAltEntry">commandDeleteAltEntry</a></li><li><a href="global.html#commandDeleteChatStatus">commandDeleteChatStatus</a></li><li><a href="global.html#commandDeleteEntry">commandDeleteEntry</a></li><li><a href="global.html#commandGetAltEntryField">commandGetAltEntryField</a></li><li><a href="global.html#commandGetAltEntryUID">commandGetAltEntryUID</a></li><li><a href="global.html#commandGetEntryField">commandGetEntryField</a></li><li><a href="global.html#commandGetEntryUID">commandGetEntryUID</a></li><li><a href="global.html#commandSetAltEntryField">commandSetAltEntryField</a></li><li><a href="global.html#commandSetEntryField">commandSetEntryField</a></li><li><a href="global.html#commandSwitchEntryValue">commandSwitchEntryValue</a></li><li><a href="global.html#customEnumProviders">customEnumProviders</a></li><li><a href="global.html#destroyElement">destroyElement</a></li><li><a href="global.html#displaySettings">displaySettings</a></li><li><a href="global.html#fillMissingMetadata">fillMissingMetadata</a></li><li><a href="global.html#getCharStatus">getCharStatus</a></li><li><a href="global.html#getLastDisplayPosition">getLastDisplayPosition</a></li><li><a href="global.html#getParticipantFromName">getParticipantFromName</a></li><li><a href="global.html#loadHTMLSettings">loadHTMLSettings</a></li><li><a href="global.html#refreshCharEntryDisplay">refreshCharEntryDisplay</a></li><li><a href="global.html#registerSlashCommands">registerSlashCommands</a></li><li><a href="global.html#setSettings">setSettings</a></li><li><a href="global.html#settingsBooleanButton">settingsBooleanButton</a></li><li><a href="global.html#updateCharEntry">updateCharEntry</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jul 05 2025 20:13:15 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

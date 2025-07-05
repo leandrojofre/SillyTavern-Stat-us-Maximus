@@ -1,4 +1,32 @@
-import {extension_settings, saveMetadataDebounced} from "../../../extensions.js";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: index.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: index.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import {extension_settings, saveMetadataDebounced} from "../../../extensions.js";
 import {saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar} from "../../../../script.js";
 import { getGroupMembers, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
@@ -38,7 +66,7 @@ export const log = (...msg) => {
 // * Extension methods
 
 /** Destroys an element and all data associated with it
-    @param {string|HTMLElement|Node|JQuery<any>|HTMLElement[]|NodeList} element
+    @param {string|HTMLElement|Node|JQuery&lt;any>|HTMLElement[]|NodeList} element
 */
 export function destroyElement(element) {
     const elem = $(element);
@@ -74,6 +102,7 @@ function getCharacter(value, search_key = "avatar") {
 
 function getUser(avatar = user_avatar) {
     if (!power_user.personas[avatar]) return false;
+    if (!avatar) return false;
 
     return {
         name: power_user.personas[avatar],
@@ -86,22 +115,22 @@ function getUser(avatar = user_avatar) {
 export function getStatusDepth(chat, character) {
     const lastIndex = chat.findLastIndex((mess) =>{
         if (mess.is_user)
-            return mess.force_avatar.replace(/(user avatars\/)|(\/thumbnail\?type=persona&file=)/i, "") === character.avatar;
+            return mess.force_avatar.replace(/(user avatars\/)|(\/thumbnail\?type=persona&amp;file=)/i, "") === character.avatar;
 
         if (mess?.original_avatar !== undefined)
             return mess.original_avatar === character.avatar;
 
         if (mess?.force_avatar !== undefined)
-            return mess.force_avatar.replace(/\/thumbnail\?type=avatar&file=/i, "") === character.avatar;
+            return mess.force_avatar.replace(/\/thumbnail\?type=avatar&amp;file=/i, "") === character.avatar;
 
         return mess.name === character.name;
     });
 
-    if (lastIndex < 0) return lastIndex;
+    if (lastIndex &lt; 0) return lastIndex;
     return chat.length - lastIndex - 1;
 }
 
-function getParticipant(avatar, is_user) {
+export function getParticipant(avatar, is_user) {
     if (is_user) return getUser(avatar);
     else return getCharacter(avatar);
 }
@@ -121,11 +150,11 @@ export function getActiveParticipants(discard = []) {
     else if (this_chid !== undefined) {
         const character = characters[this_chid];
 
-        if (character && !discard.some(c => c.avatar === character.avatar))
+        if (character &amp;&amp; !discard.some(c => c.avatar === character.avatar))
             chars.push(character);
     }
 
-    if (user && !discard.some(c => c.avatar === user.avatar))
+    if (user &amp;&amp; !discard.some(c => c.avatar === user.avatar))
         chars.push(user);
 
     return chars;
@@ -145,11 +174,11 @@ function getAllParticipantsInChat(chat) {
         else if (this_chid !== undefined)
             char = characters[this_chid];
 
-        else if (selected_group && mess?.original_avatar !== undefined)
+        else if (selected_group &amp;&amp; mess?.original_avatar !== undefined)
             char = getCharacter(mess.original_avatar);
 
-        else if (selected_group && mess?.force_avatar !== undefined) {
-            const charAvatar = mess.force_avatar.replace(/\/thumbnail\?type=avatar&file=/i, "");
+        else if (selected_group &amp;&amp; mess?.force_avatar !== undefined) {
+            const charAvatar = mess.force_avatar.replace(/\/thumbnail\?type=avatar&amp;file=/i, "");
             char = getCharacter(charAvatar);
         }
 
@@ -179,42 +208,42 @@ function addTracker(status, mesID, character) {
     /** Create Status form template */
     const statusRow = document.createElement("tr");
     statusRow.innerHTML = `
-        <th scope="row">
-            <form>
-                <input type="hidden" name="enabled">
-                <input type="hidden" name="key">
-                <input type="hidden" name="value">
-                <input type="hidden" name="value_uid">
-            </form>
-            <div class="d-flex flex-col flex-center p-10px">
-                <div class="d-flex w-100 flex-center-between">
-                    <div class="d-flex flex-center">
-                        <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state." data-i18n="Toggle entry's active state."></div>
-                        <span class="status-title"></span>
-                    </div>
-                    <select class="status-value-uid m-0"></select>
-                </div>
-                <div class="separator-x d-none"></div>
-                <span class="status-description text-left w-100 d-none"></span>
-            </div>
-        </th>
+        &lt;th scope="row">
+            &lt;form>
+                &lt;input type="hidden" name="enabled">
+                &lt;input type="hidden" name="key">
+                &lt;input type="hidden" name="value">
+                &lt;input type="hidden" name="value_uid">
+            &lt;/form>
+            &lt;div class="d-flex flex-col flex-center p-10px">
+                &lt;div class="d-flex w-100 flex-center-between">
+                    &lt;div class="d-flex flex-center">
+                        &lt;div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state." data-i18n="Toggle entry's active state.">&lt;/div>
+                        &lt;span class="status-title">&lt;/span>
+                    &lt;/div>
+                    &lt;select class="status-value-uid m-0">&lt;/select>
+                &lt;/div>
+                &lt;div class="separator-x d-none">&lt;/div>
+                &lt;span class="status-description text-left w-100 d-none">&lt;/span>
+            &lt;/div>
+        &lt;/th>
     `;
 
     /** Create table */
     const statusTableBody = document.createElement("tbody");
     const statusTableHead = document.createElement("thead");
     statusTableHead.innerHTML = `
-        <tr>
-            <th scope="col">
-                <div class="d-flex w-100 flex-center-between p-10px">
-                    <span>Status - ${character.name}</span>
-                    <div class="d-flex flex-center">
-                        <div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0" tabindex="0"></div>
-                        <div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0" tabindex="0"></div>
-                    </div>
-                </div>
-            </th>
-        </tr>
+        &lt;tr>
+            &lt;th scope="col">
+                &lt;div class="d-flex w-100 flex-center-between p-10px">
+                    &lt;span>Status - ${character.name}&lt;/span>
+                    &lt;div class="d-flex flex-center">
+                        &lt;div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0" tabindex="0">&lt;/div>
+                        &lt;div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0" tabindex="0">&lt;/div>
+                    &lt;/div>
+                &lt;/div>
+            &lt;/th>
+        &lt;/tr>
     `;
 
     const statusTable = document.createElement("table");
@@ -367,7 +396,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
     for (const key of Object.keys(extension_prompts))
         if (key.includes(extensionName.toLowerCase())) delete extension_prompts[key];
 
-    for (let i = 0; i < statuses.length; i++) {
+    for (let i = 0; i &lt; statuses.length; i++) {
         const character = chars[i];
 
         if (!character) continue;
@@ -380,7 +409,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
             statuses[i].depth = char_depth;
 
         // If chat/status is empty or character is not even in the context
-        if (char_depth < 0) continue;
+        if (char_depth &lt; 0) continue;
         if (forceUIUpdate || (statuses[i].last_mes_id + char_depth) !== newMessID) addTracker(statuses[i], newMessID, character);
         if (!statuses[i].entries.length) continue;
 
@@ -394,7 +423,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
             promptValue += entry.key;
 
-            if (entry.key !== "" && entry.value !== "") promptValue += entry.separator;
+            if (entry.key !== "" &amp;&amp; entry.value !== "") promptValue += entry.separator;
 
             promptValue += entry.value;
         };
@@ -426,7 +455,7 @@ export function groupListAvatarsClick(e) {
     const char = getCharacter(char_avatar);
 
     // @ts-ignore
-    if (!char) return toastr.warning(t`The character could be found`);
+    if (!char) return toastr.warning(t`The character could not be found`);
 
     popupStatusSingleChar(char);
 }
@@ -525,7 +554,7 @@ function initButtons() {
         }
 
         // @ts-ignore
-        if (!chars.length) return toastr.warning(t`No character could be found in the metadata`);
+        if (!chars.length) return toastr.warning(t`The character could not be found in the metadata`);
 
         return await popupStatusMultiChar(chars);
     });
@@ -551,7 +580,7 @@ function initButtons() {
             const char = characters[this_chid];
 
             // @ts-ignore
-            if (!char) return toastr.warning(t`The character could be found`);
+            if (!char) return toastr.warning(t`The character could not be found`);
 
             return await popupStatusSingleChar(char);
         }
@@ -591,3 +620,26 @@ function initButtons() {
     initButtons();
     startListeners();
 })();
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#acceptedAltEntryFields">acceptedAltEntryFields</a></li><li><a href="global.html#acceptedEntryFields">acceptedEntryFields</a></li><li><a href="global.html#buildUIDsComment">buildUIDsComment</a></li><li><a href="global.html#commandCreateEntry">commandCreateEntry</a></li><li><a href="global.html#commandCreateEntryAltValue">commandCreateEntryAltValue</a></li><li><a href="global.html#commandDeleteAltEntry">commandDeleteAltEntry</a></li><li><a href="global.html#commandDeleteChatStatus">commandDeleteChatStatus</a></li><li><a href="global.html#commandDeleteEntry">commandDeleteEntry</a></li><li><a href="global.html#commandGetAltEntryField">commandGetAltEntryField</a></li><li><a href="global.html#commandGetAltEntryUID">commandGetAltEntryUID</a></li><li><a href="global.html#commandGetEntryField">commandGetEntryField</a></li><li><a href="global.html#commandGetEntryUID">commandGetEntryUID</a></li><li><a href="global.html#commandSetAltEntryField">commandSetAltEntryField</a></li><li><a href="global.html#commandSetEntryField">commandSetEntryField</a></li><li><a href="global.html#commandSwitchEntryValue">commandSwitchEntryValue</a></li><li><a href="global.html#customEnumProviders">customEnumProviders</a></li><li><a href="global.html#destroyElement">destroyElement</a></li><li><a href="global.html#displaySettings">displaySettings</a></li><li><a href="global.html#fillMissingMetadata">fillMissingMetadata</a></li><li><a href="global.html#getCharStatus">getCharStatus</a></li><li><a href="global.html#getLastDisplayPosition">getLastDisplayPosition</a></li><li><a href="global.html#getParticipantFromName">getParticipantFromName</a></li><li><a href="global.html#loadHTMLSettings">loadHTMLSettings</a></li><li><a href="global.html#refreshCharEntryDisplay">refreshCharEntryDisplay</a></li><li><a href="global.html#registerSlashCommands">registerSlashCommands</a></li><li><a href="global.html#setSettings">setSettings</a></li><li><a href="global.html#settingsBooleanButton">settingsBooleanButton</a></li><li><a href="global.html#updateCharEntry">updateCharEntry</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jul 05 2025 20:13:15 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
