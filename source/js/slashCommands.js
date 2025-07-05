@@ -10,7 +10,7 @@ import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { fetchStatus, getParticipant, log } from "../../index.js";
-import { addCharAltValue, addCharEntry, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharEntry, updateCharAltValue, updateCharEntry } from "./statusControls.js";
+import { addCharAltValue, addCharEntry, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry } from "./statusControls.js";
 
 /** Takes an object with a key and value and generates a comment
     @param {object} entry
@@ -264,6 +264,7 @@ function commandGetEntryField(args, value) {
     @param {object} args
     @param {String} args.char - Character name
     @param {String} args.uid - Entry UID
+    @returns {String} True if succeeds, False otherwise
 */
 function commandDeleteEntry(args, value) {
     try {
@@ -275,11 +276,11 @@ function commandDeleteEntry(args, value) {
         if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
         if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
 
-        const deletionSucced = removeCharEntry(character, parsed_uid);
+        const deletionSucceed = removeCharEntry(character, parsed_uid);
 
-        if (deletionSucced) fetchStatus({forceUIUpdate: true});
+        if (deletionSucceed) fetchStatus({forceUIUpdate: true});
 
-        return String(deletionSucced ?? false);
+        return String(deletionSucceed ?? false);
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
@@ -486,6 +487,38 @@ function commandGetAltEntryField(args, value) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
 
         return "";
+    }
+}
+
+/** Deletes an alt value within a status entry
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.uid - Entry UID
+    @param {String} args.altuid - UID of the entry alt value
+    @returns {String} True if succeeds, False otherwise
+*/
+function commandDeleteAltEntry(args, value) {
+    try {
+        const {char = "", uid = "-1", altuid = "-1"} = args;
+
+        const parsed_uid = Number(uid);
+        const parsed_altuid = Number(altuid);
+        const character = getParticipantFromName(char);
+
+        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (isNaN(parsed_altuid) || parsed_altuid < 0) throw new Error(`Invalid alt UID "${altuid}"`);
+
+        const deletionSucceed = removeCharAltValue(character, parsed_uid, parsed_altuid);
+
+        if (deletionSucceed) fetchStatus({forceUIUpdate: true});
+
+        return String(deletionSucceed ?? false);
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
+        return "false";
     }
 }
 
@@ -972,6 +1005,49 @@ export function registerSlashCommands() {
                 <ul>
                     <li>
                         <pre><code>/stum-get-alt-entry-field char="Tom" field="value" uid=7 altuid=2</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-delete-alt-entry",
+            callback: commandDeleteAltEntry,
+            returns: 'True or False',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.participantNames
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'uid',
+                    description: 'UID of the status entry',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.entryUIDs
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'altuid',
+                    description: 'UID of the status entry alternative value',
+                    typeList: [ARGUMENT_TYPE.NUMBER],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.altEntryUIDs
+                })
+            ],
+            helpString: `
+            <div>
+                Deletes an alt value within a status entry. Returns true if the deletion was a success, and false otherwise.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-delete-alt-entry char="Tom" uid=5 altuid=2</code></pre>
                     </li>
                 </ul>
             </div>`,

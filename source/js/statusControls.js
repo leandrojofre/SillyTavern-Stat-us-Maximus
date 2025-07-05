@@ -113,13 +113,20 @@ export function removeCharAltValue(character, entry_uid, alt_uid) {
             .alt_values
             .filter(s => s.uid !== Number(alt_uid));
 
+        if (entry.value_uid === Number(alt_uid)) {
+            entry.value = entry.alt_values[0].value;
+            entry.value_uid = entry.alt_values[0].uid;
+        }
+
         saveMetadataDebounced();
 
-        return entry.alt_values
+        return true;
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to delete Status Metadata: ${error.message}`);
         console.error(error.message);
+
+        return false;
     }
 }
 

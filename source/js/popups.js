@@ -273,7 +273,7 @@ async function formStatusSingleChar(char) {
             el(newRow, 'input[name="enabled"]').value = data[i].enabled;
             refreshAltValues(newRow, data[i].alt_values, data[i].value_uid);
             el(newRow, 'select[name="value_uid"]').value = String(data[i].value_uid);
-            el(newRow, 'input[name="alt_key"]').value = data[i].alt_values[data[i].value_uid].key;
+            el(newRow, 'input[name="alt_key"]').value = data[i].alt_values.find(alt => alt.uid === data[i].value_uid).key;
 
             if (!data[i].enabled) toggleSwitch(el(newRow, ".kill-switch"));
 
@@ -342,7 +342,11 @@ async function formStatusSingleChar(char) {
                 if (await popupDeleteConfirm("the alt value") === 0) return;
 
                 try {
-                    const new_alts = removeCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
+                    const success = removeCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
+
+                    if (!success) return;
+
+                    const new_alts = getCharEntry(char, data[i].uid).alt_values;
 
                     refreshAltValues(newRow, new_alts);
 
