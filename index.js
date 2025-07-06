@@ -337,6 +337,13 @@ function addTracker(status, mesID, character) {
         if (entry.alt_values.length <= 1) toggleVisibility(selectValueUID, true);
 
         statusTableBody.append(newRow);
+
+        /* TODO
+            - [ ] Replace select button for an icon button
+            - [ ] Highlight row on hover
+            - [ ] Hide description on disable
+            - [ ] Reduce font-size
+        */
     }
 
     /** Insert table in chat */
