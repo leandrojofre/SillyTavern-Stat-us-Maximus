@@ -180,25 +180,23 @@ function addTracker(status, mesID, character) {
     /** Create Status form template */
     const statusRow = document.createElement("tr");
     statusRow.innerHTML = `
-        <th scope="row">
+        <td>
             <form>
                 <input type="hidden" name="enabled">
                 <input type="hidden" name="key">
                 <input type="hidden" name="value">
                 <input type="hidden" name="value_uid">
             </form>
-            <div class="d-flex flex-col flex-center p-10px">
-                <div class="d-flex w-100 flex-center-between">
-                    <div class="d-flex flex-center">
-                        <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state." data-i18n="Toggle entry's active state."></div>
-                        <span class="status-title"></span>
-                    </div>
-                    <select class="status-value-uid m-0"></select>
-                </div>
-                <div class="separator-x d-none"></div>
-                <span class="status-description text-left w-100 d-none"></span>
+            <div class="d-flex flex-center-between gap-15px">
+                <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state." data-i18n="Toggle entry's active state."></div>
+                <p class="text-left flex-grow-1 m-0">
+                    <span class="status-title fw-bolder"></span>
+                    <span class="status-separator"></span>
+                    <span class="status-description"></span>
+                </p>
+                <select class="status-value-uid m-0"></select>
             </div>
-        </th>
+        </td>
     `;
 
     /** Create table */
@@ -269,11 +267,6 @@ function addTracker(status, mesID, character) {
     for (const entry of status.entries) {
         if (entry.key + entry.value === "") continue;
 
-        const toggleDescription = (state) => {
-            toggleVisibility(el(newRow, '.status-description'), state);
-            toggleVisibility(el(newRow, '.separator-x'), state);
-        }
-
         // Vars
         const newRow = /** @type {HTMLFormElement} */ (statusRow.cloneNode(true));
         const form = newRow.querySelector("form");
@@ -291,9 +284,8 @@ function addTracker(status, mesID, character) {
         el(form, 'input[name="value_uid"]').value = entry.value_uid;
 
         el(newRow, '.status-title').textContent = entry.key;
+        el(newRow, '.status-separator').innerHTML = entry.separator.replaceAll(/\n/g, "<br>");
         el(newRow, '.status-description').textContent = entry.value;
-
-        toggleDescription(entry.value === "");
 
         for (const alt_val of entry.alt_values) {
             const option = document.createElement("option");
@@ -339,9 +331,10 @@ function addTracker(status, mesID, character) {
             el(form, 'input[name="value_uid"]').value = alt.uid;
             el(newRow, '.status-description').textContent = alt.value;
 
-            toggleDescription(alt.value === "");
             form.dispatchEvent(evInput);
         });
+
+        if (entry.alt_values.length <= 1) toggleVisibility(selectValueUID, true);
 
         statusTableBody.append(newRow);
     }
