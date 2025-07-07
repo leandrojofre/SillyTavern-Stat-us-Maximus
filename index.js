@@ -139,17 +139,14 @@ function getAllParticipantsInChat(chat) {
         let char
 
         if (mess.is_user) {
-            const userAvatar = mess.force_avatar.replace(/user avatars\//i, "");
+            const userAvatar = mess.force_avatar.replace(/(user avatars\/)|(\/thumbnail\?type=persona&file=)/i, "");
             char = getUser(userAvatar);
         }
 
-        else if (this_chid !== undefined)
-            char = characters[this_chid];
-
-        else if (selected_group && mess?.original_avatar !== undefined)
+        else if (mess?.original_avatar !== undefined)
             char = getCharacter(mess.original_avatar);
 
-        else if (selected_group && mess?.force_avatar !== undefined) {
+        else if (mess?.force_avatar !== undefined) {
             const charAvatar = mess.force_avatar.replace(/\/thumbnail\?type=avatar&file=/i, "");
             char = getCharacter(charAvatar);
         }
@@ -349,9 +346,9 @@ function addTracker(status, mesID, character) {
 
         /* TODO
             - [ ] Replace select button for an icon button
-            - [ ] Highlight row on hover
-            - [ ] Hide description on disable
-            - [ ] Reduce font-size
+            - [X] Highlight row on hover
+            - [X] Hide description on disable
+            - [X] Reduce font-size
         */
     }
 
