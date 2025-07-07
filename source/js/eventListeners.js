@@ -1,4 +1,4 @@
-import { chat, event_types, eventSource } from "../../../../../../script.js";
+import { chat, event_types, eventSource, scrollChatToBottom } from "../../../../../../script.js";
 import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { selected_group } from "../../../../../group-chats.js";
 import { addGroupStatusButtons, fetchStatus, getActiveParticipants, getStatusDepth, log } from "../../index.js";
@@ -38,6 +38,7 @@ export function startListeners() {
         if (selected_group) addGroupStatusButtons();
 
         fetchStatus({forceUIUpdate: true});
+        scrollChatToBottom();
     });
 
     eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, async (...args) => {
