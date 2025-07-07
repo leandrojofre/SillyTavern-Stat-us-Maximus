@@ -49,11 +49,13 @@ export function destroyElement(element) {
         // Destroy even listeners
         child.off();
 
-        // Clean any ghost data
-        $.cleanData([child[0]]);
-
+        // Clean jQuery custom library elements
         // @ts-ignore
         if (child?.sortable('instance') !== undefined) child?.sortable('destroy');
+        if (child?.data('select2')) child.select2('destroy');
+
+        // Clean any ghost data
+        $.cleanData([child[0]]);
 
         // Destroy elements
         child.remove();
@@ -139,17 +141,14 @@ function getAllParticipantsInChat(chat) {
         let char
 
         if (mess.is_user) {
-            const userAvatar = mess.force_avatar.replace(/user avatars\//i, "");
+            const userAvatar = mess.force_avatar.replace(/(user avatars\/)|(\/thumbnail\?type=persona&file=)/i, "");
             char = getUser(userAvatar);
         }
 
-        else if (this_chid !== undefined)
-            char = characters[this_chid];
-
-        else if (selected_group && mess?.original_avatar !== undefined)
+        else if (mess?.original_avatar !== undefined)
             char = getCharacter(mess.original_avatar);
 
-        else if (selected_group && mess?.force_avatar !== undefined) {
+        else if (mess?.force_avatar !== undefined) {
             const charAvatar = mess.force_avatar.replace(/\/thumbnail\?type=avatar&file=/i, "");
             char = getCharacter(charAvatar);
         }
@@ -167,38 +166,39 @@ function getAllParticipantsInChat(chat) {
 
 function addTracker(status, mesID, character) {
     const $chat = document.getElementById("chat");
-    const prevLastMessID = structuredClone(status.last_mes_id);
     const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
 
     status.last_mes_id = mesID - status.depth;
 
-    destroyElement(`.mes[mesid="${prevLastMessID}"] .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
-    destroyElement(`.mes[mesid="${status.last_mes_id}"] .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
+    destroyElement(`.mes .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
 
     if (!entriesText) return;
 
     /** Create Status form template */
     const statusRow = document.createElement("tr");
     statusRow.innerHTML = `
-        <th scope="row">
+        <td>
             <form>
                 <input type="hidden" name="enabled">
                 <input type="hidden" name="key">
                 <input type="hidden" name="value">
                 <input type="hidden" name="value_uid">
             </form>
-            <div class="d-flex flex-col flex-center p-10px">
-                <div class="d-flex w-100 flex-center-between">
-                    <div class="d-flex flex-center">
-                        <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state." data-i18n="Toggle entry's active state."></div>
-                        <span class="status-title"></span>
-                    </div>
-                    <select class="status-value-uid m-0"></select>
-                </div>
-                <div class="separator-x d-none"></div>
-                <span class="status-description text-left w-100 d-none"></span>
+            <div class="d-flex flex-center-between gap-15px fs-90p text-muted hover-highlight">
+                <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state." data-i18n="Toggle entry's active state."></div>
+                <p class="text-left flex-grow-1 m-0">
+                    <span class="status-title fw-bolder"></span>
+                    <span class="status-separator"></span>
+                    <span class="status-description"></span>
+                </p>
+                <details class="status-value-uid m-0 place-items-baseline">
+                    <summary>
+                        <div class="menu_button menu_button_icon fa-solid fa-list-1-2 m-0" tabindex="0"></div>
+                    </summary>
+                    <div class="status-value-uid-options border p-0 scrollbar-none"></div>
+                </details>
             </div>
-        </th>
+        </td>
     `;
 
     /** Create table */
@@ -269,11 +269,6 @@ function addTracker(status, mesID, character) {
     for (const entry of status.entries) {
         if (entry.key + entry.value === "") continue;
 
-        const toggleDescription = (state) => {
-            toggleVisibility(el(newRow, '.status-description'), state);
-            toggleVisibility(el(newRow, '.separator-x'), state);
-        }
-
         // Vars
         const newRow = /** @type {HTMLFormElement} */ (statusRow.cloneNode(true));
         const form = newRow.querySelector("form");
@@ -282,7 +277,7 @@ function addTracker(status, mesID, character) {
         form.removeAttribute('action');
 
         const killSwitch = el(newRow, ".kill-switch");
-        const selectValueUID = el(newRow, 'select.status-value-uid');
+        const selectValueUID = el(newRow, 'details.status-value-uid');
 
         // Set Values
         el(form, 'input[name="key"]').value = entry.key;
@@ -291,25 +286,29 @@ function addTracker(status, mesID, character) {
         el(form, 'input[name="value_uid"]').value = entry.value_uid;
 
         el(newRow, '.status-title').textContent = entry.key;
+        el(newRow, '.status-separator').innerHTML = entry.separator.replaceAll(/\n/g, "<br>");
         el(newRow, '.status-description').textContent = entry.value;
 
-        toggleDescription(entry.value === "");
-
         for (const alt_val of entry.alt_values) {
-            const option = document.createElement("option");
-            option.value = String(alt_val.uid);
-            option.text = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
+            const option = document.createElement("div");
+            option.setAttribute("value", String(alt_val.uid));
+            option.innerText = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
+            option.classList.add("w-auto", "menu_button", "interactable", "m-0");
 
-            if (entry.value_uid === alt_val.uid) {
-                option.selected = true;
-            }
+            option.addEventListener("click", () => {
+                const alt = getCharAltValue(character, entry.uid, option.getAttribute("value"));
 
-           selectValueUID.append(option);
+                el(form, 'input[name="value"]').value = alt.value;
+                el(form, 'input[name="value_uid"]').value = alt.uid;
+                el(newRow, '.status-description').textContent = alt.value;
+
+                form.dispatchEvent(evInput);
+            });
+
+            el(newRow, '.status-value-uid-options').append(option);
         }
 
         selectValueUID.value = String(entry.value_uid);
-
-        if (!entry.enabled) toggleSwitch(killSwitch);
 
         // Add listeners
         form.addEventListener("submit", (e) => {
@@ -327,23 +326,33 @@ function addTracker(status, mesID, character) {
         });
 
         killSwitch.addEventListener("click", (e) => {
-            toggleSwitch(killSwitch, (state) => el(form, 'input[name="enabled"]').value = state);
+            toggleSwitch(killSwitch, (state) => {
+                el(form, 'input[name="enabled"]').value = state;
+                toggleVisibility(el(newRow, '.status-separator'), !state);
+                toggleVisibility(el(newRow, '.status-description'), !state);
+                el(newRow, '.hover-highlight').classList.toggle('disabled', !state);
+            });
 
             form.dispatchEvent(evInput);
         });
 
-        selectValueUID.addEventListener("change", () => {
-            const alt = getCharAltValue(character, entry.uid, selectValueUID.value);
-
-            el(form, 'input[name="value"]').value = alt.value;
-            el(form, 'input[name="value_uid"]').value = alt.uid;
-            el(newRow, '.status-description').textContent = alt.value;
-
-            toggleDescription(alt.value === "");
-            form.dispatchEvent(evInput);
+        // Set up UI
+        if (!entry.enabled) toggleSwitch(killSwitch, (state) => {
+            toggleVisibility(el(newRow, '.status-separator'), !state);
+            toggleVisibility(el(newRow, '.status-description'), !state);
+            el(newRow, '.hover-highlight').classList.toggle('disabled', !state);
         });
+
+        if (entry.alt_values.length <= 1) toggleVisibility(selectValueUID, true);
 
         statusTableBody.append(newRow);
+
+        /* TODO
+            - [ ] Replace select button for an icon button
+            - [X] Highlight row on hover
+            - [X] Hide description on disable
+            - [X] Reduce font-size
+        */
     }
 
     /** Insert table in chat */

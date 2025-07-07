@@ -4,8 +4,9 @@ import { selected_group } from "../../../../../group-chats.js";
 import { addGroupStatusButtons, fetchStatus, getActiveParticipants, getStatusDepth, log } from "../../index.js";
 import { createCharStatus, getCharStatus } from "./statusControls.js";
 
-// ? event_types.GROUP_UPDATED doesn't matter, status will update when that character sends a message
 /*
+    ? event_types.GROUP_UPDATED doesn't matter, status will update when that character sends a message
+
     # TODO
     - Change of heart, maybe use GROUP_UPDATED for:
         - [X] Check if the group member exists in metadata
