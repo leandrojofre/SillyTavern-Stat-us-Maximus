@@ -18,6 +18,7 @@ import { startListeners } from "./source/js/eventListeners.js";
 const extensionName = "SillyTavern-Stat-us-Maximus";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const defaultSettings = {
+    editNumbersFromChat: false,
     debug: false
 };
 
@@ -29,11 +30,6 @@ export const log = (...msg) => {
     if (!extensionSettings.enabled || !extensionSettings.debug) return;
     console.log("[" + extensionName + "]", ...msg);
 };
-
-// SillyTavern.StatusTest = async () => {
-//     log(this_chid, characters[this_chid]);
-//     log(selected_group);
-// }
 
 // * Extension methods
 
@@ -287,7 +283,29 @@ function addTracker(status, mesID, character) {
 
         el(newRow, '.status-title').textContent = entry.key;
         el(newRow, '.status-separator').innerHTML = entry.separator.replaceAll(/\n/g, "<br>");
-        el(newRow, '.status-description').textContent = entry.value;
+        el(newRow, '.status-description').innerHTML = "<span>" + entry.value.replaceAll(/\d+(\.\d+)?/g, (substring, p1, offset, string) => {
+            if (!extensionSettings.editNumbersFromChat) return substring;
+            return `</span><input value="${substring}" type="number" class="text_pole w-auto m-0"><span>`;
+        }) + "</span>";
+
+        el(newRow, '.status-description').querySelectorAll('input[type="number"]').forEach(input => {
+            input.style.width = `calc(${String(input.value).length}ch + 3.5ch)`;
+
+            input.addEventListener("input", () => {
+                input.style.width = `calc(${String(input.value).length}ch + 3.5ch)`;
+
+                let newValue = "";
+
+                for (const child of el(newRow, '.status-description').children) {
+                    if (child instanceof HTMLSpanElement) newValue += child.textContent;
+                    if (child instanceof HTMLInputElement) newValue += child.value;
+                }
+
+                el(form, 'input[name="value"]').value = newValue;
+
+                form.dispatchEvent(evInput);
+            });
+        });
 
         for (const alt_val of entry.alt_values) {
             const option = document.createElement("div");
@@ -300,7 +318,10 @@ function addTracker(status, mesID, character) {
 
                 el(form, 'input[name="value"]').value = alt.value;
                 el(form, 'input[name="value_uid"]').value = alt.uid;
-                el(newRow, '.status-description').textContent = alt.value;
+                el(newRow, '.status-description').textContent = "<span>" + alt.value.replaceAll(/\d+(\.\d+)?/g, (substring, p1, offset, string) => {
+                    if (!extensionSettings.editNumbersFromChat) return substring;
+                    return `</span><input value="${substring}" type="number" class="text_pole w-auto m-0"><span>`;
+                }) + "</span>";
 
                 form.dispatchEvent(evInput);
             });
@@ -348,7 +369,7 @@ function addTracker(status, mesID, character) {
         statusTableBody.append(newRow);
 
         /* TODO
-            - [ ] Replace select button for an icon button
+            - [X] Replace select button for an icon button
             - [X] Highlight row on hover
             - [X] Hide description on disable
             - [X] Reduce font-size
@@ -457,6 +478,11 @@ const settingsCallbacks = {
     /**	Triggers on enabled setting change. */
     enabled: () => {
         // Nothing by the moment
+    },
+
+    /**	Triggers on editNumbersFromChat setting change. */
+    editNumbersFromChat: () => {
+        fetchStatus({forceUIUpdate: true});
     }
 }
 
@@ -477,6 +503,7 @@ function settingsBooleanButton(event) {
 
 /**	Logs setting's values. */
 function displaySettings() {
+    console.debug("[" + extensionName + "]", `Edit numbers from chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Debug mode is ${extensionSettings.debug ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", structuredClone(extensionSettings));
 }
@@ -488,6 +515,7 @@ async function loadHTMLSettings() {
     $("#extensions_settings2").append(settingsHtml);
 
     // Event Listeners for the extension HTML
+    $("#stat-us-max-activate-edit-numbers-from-chat").on("input", settingsBooleanButton);
     $("#stat-us-max-activate-debug").on("input", settingsBooleanButton);
     $("#stat-us-max-check-configuration").on("click", displaySettings);
 
@@ -496,6 +524,7 @@ async function loadHTMLSettings() {
 
 /** Init setting values on the menu */
 function setSettings() {
+    $("#stat-us-max-activate-edit-numbers-from-chat").prop("checked", extensionSettings.editNumbersFromChat);
     $("#stat-us-max-activate-debug").prop("checked", extensionSettings.debug).trigger("input");
 }
 

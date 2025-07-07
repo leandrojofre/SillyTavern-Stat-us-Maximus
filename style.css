@@ -246,6 +246,10 @@
         max-width: 15%;
     }
 
+    .mw-min-content {
+        max-width: min-content;
+    }
+
     .mw-25 {
         max-width: 25%;
     }
@@ -373,5 +377,10 @@
 
     details[open] .status-value-uid-options {
         max-height: 15vh;
+    }
+
+    .status-description input.text_pole {
+        font-family: monospace;
+        border: unset;
     }
 }
