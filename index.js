@@ -166,13 +166,11 @@ function getAllParticipantsInChat(chat) {
 
 function addTracker(status, mesID, character) {
     const $chat = document.getElementById("chat");
-    const prevLastMessID = structuredClone(status.last_mes_id);
     const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
 
     status.last_mes_id = mesID - status.depth;
 
-    destroyElement(`.mes[mesid="${prevLastMessID}"] .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
-    destroyElement(`.mes[mesid="${status.last_mes_id}"] .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
+    destroyElement(`.mes .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
 
     if (!entriesText) return;
 
