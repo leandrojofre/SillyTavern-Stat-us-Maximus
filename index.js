@@ -31,11 +31,6 @@ export const log = (...msg) => {
     console.log("[" + extensionName + "]", ...msg);
 };
 
-// SillyTavern.StatusTest = async () => {
-//     log(this_chid, characters[this_chid]);
-//     log(selected_group);
-// }
-
 // * Extension methods
 
 /** Destroys an element and all data associated with it
@@ -374,7 +369,7 @@ function addTracker(status, mesID, character) {
         statusTableBody.append(newRow);
 
         /* TODO
-            - [ ] Replace select button for an icon button
+            - [X] Replace select button for an icon button
             - [X] Highlight row on hover
             - [X] Hide description on disable
             - [X] Reduce font-size
