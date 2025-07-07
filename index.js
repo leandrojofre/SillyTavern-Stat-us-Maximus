@@ -287,7 +287,28 @@ function addTracker(status, mesID, character) {
 
         el(newRow, '.status-title').textContent = entry.key;
         el(newRow, '.status-separator').innerHTML = entry.separator.replaceAll(/\n/g, "<br>");
-        el(newRow, '.status-description').textContent = entry.value;
+        el(newRow, '.status-description').innerHTML = "<span>" + entry.value.replaceAll(/\d+(\.\d+)?/g, (substring, p1, offset, string) => {
+            return `</span><input value="${substring}" type="number" class="text_pole w-auto m-0"><span>`;
+        }) + "</span>";
+
+        el(newRow, '.status-description').querySelectorAll('input[type="number"]').forEach(input => {
+            input.style.width = `calc(${String(input.value).length}ch + 3.5ch)`;
+
+            input.addEventListener("input", () => {
+                input.style.width = `calc(${String(input.value).length}ch + 3.5ch)`;
+
+                let newValue = "";
+
+                for (const child of el(newRow, '.status-description').children) {
+                    if (child instanceof HTMLSpanElement) newValue += child.textContent;
+                    if (child instanceof HTMLInputElement) newValue += child.value;
+                }
+
+                el(form, 'input[name="value"]').value = newValue;
+
+                form.dispatchEvent(evInput);
+            });
+        });
 
         for (const alt_val of entry.alt_values) {
             const option = document.createElement("div");
