@@ -234,6 +234,10 @@
         color: color-mix(in srgb, currentColor 40%, black);
     }
 
+    .w-auto {
+        width: auto;
+    }
+
     .w-100 {
         width: 100%;
     }
@@ -330,5 +334,44 @@
         padding-bottom: 5px;
         margin-bottom: 5px;
         border-radius: 0;
+    }
+
+    .place-items-end {
+        place-items: end;
+    }
+
+    .place-items-baseline {
+        place-items: baseline;
+    }
+
+    .scrollbar-none {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
+
+    summary {
+        display: block;
+    }
+
+    .status-value-uid-options {
+        position: absolute;
+        place-self: end;
+        overflow-x: hidden;
+        overflow-y: scroll;
+    }
+
+    .status-value-uid-options::-webkit-scrollbar {
+        display: none;
+    }
+    .menu_button:hover {
+        background-color: color-mix(in srgb, var(--SmartThemeBlurTintColor) 70%, white);
+    }
+
+    details[open] .status-value-uid-options {
+        max-height: 15vh;
     }
 }

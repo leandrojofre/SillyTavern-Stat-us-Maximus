@@ -191,7 +191,12 @@ function addTracker(status, mesID, character) {
                     <span class="status-separator"></span>
                     <span class="status-description"></span>
                 </p>
-                <select class="status-value-uid m-0"></select>
+                <details class="status-value-uid m-0 place-items-baseline">
+                    <summary>
+                        <div class="menu_button menu_button_icon fa-solid fa-list-1-2 m-0" tabindex="0"></div>
+                    </summary>
+                    <div class="status-value-uid-options border p-0 scrollbar-none"></div>
+                </details>
             </div>
         </td>
     `;
@@ -272,7 +277,7 @@ function addTracker(status, mesID, character) {
         form.removeAttribute('action');
 
         const killSwitch = el(newRow, ".kill-switch");
-        const selectValueUID = el(newRow, 'select.status-value-uid');
+        const selectValueUID = el(newRow, 'details.status-value-uid');
 
         // Set Values
         el(form, 'input[name="key"]').value = entry.key;
@@ -285,24 +290,25 @@ function addTracker(status, mesID, character) {
         el(newRow, '.status-description').textContent = entry.value;
 
         for (const alt_val of entry.alt_values) {
-            const option = document.createElement("option");
-            option.value = String(alt_val.uid);
-            option.text = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
+            const option = document.createElement("div");
+            option.setAttribute("value", String(alt_val.uid));
+            option.innerText = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
+            option.classList.add("w-auto", "menu_button", "interactable", "m-0");
 
-            if (entry.value_uid === alt_val.uid) {
-                option.selected = true;
-            }
+            option.addEventListener("click", () => {
+                const alt = getCharAltValue(character, entry.uid, option.getAttribute("value"));
 
-           selectValueUID.append(option);
+                el(form, 'input[name="value"]').value = alt.value;
+                el(form, 'input[name="value_uid"]').value = alt.uid;
+                el(newRow, '.status-description').textContent = alt.value;
+
+                form.dispatchEvent(evInput);
+            });
+
+            el(newRow, '.status-value-uid-options').append(option);
         }
 
         selectValueUID.value = String(entry.value_uid);
-
-        if (!entry.enabled) toggleSwitch(killSwitch, (state) => {
-            toggleVisibility(el(newRow, '.status-separator'), !state);
-            toggleVisibility(el(newRow, '.status-description'), !state);
-            el(newRow, '.hover-highlight').classList.toggle('disabled', !state);
-        });
 
         // Add listeners
         form.addEventListener("submit", (e) => {
@@ -330,14 +336,11 @@ function addTracker(status, mesID, character) {
             form.dispatchEvent(evInput);
         });
 
-        selectValueUID.addEventListener("change", () => {
-            const alt = getCharAltValue(character, entry.uid, selectValueUID.value);
-
-            el(form, 'input[name="value"]').value = alt.value;
-            el(form, 'input[name="value_uid"]').value = alt.uid;
-            el(newRow, '.status-description').textContent = alt.value;
-
-            form.dispatchEvent(evInput);
+        // Set up UI
+        if (!entry.enabled) toggleSwitch(killSwitch, (state) => {
+            toggleVisibility(el(newRow, '.status-separator'), !state);
+            toggleVisibility(el(newRow, '.status-description'), !state);
+            el(newRow, '.hover-highlight').classList.toggle('disabled', !state);
         });
 
         if (entry.alt_values.length <= 1) toggleVisibility(selectValueUID, true);
