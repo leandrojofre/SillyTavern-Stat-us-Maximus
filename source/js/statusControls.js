@@ -328,6 +328,8 @@ const statusTemplate = {
     avatar: "",
     role: extension_prompt_roles.SYSTEM,
     separator: "\n",
+    prefix: "",
+    suffix: "",
     depth: -1,
     last_mes_id: -1,
     is_user: false,

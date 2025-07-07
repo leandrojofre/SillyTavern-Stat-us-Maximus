@@ -72,7 +72,7 @@ async function formStatusSingleChar(char) {
         - [ ] Button to delete status metadata - per character
         - [ ] Open/close all entries - per character
         - [ ] Status transfer button
-        - [ ] Entries block prefix/suffix
+        - [X] Entries block prefix/suffix
         - [ ] Custom depth buttons - dynamic depth if undefined
         - [ ] Fucking labels
     */
@@ -114,13 +114,25 @@ async function formStatusSingleChar(char) {
     textareaStatusSeparator.value = escapeNewlines(metadata.separator);
     textareaStatusSeparator.classList.add("text_pole", "mw-15");
 
+    const textareaStatusPrefix = document.createElement("input");
+    textareaStatusPrefix.type = "text";
+    textareaStatusPrefix.placeholder = t`Status prefix...`;
+    textareaStatusPrefix.value = escapeNewlines(metadata.prefix);
+    textareaStatusPrefix.classList.add("text_pole", "mw-15");
+
+    const textareaStatusSuffix = document.createElement("input");
+    textareaStatusSuffix.type = "text";
+    textareaStatusSuffix.placeholder = t`Status suffix...`;
+    textareaStatusSuffix.value = escapeNewlines(metadata.suffix);
+    textareaStatusSuffix.classList.add("text_pole", "mw-15");
+
     const newStatBtn = document.createElement("div");
     newStatBtn.id = "stat-us-max-new-btn-" + metadata.last_mes_id;
     newStatBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable");
 
     const wrapper = document.createElement("div");
     wrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px");
-    wrapper.append(avatarContainer, selectEntryRole, textareaStatusSeparator, newStatBtn, title);
+    wrapper.append(avatarContainer, selectEntryRole, textareaStatusSeparator, textareaStatusPrefix, textareaStatusSuffix, newStatBtn, title);
 
     /** Create input template */
     /** - Key */
@@ -222,6 +234,8 @@ async function formStatusSingleChar(char) {
     let formDebounceTimer;
     let altKeyDebounceTimer;
     let separatorDebounceTimer;
+    let prefixDebounceTimer;
+    let suffixDebounceTimer;
 
     const el = (target, class_name) => target.querySelector(class_name);
 
@@ -378,6 +392,26 @@ async function formStatusSingleChar(char) {
         clearTimeout(separatorDebounceTimer);
 
         separatorDebounceTimer = window.setTimeout(() => {
+            saveMetadataDebounced();
+        }, DEBOUNCE_MS);
+    });
+
+    textareaStatusPrefix.addEventListener("input", () => {
+        metadata.prefix = un_escapeNewlines(textareaStatusPrefix.value);
+
+        clearTimeout(prefixDebounceTimer);
+
+        prefixDebounceTimer = window.setTimeout(() => {
+            saveMetadataDebounced();
+        }, DEBOUNCE_MS);
+    });
+
+    textareaStatusSuffix.addEventListener("input", () => {
+        metadata.suffix = un_escapeNewlines(textareaStatusSuffix.value);
+
+        clearTimeout(suffixDebounceTimer);
+
+        suffixDebounceTimer = window.setTimeout(() => {
             saveMetadataDebounced();
         }, DEBOUNCE_MS);
     });

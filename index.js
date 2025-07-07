@@ -435,6 +435,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
         };
 
         if (!promptValue) continue;
+        else promptValue = status.prefix + promptValue + status.suffix;
 
         promptValue = promptValue.replaceAll("{{name}}", character.name);
 

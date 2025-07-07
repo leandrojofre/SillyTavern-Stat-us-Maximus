@@ -2,7 +2,7 @@ import { chat, event_types, eventSource, scrollChatToBottom } from "../../../../
 import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { selected_group } from "../../../../../group-chats.js";
 import { addGroupStatusButtons, fetchStatus, getActiveParticipants, getStatusDepth, log } from "../../index.js";
-import { createCharStatus, getCharStatus } from "./statusControls.js";
+import { createCharStatus, fillMissingMetadata, getCharStatus } from "./statusControls.js";
 
 /*
     ? event_types.GROUP_UPDATED doesn't matter, status will update when that character sends a message
@@ -36,7 +36,8 @@ export function startListeners() {
 
         if (!args[0]) return;
         if (selected_group) addGroupStatusButtons();
-
+        
+        fillMissingMetadata();
         fetchStatus({forceUIUpdate: true});
         scrollChatToBottom();
     });
