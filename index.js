@@ -49,11 +49,13 @@ export function destroyElement(element) {
         // Destroy even listeners
         child.off();
 
-        // Clean any ghost data
-        $.cleanData([child[0]]);
-
+        // Clean jQuery custom library elements
         // @ts-ignore
         if (child?.sortable('instance') !== undefined) child?.sortable('destroy');
+        if (child?.data('select2')) child.select2('destroy');
+
+        // Clean any ghost data
+        $.cleanData([child[0]]);
 
         // Destroy elements
         child.remove();
