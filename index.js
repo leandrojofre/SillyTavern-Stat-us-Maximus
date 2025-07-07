@@ -283,29 +283,36 @@ function addTracker(status, mesID, character) {
 
         el(newRow, '.status-title').textContent = entry.key;
         el(newRow, '.status-separator').innerHTML = entry.separator.replaceAll(/\n/g, "<br>");
-        el(newRow, '.status-description').innerHTML = "<span>" + entry.value.replaceAll(/\d+(\.\d+)?/g, (substring, p1, offset, string) => {
-            if (!extensionSettings.editNumbersFromChat) return substring;
-            return `</span><input value="${substring}" type="number" class="text_pole w-auto m-0"><span>`;
-        }) + "</span>";
 
-        el(newRow, '.status-description').querySelectorAll('input[type="number"]').forEach(input => {
-            input.style.width = `calc(${String(input.value).length}ch + 3.5ch)`;
+        const updateDescription = (description) => {
+            destroyElement(el(newRow, '.status-description').children);
 
-            input.addEventListener("input", () => {
+            el(newRow, '.status-description').innerHTML = "<span>" + String(description).replaceAll(/\d+(\.\d+)?/g, (substring, p1, offset, string) => {
+                if (!extensionSettings.editNumbersFromChat) return substring;
+                return `</span><input value="${substring}" type="number" class="text_pole w-auto m-0"><span>`;
+            }) + "</span>";
+
+            el(newRow, '.status-description').querySelectorAll('input[type="number"]').forEach(input => {
                 input.style.width = `calc(${String(input.value).length}ch + 3.5ch)`;
 
-                let newValue = "";
+                input.addEventListener("input", () => {
+                    input.style.width = `calc(${String(input.value).length}ch + 3.5ch)`;
 
-                for (const child of el(newRow, '.status-description').children) {
-                    if (child instanceof HTMLSpanElement) newValue += child.textContent;
-                    if (child instanceof HTMLInputElement) newValue += child.value;
-                }
+                    let newValue = "";
 
-                el(form, 'input[name="value"]').value = newValue;
+                    for (const child of el(newRow, '.status-description').children) {
+                        if (child instanceof HTMLSpanElement) newValue += child.textContent;
+                        if (child instanceof HTMLInputElement) newValue += child.value;
+                    }
 
-                form.dispatchEvent(evInput);
+                    el(form, 'input[name="value"]').value = newValue;
+
+                    form.dispatchEvent(evInput);
+                });
             });
-        });
+        }
+
+        updateDescription(entry.value);
 
         for (const alt_val of entry.alt_values) {
             const option = document.createElement("div");
@@ -318,10 +325,7 @@ function addTracker(status, mesID, character) {
 
                 el(form, 'input[name="value"]').value = alt.value;
                 el(form, 'input[name="value_uid"]').value = alt.uid;
-                el(newRow, '.status-description').textContent = "<span>" + alt.value.replaceAll(/\d+(\.\d+)?/g, (substring, p1, offset, string) => {
-                    if (!extensionSettings.editNumbersFromChat) return substring;
-                    return `</span><input value="${substring}" type="number" class="text_pole w-auto m-0"><span>`;
-                }) + "</span>";
+                updateDescription(alt.value);
 
                 form.dispatchEvent(evInput);
             });
