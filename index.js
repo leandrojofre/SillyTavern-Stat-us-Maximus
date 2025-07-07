@@ -187,7 +187,7 @@ function addTracker(status, mesID, character) {
                 <input type="hidden" name="value">
                 <input type="hidden" name="value_uid">
             </form>
-            <div class="d-flex flex-center-between gap-15px">
+            <div class="d-flex flex-center-between gap-15px fs-90p text-muted hover-highlight">
                 <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state." data-i18n="Toggle entry's active state."></div>
                 <p class="text-left flex-grow-1 m-0">
                     <span class="status-title fw-bolder"></span>
@@ -301,7 +301,11 @@ function addTracker(status, mesID, character) {
 
         selectValueUID.value = String(entry.value_uid);
 
-        if (!entry.enabled) toggleSwitch(killSwitch);
+        if (!entry.enabled) toggleSwitch(killSwitch, (state) => {
+            toggleVisibility(el(newRow, '.status-separator'), !state);
+            toggleVisibility(el(newRow, '.status-description'), !state);
+            el(newRow, '.hover-highlight').classList.toggle('disabled', !state);
+        });
 
         // Add listeners
         form.addEventListener("submit", (e) => {
@@ -319,7 +323,12 @@ function addTracker(status, mesID, character) {
         });
 
         killSwitch.addEventListener("click", (e) => {
-            toggleSwitch(killSwitch, (state) => el(form, 'input[name="enabled"]').value = state);
+            toggleSwitch(killSwitch, (state) => {
+                el(form, 'input[name="enabled"]').value = state;
+                toggleVisibility(el(newRow, '.status-separator'), !state);
+                toggleVisibility(el(newRow, '.status-description'), !state);
+                el(newRow, '.hover-highlight').classList.toggle('disabled', !state);
+            });
 
             form.dispatchEvent(evInput);
         });

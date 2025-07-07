@@ -222,6 +222,18 @@
         font-weight: bolder;
     }
 
+    .fs-90p {
+        font-size: calc(var(--mainFontSize) * 0.9);
+    }
+
+    .text-muted {
+        color: color-mix(in srgb, currentColor 85%, black);
+    }
+
+    .disabled {
+        color: color-mix(in srgb, currentColor 40%, black);
+    }
+
     .w-100 {
         width: 100%;
     }
@@ -283,6 +295,12 @@
     .inline-drawer-header:hover {
         filter: brightness(1.5) saturate(1.75) invert(25%);
         border-color: invert(var(--stat-us-border-color)) !important;
+    }
+
+    .hover-highlight:not(.disabled):hover {
+        filter: brightness(1.25) saturate(1.25);
+        border-color: invert(var(--stat-us-border-color)) !important;
+        color: currentColor;
     }
 
     .kill-switch.fa-toggle-on {
