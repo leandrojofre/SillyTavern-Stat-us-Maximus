@@ -48,6 +48,8 @@ This extension adds a menu per character to have your notes, it is basically a s
 - [ ] Status block prefix/suffix in popup menus.
 - [ ] Custom depth buttons - dynamic depth if undefined.
 - [ ] Labels for input buttons in popup menus.
+- [ ] Status templates in the extension settings menu.
+- [ ] Turn entries into global entries.
 
 ## Installation
 Install the extension using this link: ```https://github.com/leandrojofre/SillyTavern-Stat-us-Maximus.git```
