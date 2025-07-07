@@ -5,8 +5,8 @@ This extension adds a menu per character to have your notes, it is basically a s
 **This is still in development! Please submit any bug you find and feature you want! Either as a GitHub issue or through the ST Discord.**
 
 <img width="100%" src="https://github.com/user-attachments/assets/66bb967f-76b7-4b32-a0ce-bebbe818abe9">
-<img width="100%" src="https://github.com/user-attachments/assets/bca7f694-d641-4278-87e1-d095590404e3">
 <img width="100%" src="https://github.com/user-attachments/assets/5019ebf9-87e8-441d-95a4-446cdf050d28">
+<img width="100%" src="https://github.com/user-attachments/assets/7c41659b-3c4c-4844-86fb-cb25284c59d7">
 
 ## Features
 - When you open a chat, a status will be added for every character present (either now or in the past).
