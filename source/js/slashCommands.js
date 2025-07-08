@@ -44,7 +44,7 @@ const acceptedEntryFields = {
     value: "Value of the entry",
     separator: "Separator between the key and value",
     value_uid: "Unique identifier of the selected alt value (select menu of the entry - starts at 0)",
-    display_position: "Order at which the entry gets inserted (starts at 0)"
+    // display_position: "Order at which the entry gets inserted (starts at 0)"
 }
 
 /** Accepted alt key values and their descriptions */
