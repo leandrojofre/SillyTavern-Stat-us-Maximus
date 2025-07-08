@@ -281,18 +281,17 @@ function addTracker(status, mesID, character) {
         el(form, 'input[name="enabled"]').value = entry.enabled;
         el(form, 'input[name="value_uid"]').value = entry.value_uid;
 
-        el(newRow, '.status-title').textContent = entry.key;
         el(newRow, '.status-separator').innerHTML = entry.separator.replaceAll(/\n/g, "<br>");
 
-        const updateDescription = (description) => {
-            destroyElement(el(newRow, '.status-description').children);
+        const updateDescription = (text, el_target, input_target) => {
+            destroyElement(el(newRow, el_target).children);
 
-            el(newRow, '.status-description').innerHTML = "<span>" + String(description).replaceAll(/\d+(\.\d+)?/g, (substring, p1, offset, string) => {
+            el(newRow, el_target).innerHTML = "<span>" + String(text).replaceAll(/\d+(\.\d+)?/g, (substring, p1, offset, string) => {
                 if (!extensionSettings.editNumbersFromChat) return substring;
-                return `</span><input value="${substring}" type="number" class="text_pole w-auto m-0"><span>`;
+                return `</span><input value="${substring}" type="number" class="text_pole w-auto m-0 chat-number-editor"><span>`;
             }) + "</span>";
 
-            el(newRow, '.status-description').querySelectorAll('input[type="number"]').forEach(input => {
+            el(newRow, el_target).querySelectorAll('input[type="number"]').forEach(input => {
                 input.style.width = `calc(${String(input.value).length}ch + 3.5ch)`;
 
                 input.addEventListener("input", () => {
@@ -300,19 +299,20 @@ function addTracker(status, mesID, character) {
 
                     let newValue = "";
 
-                    for (const child of el(newRow, '.status-description').children) {
+                    for (const child of el(newRow, el_target).children) {
                         if (child instanceof HTMLSpanElement) newValue += child.textContent;
                         if (child instanceof HTMLInputElement) newValue += child.value;
                     }
 
-                    el(form, 'input[name="value"]').value = newValue;
+                    el(form, `input[name="${input_target}"]`).value = newValue;
 
                     form.dispatchEvent(evInput);
                 });
             });
         }
 
-        updateDescription(entry.value);
+        updateDescription(entry.key, '.status-title', 'key');
+        updateDescription(entry.value, '.status-description', 'value');
 
         for (const alt_val of entry.alt_values) {
             const option = document.createElement("div");
@@ -325,7 +325,7 @@ function addTracker(status, mesID, character) {
 
                 el(form, 'input[name="value"]').value = alt.value;
                 el(form, 'input[name="value_uid"]').value = alt.uid;
-                updateDescription(alt.value);
+                updateDescription(alt.value, '.status-description', 'value');
 
                 form.dispatchEvent(evInput);
             });

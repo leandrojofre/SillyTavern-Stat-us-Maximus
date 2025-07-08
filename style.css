@@ -379,7 +379,7 @@
         max-height: 15vh;
     }
 
-    .status-description input.text_pole {
+    input.text_pole.chat-number-editor {
         font-family: monospace;
         border: unset;
     }
