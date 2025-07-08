@@ -31,12 +31,17 @@ export function startListeners() {
         addGroupStatusButtons();
     });
 
+    eventSource.on('groupSelected', async (...args) => { // WTF - Why isn't this in event_types?
+        log("groupSelected", args);
+        addGroupStatusButtons();
+    });
+
     eventSource.on(event_types.CHAT_CHANGED, async (...args) => {
         log("CHAT_CHANGED", args);
 
         if (!args[0]) return;
         if (selected_group) addGroupStatusButtons();
-        
+
         fillMissingMetadata();
         fetchStatus({forceUIUpdate: true});
         scrollChatToBottom();
