@@ -4,7 +4,7 @@ import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { getSortableDelay } from "../../../../../utils.js";
 import { log, destroyElement, fetchStatus } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay } from "./statusControls.js";
+import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus } from "./statusControls.js";
 
 export function escapeNewlines(str) {
     return str
@@ -52,7 +52,9 @@ function getFullCharAvatar(status) {
 }
 
 async function formStatusSingleChar(char) {
-    const metadata = getCharStatus(char);
+    let metadata = getCharStatus(char);
+
+    if (!metadata) metadata = createCharStatus(char);
 
     // @ts-ignore
     if (!metadata) return toastr.error(t`No metadata was found for the character -${char?.name}-`);
@@ -69,9 +71,10 @@ async function formStatusSingleChar(char) {
         - [X] Drag and drop for entries
         - [X] Per-character open menu buttons on group list and in right nav UI for solo chats
         - [ ] Per-user open menu buttons
-        - [ ] Button to delete status metadata - per character
         - [ ] Open/close all entries - per character
         - [ ] Status transfer button
+        - [ ] Status clone button
+        - [ ] Status delete button
         - [X] Entries block prefix/suffix
         - [ ] Custom depth buttons - dynamic depth if undefined
         - [ ] Fucking labels
@@ -127,7 +130,6 @@ async function formStatusSingleChar(char) {
     textareaStatusSuffix.classList.add("text_pole", "mw-15");
 
     const newStatBtn = document.createElement("div");
-    newStatBtn.id = "stat-us-max-new-btn-" + metadata.last_mes_id;
     newStatBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable");
 
     const wrapper = document.createElement("div");

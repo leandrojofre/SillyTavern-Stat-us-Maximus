@@ -13,12 +13,23 @@ import { startListeners } from "./source/js/eventListeners.js";
 /*  # TODO
     - [ ] Setting to disable confirm delete
     - [ ] Setting for deff role
+    - [X] Setting to disable auto detection
+*/
+
+/*
+    ! THE PLAN
+    I have a fucking big brain; how to rework the code to implement "Setting to disable auto detection"?
+    Easy, don't rework it! I can just:
+    1. [ ] Add a slash command to initialize Status metadata - the existing ones already throw an error if char is not in metadata
+    2. [X] Make the UI buttons to open individual popups create Status data when interacted with
+    3. [ ] Stonks!
 */
 
 const extensionName = "SillyTavern-Stat-us-Maximus";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const defaultSettings = {
     editNumbersFromChat: false,
+    autoDetectParticipants: true,
     debug: false
 };
 
@@ -402,6 +413,8 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
     for (const key of Object.keys(extension_prompts))
         if (key.includes(extensionName.toLowerCase())) delete extension_prompts[key];
 
+    if (!statuses.length) return;
+
     for (let i = 0; i < statuses.length; i++) {
         const character = chars[i];
 
@@ -409,10 +422,11 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
         const char_depth = getStatusDepth(realChat, character);
 
-        if (!statuses[i])
-            statuses[i] = createCharStatus(character, char_depth);
-        else
+        if (statuses[i])
             statuses[i].depth = char_depth;
+        else if (extensionSettings.autoDetectParticipants)
+            statuses[i] = createCharStatus(character, char_depth);
+        else continue;
 
         // If chat/status is empty or character is not even in the context
         if (char_depth < 0) continue;
@@ -480,12 +494,7 @@ export function addGroupStatusButtons() {
 // * Methods in charge of controlling the extension settings
 
 const settingsCallbacks = {
-    /**	Triggers on enabled setting change. */
-    enabled: () => {
-        // Nothing by the moment
-    },
-
-    /**	Triggers on editNumbersFromChat setting change. */
+    /**	Triggers on editNumbersFromChat change. */
     editNumbersFromChat: () => {
         fetchStatus({forceUIUpdate: true});
     }
@@ -508,6 +517,7 @@ function settingsBooleanButton(event) {
 
 /**	Logs setting's values. */
 function displaySettings() {
+    console.debug("[" + extensionName + "]", `Auto detect participants is ${extensionSettings.autoDetectParticipants ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Edit numbers from chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Debug mode is ${extensionSettings.debug ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", structuredClone(extensionSettings));
@@ -520,8 +530,9 @@ async function loadHTMLSettings() {
     $("#extensions_settings2").append(settingsHtml);
 
     // Event Listeners for the extension HTML
-    $("#stat-us-max-activate-edit-numbers-from-chat").on("input", settingsBooleanButton);
-    $("#stat-us-max-activate-debug").on("input", settingsBooleanButton);
+    $("#stat-us-max-auto-detect-participants").on("input", settingsBooleanButton);
+    $("#stat-us-max-edit-numbers-from-chat").on("input", settingsBooleanButton);
+    $("#stat-us-max-debug").on("input", settingsBooleanButton);
     $("#stat-us-max-check-configuration").on("click", displaySettings);
 
     log("loadHTMLSettings");
@@ -529,8 +540,9 @@ async function loadHTMLSettings() {
 
 /** Init setting values on the menu */
 function setSettings() {
-    $("#stat-us-max-activate-edit-numbers-from-chat").prop("checked", extensionSettings.editNumbersFromChat);
-    $("#stat-us-max-activate-debug").prop("checked", extensionSettings.debug).trigger("input");
+    $("#stat-us-max-auto-detect-participants").prop("checked", extensionSettings.autoDetectParticipants);
+    $("#stat-us-max-edit-numbers-from-chat").prop("checked", extensionSettings.editNumbersFromChat);
+    $("#stat-us-max-debug").prop("checked", extensionSettings.debug).trigger("input");
 }
 
 // * Initialize Extension
@@ -556,10 +568,6 @@ function initButtons() {
     globalStatusMenu.append(globalStatusButton);
     globalStatusMenu.addEventListener("click", async () => {
         const metadata = chat_metadata.stat_us_maximus;
-
-        // @ts-ignore
-        if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit, open a chat or refresh the current one`);
-
         const chars = [];
 
         for (const status of metadata) {
@@ -569,7 +577,7 @@ function initButtons() {
         }
 
         // @ts-ignore
-        if (!chars.length) return toastr.warning(t`The character could not be found in the metadata`);
+        if (!chars.length) return toastr.warning(t`Characters could not be found in the metadata`);
 
         return await popupStatusMultiChar(chars);
     });
@@ -586,11 +594,6 @@ function initButtons() {
     const charStatusOpenPopupBtn = document.createElement("div");
     charStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-table", "interactable", "m-0");
     charStatusOpenPopupBtn.addEventListener("click", async () => {
-        const metadata = chat_metadata.stat_us_maximus;
-
-        // @ts-ignore
-        if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit, open a chat or refresh the current one`);
-
         if (this_chid !== undefined) {
             const char = characters[this_chid];
 

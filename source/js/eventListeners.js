@@ -1,7 +1,7 @@
-import { chat, event_types, eventSource, scrollChatToBottom } from "../../../../../../script.js";
+import { chat, chat_metadata, event_types, eventSource, scrollChatToBottom } from "../../../../../../script.js";
 import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { selected_group } from "../../../../../group-chats.js";
-import { addGroupStatusButtons, fetchStatus, getActiveParticipants, getStatusDepth, log } from "../../index.js";
+import { addGroupStatusButtons, extensionSettings, fetchStatus, getActiveParticipants, getStatusDepth, log } from "../../index.js";
 import { createCharStatus, fillMissingMetadata, getCharStatus } from "./statusControls.js";
 
 /*
@@ -18,9 +18,10 @@ export function startListeners() {
     eventSource.on(event_types.GROUP_UPDATED, async (...args) => {
         log("GROUP_UPDATED", args);
 
-        for (const char of getActiveParticipants()) {
-            if (!getCharStatus(char)) createCharStatus(char, getStatusDepth(chat, char));
-        }
+        if (extensionSettings.autoDetectParticipants)
+            for (const char of getActiveParticipants()) {
+                if (!getCharStatus(char)) createCharStatus(char, getStatusDepth(chat, char));
+            }
 
         saveMetadataDebounced();
         addGroupStatusButtons();
@@ -40,6 +41,7 @@ export function startListeners() {
         log("CHAT_CHANGED", args);
 
         if (!args[0]) return;
+        if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
         if (selected_group) addGroupStatusButtons();
 
         fillMissingMetadata();
