@@ -294,21 +294,31 @@ export function removeCharEntry(character, entry_uid = -1) {
     }
 }
 
-export function createCharStatus(character, depth) {
-    const status = {
-        avatar: character.avatar,
-        role: extension_prompt_roles.SYSTEM,
-        separator: "\n",
-        depth: depth,
-        last_mes_id: chat.length - depth - 1,
-        is_user: character.is_user ?? false,
-        is_collapsed: false,
-        entries: []
-    };
+export function createCharStatus(character, depth = -1) {
+    try {
+        const status = {
+            avatar: character.avatar,
+            role: extension_prompt_roles.SYSTEM,
+            separator: "\n",
+            prefix: "",
+            suffix: "",
+            depth: depth,
+            last_mes_id: (depth >= 0) ? (chat.length - depth - 1) : (-1),
+            is_user: character.is_user ?? false,
+            is_collapsed: false,
+            entries: []
+        };
 
-    chat_metadata.stat_us_maximus.push(status);
+        chat_metadata.stat_us_maximus.push(status);
 
-    return status;
+        return status;
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to create Status Metadata - Check the browser console for more details`);
+        console.error(error);
+
+        return false;
+    }
 }
 
 /**
