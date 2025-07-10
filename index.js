@@ -27,7 +27,7 @@ import { startListeners } from "./source/js/eventListeners.js";
 
     1. [X] Add a slash command to initialize Status metadata - the existing ones already throw an error if char is not in metadata
     2. [X] Make the UI buttons to open individual popups create Status data when interacted with
-    3. [ ] Stonks!
+    3. [X] Stonks!
 */
 
 const extensionName = "SillyTavern-Stat-us-Maximus";

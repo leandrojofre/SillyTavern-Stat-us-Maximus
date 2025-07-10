@@ -334,6 +334,25 @@ export function getCharStatus(character) {
         return false;
 }
 
+export function deleteCharStatus(character) {
+    try {
+        if (!chat_metadata?.stat_us_maximus) return false;
+
+        chat_metadata.stat_us_maximus = chat_metadata.stat_us_maximus
+            .filter(stat => stat.avatar !== character.avatar);
+
+        saveMetadataDebounced();
+
+        return true;
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to delete Status Metadata - Check the browser console for more details`);
+        console.error(error);
+
+        return false;
+    }
+}
+
 const statusTemplate = {
     avatar: "",
     role: extension_prompt_roles.SYSTEM,
