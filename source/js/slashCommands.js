@@ -10,7 +10,7 @@ import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { fetchStatus, getParticipant, log } from "../../index.js";
-import { addCharAltValue, addCharEntry, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry } from "./statusControls.js";
+import { addCharAltValue, addCharEntry, createCharStatus, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry } from "./statusControls.js";
 
 /*  # TODO
     - [ ] Command to create Status data
@@ -126,6 +126,34 @@ const customEnumProviders = {
         if (!entry || !entry?.alt_values?.length) return [];
 
         return entry.alt_values.map(alt => new SlashCommandEnumValue(String(alt.uid), buildUIDsComment(alt), enumTypes.number, enumIcons.key));
+    }
+}
+
+/** Creates a new entry for a character
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.isuser - Wether to search for personas or characters
+    @returns {Promise<String>} UID of the new entry or empty string
+*/
+async function commandCreateStatus(args, value) {
+    try {
+        const {char = "", isuser = "false"} = args;
+        const character = getParticipant(char, isuser === "true", {field: "name"});
+
+        log(char, typeof char, isuser, typeof isuser, character);
+
+        if (!character) throw new Error(`The character "${args?.char}" could not be found in the metadata`);
+
+        const status = createCharStatus(character);
+
+        if (!status) return "false";
+
+        return "true";
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
+        return "false";
     }
 }
 
@@ -543,6 +571,42 @@ async function commandDeleteChatStatus() {
 
 /** Register all slash commands into SillyTavern */
 export function registerSlashCommands() {
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-create-status",
+            callback: commandCreateStatus,
+            returns: 'True or False',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: () => [...commonEnumProviders.characters()(), ...commonEnumProviders.personas()]
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    isRequired: true,
+                    enumProvider: commonEnumProviders.boolean()
+                })
+            ],
+            helpString: `
+            <div>
+                Creates status data for the selected character in the active chat and returns true. If the character already has data, this does nothing and returns false.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-create-status char="Tom"</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
             name: "stum-create-entry",

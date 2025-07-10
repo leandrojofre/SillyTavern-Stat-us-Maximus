@@ -21,8 +21,10 @@ import { startListeners } from "./source/js/eventListeners.js";
     - [ ] Button on right nav panel to open user metadata - one for active and another for all
 
     ! THE PLAN
+
     I have a fucking big brain; how to rework the code to implement "Setting to disable auto detection"?
     Easy, don't rework it! I can just:
+    
     1. [ ] Add a slash command to initialize Status metadata - the existing ones already throw an error if char is not in metadata
     2. [X] Make the UI buttons to open individual popups create Status data when interacted with
     3. [ ] Stonks!
@@ -84,9 +86,21 @@ function getCharacter(value, search_key = "avatar") {
     return characters.find(c => c[search_key] === value) ?? false;
 }
 
-function getUser(avatar = user_avatar) {
-    if (!power_user.personas[avatar]) return false;
-    if (!avatar) return false;
+function getUser(value = user_avatar, search_key = "avatar") {
+    if (!value) return false;
+
+    let avatar = "";
+
+    if (search_key === "avatar") avatar = value;
+    else if (search_key === "name")
+        avatar = Object
+            .entries(power_user.personas)
+            .map(([key, value]) => {return {name: value, avatar: key}})
+            .find(per => per.name === value)
+            ?.avatar ?? "";
+    else return false;
+
+    if (!avatar || !power_user.personas[avatar]) return false;
 
     return {
         name: power_user.personas[avatar],
@@ -114,9 +128,9 @@ export function getStatusDepth(chat, character) {
     return chat.length - lastIndex - 1;
 }
 
-export function getParticipant(avatar, is_user) {
-    if (is_user) return getUser(avatar);
-    else return getCharacter(avatar);
+export function getParticipant(avatar, is_user, {field = "avatar"} = {}) {
+    if (is_user) return getUser(avatar, field);
+    else return getCharacter(avatar, field);
 }
 
 export function getActiveParticipants(discard = []) {
