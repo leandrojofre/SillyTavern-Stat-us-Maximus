@@ -13,7 +13,7 @@ import { fetchStatus, getParticipant, log } from "../../index.js";
 import { addCharAltValue, addCharEntry, createCharStatus, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry } from "./statusControls.js";
 
 /*  # TODO
-    - [ ] Command to create Status data
+    - [X] Command to create Status data
     - [ ] Command to delete Status data
 */
 
@@ -129,7 +129,7 @@ const customEnumProviders = {
     }
 }
 
-/** Creates a new entry for a character
+/** Creates status data for a character
     @param {object} args
     @param {String} args.char - Character name
     @param {String} args.isuser - Wether to search for personas or characters
@@ -138,11 +138,10 @@ const customEnumProviders = {
 async function commandCreateStatus(args, value) {
     try {
         const {char = "", isuser = "false"} = args;
-        const character = getParticipant(char, isuser === "true", {field: "name"});
+        const parsed_isuser = isuser === "true";
+        const character = getParticipant(char, parsed_isuser, {field: "name"});
 
-        log(char, typeof char, isuser, typeof isuser, character);
-
-        if (!character) throw new Error(`The character "${args?.char}" could not be found in the metadata`);
+        if (!character) throw new Error(`The character "${args?.char}" could not be found`);
 
         const status = createCharStatus(character);
 
@@ -586,9 +585,9 @@ export function registerSlashCommands() {
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
-                    description: 'Name of the character',
+                    description: 'Whether to look for personas or characters - false by default',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
-                    isRequired: true,
+                    isRequired: false,
                     enumProvider: commonEnumProviders.boolean()
                 })
             ],

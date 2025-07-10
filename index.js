@@ -24,8 +24,8 @@ import { startListeners } from "./source/js/eventListeners.js";
 
     I have a fucking big brain; how to rework the code to implement "Setting to disable auto detection"?
     Easy, don't rework it! I can just:
-    
-    1. [ ] Add a slash command to initialize Status metadata - the existing ones already throw an error if char is not in metadata
+
+    1. [X] Add a slash command to initialize Status metadata - the existing ones already throw an error if char is not in metadata
     2. [X] Make the UI buttons to open individual popups create Status data when interacted with
     3. [ ] Stonks!
 */
