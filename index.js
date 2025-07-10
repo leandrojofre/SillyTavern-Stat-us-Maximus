@@ -14,9 +14,12 @@ import { startListeners } from "./source/js/eventListeners.js";
     - [ ] Setting to disable confirm delete
     - [ ] Setting for deff role
     - [X] Setting to disable auto detection
-*/
+    - [X] Replace select button for an icon button
+    - [X] Highlight row on hover
+    - [X] Hide description on disable
+    - [X] Reduce font-size
+    - [ ] Button on right nav panel to open user metadata - one for active and another for all
 
-/*
     ! THE PLAN
     I have a fucking big brain; how to rework the code to implement "Setting to disable auto detection"?
     Easy, don't rework it! I can just:
@@ -382,13 +385,6 @@ function addTracker(status, mesID, character) {
         if (entry.alt_values.length <= 1) toggleVisibility(selectValueUID, true);
 
         statusTableBody.append(newRow);
-
-        /* TODO
-            - [X] Replace select button for an icon button
-            - [X] Highlight row on hover
-            - [X] Hide description on disable
-            - [X] Reduce font-size
-        */
     }
 
     /** Insert table in chat */

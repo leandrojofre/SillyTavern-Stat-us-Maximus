@@ -12,6 +12,11 @@ import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandPa
 import { fetchStatus, getParticipant, log } from "../../index.js";
 import { addCharAltValue, addCharEntry, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry } from "./statusControls.js";
 
+/*  # TODO
+    - [ ] Command to create Status data
+    - [ ] Command to delete Status data
+*/
+
 /** Takes an object with a key and value and generates a comment
     @param {object} entry
 */

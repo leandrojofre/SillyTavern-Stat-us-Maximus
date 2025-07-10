@@ -6,6 +6,27 @@ import { getSortableDelay } from "../../../../../utils.js";
 import { log, destroyElement, fetchStatus } from "../../index.js";
 import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus } from "./statusControls.js";
 
+/*  # TODO
+    - [X] Select for alt_values
+    - [X] Add for alt_values
+    - [X] Delete for alt_values
+    - [X] Nick for alt_values
+    - [X] Disable row btn
+    - [X] Role button
+    - [X] Confirm screen for delete
+    - [X] Avatar before title
+    - [X] Drag and drop for entries
+    - [X] Per-character open menu buttons on group list and in right nav UI for solo chats
+    - [ ] Per-user open menu buttons
+    - [ ] Open/close all entries - per character
+    - [ ] Status transfer button
+    - [ ] Status clone button
+    - [ ] Status delete button
+    - [X] Entries block prefix/suffix
+    - [ ] Custom depth buttons - dynamic depth if undefined
+    - [ ] Fucking labels
+*/
+
 export function escapeNewlines(str) {
     return str
         .replace(/\\/g, "\\\\")
@@ -20,7 +41,6 @@ export function un_escapeNewlines(str) {
         .replace(/\\n/g, "\n")
         .replace(/\\r/g, "\r");
 }
-
 
 async function popupDeleteConfirm(del_name = "this") {
     const delete_title = document.createElement("div");
@@ -58,27 +78,6 @@ async function formStatusSingleChar(char) {
 
     // @ts-ignore
     if (!metadata) return toastr.error(t`No metadata was found for the character -${char?.name}-`);
-
-    /*  # TODO
-        - [X] Select for alt_values
-        - [X] Add for alt_values
-        - [X] Delete for alt_values
-        - [X] Nick for alt_values
-        - [X] Disable row btn
-        - [X] Role button
-        - [X] Confirm screen for delete
-        - [X] Avatar before title
-        - [X] Drag and drop for entries
-        - [X] Per-character open menu buttons on group list and in right nav UI for solo chats
-        - [ ] Per-user open menu buttons
-        - [ ] Open/close all entries - per character
-        - [ ] Status transfer button
-        - [ ] Status clone button
-        - [ ] Status delete button
-        - [X] Entries block prefix/suffix
-        - [ ] Custom depth buttons - dynamic depth if undefined
-        - [ ] Fucking labels
-    */
 
     /** Create Menu header. */
     const avatar = document.createElement("img");
