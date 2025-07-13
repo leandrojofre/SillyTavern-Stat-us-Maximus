@@ -372,7 +372,7 @@ function addTracker(status, mesID, character) {
                 newValue += child.innerText;
 
             if (child instanceof HTMLSpanElement && child.classList.contains("chat-input-editor")) {
-                /**@type {HTMLSpanElement}*/const inputNumber = child.querySelector('input[type="number"]');
+                /**@type {HTMLInputElement}*/const inputNumber = child.querySelector('input[type="number"]');
                 const min = inputNumber.min;
                 const max = inputNumber.max;
                 const step = inputNumber.step;
@@ -458,6 +458,7 @@ function addTracker(status, mesID, character) {
 
                 span.addEventListener("input", (e) => {
                     /**@type {HTMLInputElement}*/
+                    // @ts-ignore
                     const original = e.target;
                     inputNumber.value = original.value;
                     inputRange.value = original.value;
@@ -538,7 +539,7 @@ function addTracker(status, mesID, character) {
     toggleVisibility(statusTableBody, status.is_collapsed ?? false);
 }
 
-export function processMacros(text, {char = false, processInputs = true} = {}) {
+export function processMacros(text, {char = undefined, processInputs = true} = {}) {
     let newText = text;
 
     if (char) {
