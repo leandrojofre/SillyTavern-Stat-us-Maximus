@@ -1,5 +1,5 @@
-import {extension_settings, saveMetadataDebounced} from "../../../extensions.js";
-import {saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar} from "../../../../script.js";
+import { extension_settings, saveMetadataDebounced } from "../../../extensions.js";
+import { saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar } from "../../../../script.js";
 import { getGroupMembers, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
 import { createCharStatus, getCharAltValue, getCharStatus, updateCharEntry } from "./source/js/statusControls.js";
@@ -19,6 +19,8 @@ import { startListeners } from "./source/js/eventListeners.js";
     - [X] Hide description on disable
     - [X] Reduce font-size
     - [ ] Button on right nav panel to open user metadata - one for active and another for all
+    - [ ] Use alt title if description is empty
+    - [ ] Global Stat not attached to character
 
     ! THE PLAN
 
@@ -37,6 +39,12 @@ const defaultSettings = {
     autoDetectParticipants: true,
     debug: false
 };
+
+// TODO See how to implement ([A-z_]+::)? to add input names with mass edition
+const regexTextInput = /({{text)(::[^}\n]*)?(}})/g;
+const regexNumberInput = /({{number)(::[\d]+(\.[\d]+)?)?(}})/g;
+const regexBooleanInput = /({{boolean)(::((false)|(true))::[^}\n]+::[^}\n]+)?(}})/g;
+const regexRangeInput = /({{range::)([\d]+(\.[\d]+)?)(::[\d]+(\.[\d]+)?){3}(}})/g;
 
 export const extensionSettings = extension_settings[extensionName];
 
@@ -192,11 +200,11 @@ function addTracker(status, mesID, character) {
     const $chat = document.getElementById("chat");
     const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
 
-    status.last_mes_id = mesID - status.depth;
-
     destroyElement(`.mes .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
 
-    if (!entriesText) return;
+    if (!entriesText || status.depth < 0) return;
+
+    status.last_mes_id = mesID - status.depth;
 
     /** Create Status form template */
     const statusRow = document.createElement("tr");
@@ -213,7 +221,7 @@ function addTracker(status, mesID, character) {
                 <p class="text-left flex-grow-1 m-0">
                     <span class="status-title fw-bolder"></span>
                     <span class="status-separator"></span>
-                    <span class="status-description"></span>
+                    <span class="status-description d-table"></span>
                 </p>
                 <details class="status-value-uid m-0 place-items-baseline">
                     <summary>
@@ -268,7 +276,13 @@ function addTracker(status, mesID, character) {
     /** @param {HTMLElement} el */
     const toggleVisibility = (el, state) => {
         el.classList.toggle("d-none", state);
-    }
+    };
+
+    /** @param {HTMLElement} target */
+    const safeDispatch = (target, type = 'input', options = { bubbles: true, cancelable: true }) => {
+        const evt = new Event(type, options);
+        target.dispatchEvent(evt);
+    };
 
     statusTable.querySelector(".menu_button.fa-pen").addEventListener("click", async () => {
         const metadata = chat_metadata.stat_us_maximus;
@@ -287,7 +301,90 @@ function addTracker(status, mesID, character) {
         saveMetadataDebounced();
     });
 
-    const evInput = new Event('input', { bubbles: true, cancelable: true });
+    const createInputs = (/**@type {String}*/text) => {
+        if (!extensionSettings.editNumbersFromChat) return text;
+
+        let newText = "<span>" + text + "</span>";
+
+        text.match(regexTextInput)
+            ?.forEach(match => {
+                const value = match.replaceAll(/(({{text(::)?)|(}}))/g, "");
+                const input = `<input type="text" value="${value}" class="text_pole w-auto m-0 chat-input-editor">`;
+
+                newText = newText.replace(match, `</span>${input}<span>`);
+            });
+
+        text.match(regexNumberInput)
+            ?.forEach(match => {
+                const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
+                const input = `<input type="number" value="${value === "" ? "0" : value}" class="text_pole w-auto m-0 chat-input-editor">`;
+
+                newText = newText.replace(match, `</span>${input}<span>`);
+            });
+
+        text.match(regexBooleanInput)
+            ?.forEach(match => {
+                const props = match.replaceAll(/(({{boolean(::)?)|(}}))/g, "").split("::");
+                const checked = props[0] ?? "true";
+                const trueValue = props[1] ?? "true";
+                const falseValue = props[2] ?? "false";
+                const input = `
+                    <input type="checkbox" ${checked === "true" ? "checked" : ""} data-true="${trueValue}" data-false="${falseValue}" class="m-0 chat-input-editor">
+                    <span class="ignore"> ${checked === "true" ? trueValue : falseValue}</span>
+                `;
+
+                newText = newText.replace(match, `</span>${input}<span>`);
+            });
+
+        text.match(regexRangeInput)
+            ?.forEach(match => {
+                const props = match.replaceAll(/(({{range::)|(}}))/g, "").split("::");
+                const min = props[0];
+                const max = props[1];
+                const step = props[2];
+                const value = props[3];
+                const input = `
+                    <span class="d-flex flex-col flex-center gap-0 chat-input-editor ignore">
+                        <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider">
+                        <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input">
+                    </span>
+                `;
+
+                newText = newText.replace(match, `</span>${input}<span>`);
+            });
+
+        return newText.replace("<span></span>", "");
+    }
+
+    const createInputStrings = (parent, target) => {
+        let newValue = "";
+
+        for (const child of el(parent, target).children) {
+            if (child instanceof HTMLSpanElement && !child.classList.contains("ignore"))
+                newValue += child.textContent;
+
+            if (child instanceof HTMLSpanElement && child.classList.contains("chat-input-editor")) {
+                /**@type {HTMLSpanElement}*/const inputNumber = child.querySelector('input[type="number"]');
+                const min = inputNumber.min;
+                const max = inputNumber.max;
+                const step = inputNumber.step;
+                const value = inputNumber.value;
+                newValue += `{{range::${min}::${max}::${step}::${value}}}`;
+            }
+
+            if (child instanceof HTMLInputElement) {
+                if (child.type === "text") newValue += "{{text" + (child.value.length > 0 ? "::" : "") + child.value + "}}";
+                if (child.type === "number") newValue += "{{number" + (child.value.length > 0 ? "::" : "") + child.value + "}}";
+                if (child.type === "checkbox") {
+                    const trueValue = child.dataset.true;
+                    const falseValue = child.dataset.false;
+                    newValue += `{{boolean::${child.checked}::${trueValue}::${falseValue}}}`;
+                }
+            }
+        }
+
+        return newValue;
+    }
 
     /** Add table rows */
     for (const entry of status.entries) {
@@ -311,30 +408,56 @@ function addTracker(status, mesID, character) {
 
         el(newRow, '.status-separator').innerHTML = entry.separator.replaceAll(/\n/g, "<br>");
 
-        const updateDescription = (text, el_target, input_target) => {
+        const updateDescription = (text, el_target, form_target) => {
             destroyElement(el(newRow, el_target).children);
 
-            el(newRow, el_target).innerHTML = "<span>" + String(text).replaceAll(/\d+(\.\d+)?/g, (substring, p1, offset, string) => {
-                if (!extensionSettings.editNumbersFromChat) return substring;
-                return `</span><input value="${substring}" type="number" class="text_pole w-auto m-0 chat-number-editor"><span>`;
-            }) + "</span>";
+            el(newRow, el_target).innerHTML = createInputs(text);
 
-            el(newRow, el_target).querySelectorAll('input[type="number"]').forEach(input => {
-                input.style.width = `calc(${String(input.value).length}ch + 3.5ch)`;
+            el(newRow, el_target)
+            .querySelectorAll('input.chat-input-editor')
+            .forEach((/**@type {HTMLInputElement}*/input) => {
+                const extraWidth = input.type === "number" ? 3.5 : 1;
+
+                input.style.width = `calc(${String(input.value).length}ch + ${extraWidth}ch)`;
+
+                if (input.type === "checkbox") {
+                    input.style.width = "var(--mainFontSize)";
+                    input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
+                };
 
                 input.addEventListener("input", () => {
-                    input.style.width = `calc(${String(input.value).length}ch + 3.5ch)`;
+                    const extraWidth = input.type === "number" ? 3.5 : 1;
+                    
+                    input.style.width = `calc(${String(input.value).length}ch + ${extraWidth}ch)`;
 
-                    let newValue = "";
+                    if (input.type === "checkbox") {
+                        input.style.width = "var(--mainFontSize)";
+                        input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
+                    };
 
-                    for (const child of el(newRow, el_target).children) {
-                        if (child instanceof HTMLSpanElement) newValue += child.textContent;
-                        if (child instanceof HTMLInputElement) newValue += child.value;
-                    }
+                    el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
+                    safeDispatch(form);
+                });
+            });
 
-                    el(form, `input[name="${input_target}"]`).value = newValue;
+            el(newRow, el_target)
+            .querySelectorAll('span.chat-input-editor')
+            .forEach((/**@type {HTMLSpanElement}*/span) => {
+                /**@type {HTMLInputElement}*/const inputNumber = span.querySelector('input[type="number"]');
+                /**@type {HTMLInputElement}*/const inputRange = span.querySelector('input[type="range"]');
 
-                    form.dispatchEvent(evInput);
+                span.style.width = `calc(${String(inputNumber.value).length + 8.5}ch)`;
+
+                span.addEventListener("input", (e) => {
+                    /**@type {HTMLInputElement}*/
+                    const original = e.target;
+                    inputNumber.value = original.value;
+                    inputRange.value = original.value;
+
+                    span.style.width = `calc(${String(inputNumber.value).length + 8.5}ch)`;
+
+                    el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
+                    safeDispatch(form);
                 });
             });
         }
@@ -353,9 +476,9 @@ function addTracker(status, mesID, character) {
 
                 el(form, 'input[name="value"]').value = alt.value;
                 el(form, 'input[name="value_uid"]').value = alt.uid;
-                updateDescription(alt.value, '.status-description', 'value');
 
-                form.dispatchEvent(evInput);
+                updateDescription(alt.value, '.status-description', 'value');
+                safeDispatch(form);
             });
 
             el(newRow, '.status-value-uid-options').append(option);
@@ -386,7 +509,7 @@ function addTracker(status, mesID, character) {
                 el(newRow, '.hover-highlight').classList.toggle('disabled', !state);
             });
 
-            form.dispatchEvent(evInput);
+            safeDispatch(form);
         });
 
         // Set up UI
@@ -405,6 +528,16 @@ function addTracker(status, mesID, character) {
     const messText = $chat.querySelector(`.mes[mesid="${status.last_mes_id}"] .mes_text`);
     messText.parentNode.insertBefore(statusTableContainer, messText);
     toggleVisibility(statusTableBody, status.is_collapsed ?? false);
+}
+
+export function processMacros(text, {char = false} = {}) {
+    if (char) {
+        text = text.replaceAll("{{name}}", char.name);
+    }
+
+    // TODO Replace input macros
+
+    return text;
 }
 
 export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1)} = {}) {
@@ -461,7 +594,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
         if (!promptValue) continue;
         else promptValue = status.prefix + promptValue + status.suffix;
 
-        promptValue = promptValue.replaceAll("{{name}}", character.name);
+        promptValue = processMacros(promptValue, {char: character});
 
         setExtensionPrompt(
             promptKey,

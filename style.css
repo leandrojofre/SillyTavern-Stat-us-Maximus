@@ -110,6 +110,10 @@
         display: contents;
     }
 
+    .d-table {
+        display: table;
+    }
+
     .d-none {
         display: none !important;
     }
@@ -208,6 +212,10 @@
 
     div.label {
         flex-grow: 1;
+    }
+
+    .gap-0 {
+        gap: 0;
     }
 
     .gap-5px {
@@ -379,8 +387,28 @@
         max-height: 15vh;
     }
 
-    input.text_pole.chat-number-editor {
+    input.text_pole.chat-input-editor {
         font-family: monospace;
         border: unset;
+    }
+
+    input.chat-input-editor[type="checkbox"] {
+        display: inline-grid;
+        transform: unset;
+    }
+
+    span.chat-input-editor {
+        display: inline-flex;
+        vertical-align: middle;
+
+        input[type="range"] {
+            margin-top: 5px !important;
+        }
+
+        input[type="number"] {
+            padding: 2px 5px 0;
+            font-family: monospace;
+            border: unset;
+        }
     }
 }

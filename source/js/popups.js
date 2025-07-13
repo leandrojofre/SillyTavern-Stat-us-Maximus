@@ -17,7 +17,6 @@ import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCh
     - [X] Avatar before title
     - [X] Drag and drop for entries
     - [X] Per-character open menu buttons on group list and in right nav UI for solo chats
-    - [ ] Per-user open menu buttons
     - [ ] Open/close all entries - per character
     - [ ] Status transfer button
     - [ ] Status clone button
