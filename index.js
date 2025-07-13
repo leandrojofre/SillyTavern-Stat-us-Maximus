@@ -7,6 +7,7 @@ import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
 import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups.js";
 import { startListeners } from "./source/js/eventListeners.js";
+import { lodash } from "../../../../lib.js";
 
 // * Extension variables
 
@@ -225,10 +226,10 @@ function addTracker(status, mesID, character) {
             </form>
             <div class="d-flex flex-center-between gap-15px fs-90p text-muted hover-highlight">
                 <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state." data-i18n="Toggle entry's active state."></div>
-                <p class="text-left flex-grow-1 m-0">
-                    <span class="status-title fw-bolder"></span>
+                <p class="text-left flex-grow-1 m-0 d-table">
+                    <span class="status-title fw-bolder d-contents"></span>
                     <span class="status-separator"></span>
-                    <span class="status-description d-table"></span>
+                    <span class="status-description d-contents"></span>
                 </p>
                 <details class="status-value-uid m-0 place-items-baseline">
                     <summary>
@@ -309,9 +310,9 @@ function addTracker(status, mesID, character) {
     });
 
     const createInputs = (/**@type {String}*/text) => {
-        if (!extensionSettings.editNumbersFromChat) return text;
+        if (!extensionSettings.editNumbersFromChat) return lodash.escape(text);
 
-        let newText = "<span>" + text + "</span>";
+        let newText = "<span>" + lodash.escape(text) + "</span>";
 
         text.match(regexTextInput)
             ?.forEach(match => {
@@ -368,7 +369,7 @@ function addTracker(status, mesID, character) {
 
         for (const child of el(parent, target).children) {
             if (child instanceof HTMLSpanElement && !child.classList.contains("ignore"))
-                newValue += child.textContent;
+                newValue += child.innerText;
 
             if (child instanceof HTMLSpanElement && child.classList.contains("chat-input-editor")) {
                 /**@type {HTMLSpanElement}*/const inputNumber = child.querySelector('input[type="number"]');
@@ -413,7 +414,7 @@ function addTracker(status, mesID, character) {
         el(form, 'input[name="enabled"]').value = entry.enabled;
         el(form, 'input[name="value_uid"]').value = entry.value_uid;
 
-        el(newRow, '.status-separator').innerHTML = entry.separator.replaceAll(/\n/g, "<br>");
+        el(newRow, '.status-separator').innerHTML = lodash.escape(entry.separator);
 
         const updateDescription = (text, el_target, form_target) => {
             destroyElement(el(newRow, el_target).children);

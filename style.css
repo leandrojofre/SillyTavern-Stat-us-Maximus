@@ -114,6 +114,10 @@
         display: table;
     }
 
+    .d-inline-flex {
+        display: inline-flex;
+    }
+
     .d-none {
         display: none !important;
     }
