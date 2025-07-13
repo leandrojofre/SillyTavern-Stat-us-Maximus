@@ -22,6 +22,13 @@ import { startListeners } from "./source/js/eventListeners.js";
     - [ ] Use alt title if description is empty
     - [ ] Global Stat not attached to character
 
+    I need to refine this roadmap
+    - [ ] Create a template builder ? from the settings
+        - [ ] Store it in ? extension settings as an array
+        - [ ] Allow to bind templates to both characters and groups (group overrides character)
+        - [ ] ? Merge group and character templates
+        - [ ] ? Allow to assign multiple templates
+
     ! THE PLAN
 
     I have a fucking big brain; how to rework the code to implement "Setting to disable auto detection"?
@@ -427,7 +434,7 @@ function addTracker(status, mesID, character) {
 
                 input.addEventListener("input", () => {
                     const extraWidth = input.type === "number" ? 3.5 : 1;
-                    
+
                     input.style.width = `calc(${String(input.value).length}ch + ${extraWidth}ch)`;
 
                     if (input.type === "checkbox") {
@@ -530,14 +537,48 @@ function addTracker(status, mesID, character) {
     toggleVisibility(statusTableBody, status.is_collapsed ?? false);
 }
 
-export function processMacros(text, {char = false} = {}) {
+export function processMacros(text, {char = false, processInputs = true} = {}) {
+    let newText = text;
+
     if (char) {
-        text = text.replaceAll("{{name}}", char.name);
+        newText = text.replaceAll("{{name}}", char.name);
     }
 
-    // TODO Replace input macros
+    if (processInputs) {
+        text.match(regexTextInput)
+            ?.forEach(match => {
+                const value = match.replaceAll(/(({{text(::)?)|(}}))/g, "");
 
-    return text;
+                newText = newText.replace(match, value);
+            });
+
+        text.match(regexNumberInput)
+            ?.forEach(match => {
+                const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
+                newText = newText.replace(match, value);
+            });
+
+        text.match(regexBooleanInput)
+            ?.forEach(match => {
+                const props = match.replaceAll(/(({{boolean(::)?)|(}}))/g, "").split("::");
+                const checked = props[0] ?? "true";
+                const trueValue = props[1] ?? "true";
+                const falseValue = props[2] ?? "false";
+                const value = checked === "true" ? trueValue : falseValue;
+
+                newText = newText.replace(match, value);
+            });
+
+        text.match(regexRangeInput)
+            ?.forEach(match => {
+                const props = match.replaceAll(/(({{range::)|(}}))/g, "").split("::");
+                const value = props[3];
+
+                newText = newText.replace(match, value);
+            });
+    }
+
+    return newText;
 }
 
 export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1)} = {}) {
