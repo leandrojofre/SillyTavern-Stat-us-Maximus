@@ -214,6 +214,10 @@
         flex-grow: 1;
     }
 
+    .flex-wrap {
+        flex-wrap: wrap;
+    }
+
     div.label {
         flex-grow: 1;
     }
@@ -254,16 +258,20 @@
         width: 100%;
     }
 
+    .mw-7 {
+        max-width: 7%;
+    }
+
     .mw-15 {
         max-width: 15%;
     }
 
-    .mw-min-content {
-        max-width: min-content;
-    }
-
     .mw-25 {
         max-width: 25%;
+    }
+
+    .mw-min-content {
+        max-width: min-content;
     }
 
     .big-button {

@@ -17,7 +17,7 @@ import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCh
     - [X] Avatar before title
     - [X] Drag and drop for entries
     - [X] Per-character open menu buttons on group list and in right nav UI for solo chats
-    - [ ] Open/close all entries - per character
+    - [X] Open/close all entries - per character
     - [ ] Status transfer button
     - [ ] Status clone button
     - [ ] Status delete button
@@ -70,7 +70,7 @@ function getFullCharAvatar(status) {
     else return "/thumbnail?type=avatar&file=" + status.avatar;
 }
 
-async function formStatusSingleChar(char) {
+export async function formStatusSingleChar(char) {
     let metadata = getCharStatus(char);
 
     if (!metadata) metadata = createCharStatus(char);
@@ -87,9 +87,6 @@ async function formStatusSingleChar(char) {
     const avatarContainer = document.createElement("div");
     avatarContainer.classList.add("avatar");
     avatarContainer.append(avatar);
-
-    const title = document.createElement("div");
-    title.textContent = t`Add an status to ${char.name}`;
 
     const selectEntryRole = document.createElement("select");
     selectEntryRole.classList.add("flex-grow-1", "px-5px", "m-0", "mw-15");
@@ -127,12 +124,28 @@ async function formStatusSingleChar(char) {
     textareaStatusSuffix.value = escapeNewlines(metadata.suffix);
     textareaStatusSuffix.classList.add("text_pole", "mw-15");
 
+    const expandEntriesBtn = document.createElement("div");
+    expandEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-expand", "interactable");
+
+    const compressEntriesBtn = document.createElement("div");
+    compressEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-compress", "interactable");
+
     const newStatBtn = document.createElement("div");
+    newStatBtn.title = t`Add an status to ${char.name}`
     newStatBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable");
 
     const wrapper = document.createElement("div");
-    wrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px");
-    wrapper.append(avatarContainer, selectEntryRole, textareaStatusSeparator, textareaStatusPrefix, textareaStatusSuffix, newStatBtn, title);
+    wrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px", "gap-5px", "flex-wrap");
+    wrapper.append(
+        avatarContainer,
+        selectEntryRole,
+        textareaStatusSeparator,
+        textareaStatusPrefix,
+        textareaStatusSuffix,
+        expandEntriesBtn,
+        compressEntriesBtn,
+        newStatBtn
+    );
 
     /** Create input template */
     /** - Key */
@@ -169,7 +182,15 @@ async function formStatusSingleChar(char) {
 
     const drawerHeader = document.createElement("div");
     drawerHeader.classList.add("inline-drawer-header", "key", "w-100", "d-flex", "flex-center", "p-0");
-    drawerHeader.append(dragHandle, drawerToggle, enableRowToggle, enableRowBtn, textareaKey, textareaSeparator, deleteStatRowBtn);
+    drawerHeader.append(
+        dragHandle,
+        drawerToggle,
+        enableRowToggle,
+        enableRowBtn,
+        textareaKey,
+        textareaSeparator,
+        deleteStatRowBtn
+    );
 
     /** - Value */
     const selectAltValues = document.createElement("select");
@@ -199,7 +220,13 @@ async function formStatusSingleChar(char) {
 
     const settingsInputs = document.createElement("div");
     settingsInputs.classList.add("d-flex", "flex-center-start");
-    settingsInputs.append(selectAltValues, textareaAltKey, warningAltKey, addAltValues, delAltValues);
+    settingsInputs.append(
+        selectAltValues,
+        textareaAltKey,
+        warningAltKey,
+        addAltValues,
+        delAltValues
+    );
 
     const textareaValue = document.createElement("textarea");
     textareaValue.name = "value";
@@ -374,6 +401,14 @@ async function formStatusSingleChar(char) {
             content.append(newRow);
         }
     }
+
+    expandEntriesBtn.addEventListener("click", () =>
+        content.querySelectorAll(".inline-drawer-toggle.down").forEach((/**@type {HTMLElement}*/toggle) => toggle.click())
+    );
+
+    compressEntriesBtn.addEventListener("click", () =>
+        content.querySelectorAll(".inline-drawer-toggle.up").forEach((/**@type {HTMLElement}*/toggle) => toggle.click())
+    );
 
     newStatBtn.addEventListener("click", () => {
         const newEntry = addCharEntry(char, "", "");
