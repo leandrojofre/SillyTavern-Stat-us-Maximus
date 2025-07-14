@@ -1,5 +1,5 @@
 import { extension_settings, saveMetadataDebounced } from "../../../extensions.js";
-import { saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar } from "../../../../script.js";
+import { saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar, substituteParams } from "../../../../script.js";
 import { getGroupMembers, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
 import { createCharStatus, getCharAltValue, getCharStatus, updateCharEntry } from "./source/js/statusControls.js";
@@ -204,6 +204,16 @@ function getAllParticipantsInChat(chat) {
     return chars;
 }
 
+function replaceSkip(str, search, replaceWith, targetIndex) {
+    let count = -1;
+
+    return str.replaceAll(search, match => {
+        count++;
+        log (search, match, count, targetIndex, count === targetIndex);
+        return count === targetIndex ? replaceWith : match;
+    });
+}
+
 function addTracker(status, mesID, character) {
     const $chat = document.getElementById("chat");
     const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
@@ -310,85 +320,116 @@ function addTracker(status, mesID, character) {
     });
 
     const createInputs = (/**@type {String}*/text) => {
-        if (!extensionSettings.editNumbersFromChat) return lodash.escape(text);
+        const escapedText = lodash.escape(text);
+        const parsedText = lodash.escape(substituteParams(processMacros(text, {char: character, processInputs: false}))).replaceAll(/\n/g, "<br>");
 
-        let newText = "<span>" + lodash.escape(text) + "</span>";
+        if (!extensionSettings.editNumbersFromChat)
+            return `
+            <span class="d-none original-text">${escapedText}</span>
+            <span class="text-line">${parsedText}</span>`;
 
-        text.match(regexTextInput)
-            ?.forEach(match => {
-                const value = match.replaceAll(/(({{text(::)?)|(}}))/g, "");
-                const input = `<input type="text" value="${value}" class="text_pole w-auto m-0 chat-input-editor">`;
+        let newText = `<span class="text-line">${parsedText}</span>`;
 
-                newText = newText.replace(match, `</span>${input}<span>`);
-            });
+        newText = newText.replaceAll(regexTextInput, (match) => {
+            const value = match.replaceAll(/(({{text(::)?)|(}}))/g, "");
+            const input = `<input type="text" value="${value}" class="text_pole m-0 chat-input-editor">`;
 
-        text.match(regexNumberInput)
-            ?.forEach(match => {
-                const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
-                const input = `<input type="number" value="${value === "" ? "0" : value}" class="text_pole w-auto m-0 chat-input-editor">`;
+            return input;
+        });
 
-                newText = newText.replace(match, `</span>${input}<span>`);
-            });
+        newText = newText.replaceAll(regexNumberInput, (match) => {
+            const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
+            const input = `<input type="number" value="${value === "" ? "0" : value}" class="text_pole m-0 chat-input-editor">`;
 
-        text.match(regexBooleanInput)
-            ?.forEach(match => {
-                const props = match.replaceAll(/(({{boolean(::)?)|(}}))/g, "").split("::");
-                const checked = props[0] ?? "true";
-                const trueValue = props[1] ?? "true";
-                const falseValue = props[2] ?? "false";
-                const input = `
-                    <input type="checkbox" ${checked === "true" ? "checked" : ""} data-true="${trueValue}" data-false="${falseValue}" class="m-0 chat-input-editor">
-                    <span class="ignore"> ${checked === "true" ? trueValue : falseValue}</span>
-                `;
+            return input;
+        });
 
-                newText = newText.replace(match, `</span>${input}<span>`);
-            });
+        newText = newText.replaceAll(regexBooleanInput, (match) => {
+            const props = match.replaceAll(/(({{boolean(::)?)|(}}))/g, "").split("::");
+            const checked = props[0] ?? "true";
+            const trueValue = props[1] ?? "true";
+            const falseValue = props[2] ?? "false";
+            const input = `
+                <input type="checkbox" ${checked === "true" ? "checked" : ""} data-true="${trueValue}" data-false="${falseValue}" class="m-0 chat-input-editor">
+                <span class="ignore"> ${checked === "true" ? trueValue : falseValue}</span>
+            `;
 
-        text.match(regexRangeInput)
-            ?.forEach(match => {
-                const props = match.replaceAll(/(({{range::)|(}}))/g, "").split("::");
-                const min = props[0];
-                const max = props[1];
-                const step = props[2];
-                const value = props[3];
-                const input = `
-                    <span class="d-flex flex-col flex-center gap-0 chat-input-editor ignore">
-                        <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider">
-                        <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input">
-                    </span>
-                `;
+            return input;
+        });
 
-                newText = newText.replace(match, `</span>${input}<span>`);
-            });
+        newText = newText.replaceAll(regexRangeInput, (match) => {
+            const props = match.replaceAll(/(({{range::)|(}}))/g, "").split("::");
+            const min = props[0];
+            const max = props[1];
+            const step = props[2];
+            const value = props[3];
+            const input = `
+                <span class="d-flex flex-col flex-center gap-0 chat-input-editor ignore">
+                    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider">
+                    <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input">
+                </span>
+            `;
 
-        return newText.replace("<span></span>", "");
+            return input;
+        });
+
+        return `<span class="d-none original-text">${escapedText}</span>${newText}`;
     }
 
     const createInputStrings = (parent, target) => {
-        let newValue = "";
+        /**@type {HTMLElement}*/const targetEl = el(parent, target);
+        /**@type {NodeListOf<HTMLElement>}*/const chunks = targetEl.querySelectorAll('.chat-input-editor');
+        let newValue = targetEl.querySelector('.d-none.original-text').textContent;
 
-        for (const child of el(parent, target).children) {
-            if (child instanceof HTMLSpanElement && !child.classList.contains("ignore"))
-                newValue += child.innerText;
+        let countRange = -1;
+        let countText = -1;
+        let countNumber = -1;
+        let countBoolean = -1;
 
-            if (child instanceof HTMLSpanElement && child.classList.contains("chat-input-editor")) {
-                /**@type {HTMLInputElement}*/const inputNumber = child.querySelector('input[type="number"]');
+        for (const chunk of chunks) {
+            let match;
+            let index;
+            let newMacro = "";
+
+            if (chunk instanceof HTMLSpanElement) {
+                /**@type {HTMLInputElement}*/const inputNumber = chunk.querySelector('input[type="number"]');
                 const min = inputNumber.min;
                 const max = inputNumber.max;
                 const step = inputNumber.step;
                 const value = inputNumber.value;
-                newValue += `{{range::${min}::${max}::${step}::${value}}}`;
+                index = ++countRange;
+                match = regexRangeInput;
+                newMacro = `{{range::${min}::${max}::${step}::${value}}}`;
             }
 
-            if (child instanceof HTMLInputElement) {
-                if (child.type === "text") newValue += "{{text" + (child.value.length > 0 ? "::" : "") + child.value + "}}";
-                if (child.type === "number") newValue += "{{number" + (child.value.length > 0 ? "::" : "") + child.value + "}}";
-                if (child.type === "checkbox") {
-                    const trueValue = child.dataset.true;
-                    const falseValue = child.dataset.false;
-                    newValue += `{{boolean::${child.checked}::${trueValue}::${falseValue}}}`;
+            if (chunk instanceof HTMLInputElement) {
+                if (chunk.type === "text") {
+                    const value = chunk.value;
+                    index = ++countText;
+                    match = regexTextInput;
+                    newMacro = `{{text${value.length > 0 ? "::" : ""}${value}}}`;
+                }
+
+                if (chunk.type === "number") {
+                    const value = chunk.value;
+                    index = ++countNumber;
+                    match = regexNumberInput;
+                    newMacro = `{{number${value.length > 0 ? "::" : ""}${value}}}`;
+                }
+
+                if (chunk.type === "checkbox") {
+                    const value = chunk.checked;
+                    const trueValue = chunk.dataset.true;
+                    const falseValue = chunk.dataset.false;
+                    index = ++countBoolean;
+                    match = regexBooleanInput;
+                    newMacro = `{{boolean::${value}::${trueValue}::${falseValue}}}`;
                 }
             }
+
+            if (!newMacro || !match || index < 0) continue;
+
+            newValue = replaceSkip(newValue, match, newMacro, index);
         }
 
         return newValue;
@@ -421,25 +462,17 @@ function addTracker(status, mesID, character) {
 
             el(newRow, el_target).innerHTML = createInputs(text);
 
+            if (!extensionSettings.editNumbersFromChat) return;
+
             el(newRow, el_target)
             .querySelectorAll('input.chat-input-editor')
             .forEach((/**@type {HTMLInputElement}*/input) => {
-                const extraWidth = input.type === "number" ? 3.5 : 1;
-
-                input.style.width = `calc(${String(input.value).length}ch + ${extraWidth}ch)`;
-
                 if (input.type === "checkbox") {
-                    input.style.width = "var(--mainFontSize)";
                     input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
                 };
 
                 input.addEventListener("input", () => {
-                    const extraWidth = input.type === "number" ? 3.5 : 1;
-
-                    input.style.width = `calc(${String(input.value).length}ch + ${extraWidth}ch)`;
-
                     if (input.type === "checkbox") {
-                        input.style.width = "var(--mainFontSize)";
                         input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
                     };
 
@@ -454,16 +487,12 @@ function addTracker(status, mesID, character) {
                 /**@type {HTMLInputElement}*/const inputNumber = span.querySelector('input[type="number"]');
                 /**@type {HTMLInputElement}*/const inputRange = span.querySelector('input[type="range"]');
 
-                span.style.width = `calc(${String(inputNumber.value).length + 8.5}ch)`;
-
                 span.addEventListener("input", (e) => {
                     /**@type {HTMLInputElement}*/
                     // @ts-ignore
                     const original = e.target;
                     inputNumber.value = original.value;
                     inputRange.value = original.value;
-
-                    span.style.width = `calc(${String(inputNumber.value).length + 8.5}ch)`;
 
                     el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
                     safeDispatch(form);

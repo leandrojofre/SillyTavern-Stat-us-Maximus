@@ -102,10 +102,6 @@
         padding-right: 20px;
     }
 
-    span {
-        white-space: pre-line;
-    }
-
     .d-contents {
         display: contents;
     }
@@ -399,19 +395,31 @@
         max-height: 15vh;
     }
 
-    input.text_pole.chat-input-editor {
-        font-family: monospace;
-        border: unset;
+    .text-line {
+        display: inline;
     }
 
-    input.chat-input-editor[type="checkbox"] {
+    .chat-input-editor {
+        font-family: monospace;
+        border: unset;
+        max-width: max-content;
+    }
+
+    .chat-input-editor[type="checkbox"] {
         display: inline-grid;
         transform: unset;
+        max-width: unset;
+    }
+
+    .chat-input-editor[type="text"],
+    .chat-input-editor[type="number"] {
+        min-width: 5ch;
     }
 
     span.chat-input-editor {
         display: inline-flex;
         vertical-align: middle;
+        min-width: 8ch;
 
         input[type="range"] {
             margin-top: 5px !important;
