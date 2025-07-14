@@ -311,6 +311,8 @@ export function createCharStatus(character, depth = -1) {
 
         chat_metadata.stat_us_maximus.push(status);
 
+        saveMetadataDebounced();
+
         return status;
     } catch (error) {
         // @ts-ignore

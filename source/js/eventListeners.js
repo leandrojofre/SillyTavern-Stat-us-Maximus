@@ -23,7 +23,6 @@ export function startListeners() {
                 if (!getCharStatus(char)) createCharStatus(char, getStatusDepth(chat, char));
             }
 
-        saveMetadataDebounced();
         addGroupStatusButtons();
     });
 
