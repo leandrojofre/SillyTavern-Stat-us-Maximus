@@ -22,6 +22,10 @@ import { lodash } from "../../../../lib.js";
     - [ ] Button on right nav panel to open user metadata - one for active and another for all
     - [ ] Use alt title if description is empty
     - [ ] Global Stat not attached to character
+    - [ ] Fix chat UI select button using a similar approach to character export button - thanks Ross
+    - [ ] Before I loose the idea - Update chat UI on input input, this would allow sick tricks like modifying a variable value from an input inside the set var macro - That would require
+        - [ ] Parsing ST variables on input (and parsing mine's first)
+        - [ ] Figure out how to update the UI without loosing focus of the input (maybe when the input looses focus?)
 
     I need to refine this roadmap
     - [ ] Create a template builder ? from the settings
@@ -48,7 +52,6 @@ const defaultSettings = {
     debug: false
 };
 
-// TODO See how to implement ([A-z_]+::)? to add input names with mass edition
 const regexTextInput = /({{text)(::[^}\n]*)?(}})/g;
 const regexNumberInput = /({{number)(::[\d]+(\.[\d]+)?)?(}})/g;
 const regexBooleanInput = /({{boolean)(::((false)|(true))::[^}\n]+::[^}\n]+)?(}})/g;
