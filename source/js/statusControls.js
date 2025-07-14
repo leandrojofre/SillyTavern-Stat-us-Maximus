@@ -336,6 +336,41 @@ export function getCharStatus(character) {
         return false;
 }
 
+export function transferCharStatus(character, target, {deleteOriginal = false} = {}) {
+    try {
+        const originalStatus = getCharStatus(character);
+
+        if (!originalStatus) return false;
+
+        let targetStatus = getCharStatus(target);
+
+        if (!targetStatus) targetStatus = createCharStatus(target);
+        if (!targetStatus) return false;
+
+        for (const [key, value] of Object.entries(originalStatus)) {
+            if (key === "avatar") continue;
+            if (key === "entries" )
+                for (const entry of value) {
+                    const newUID = getFreeDataUid(targetStatus[key]);
+
+                    entry.uid = newUID;
+                    targetStatus[key].push(entry);
+                }
+            else targetStatus[key] = value;
+        }
+
+        if (deleteOriginal) deleteCharStatus(character);
+
+        return true;
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to transfer Status Metadata - Check the browser console for more details`);
+        console.error(error);
+
+        return false;
+    }
+}
+
 export function deleteCharStatus(character) {
     try {
         if (!chat_metadata?.stat_us_maximus) return false;
