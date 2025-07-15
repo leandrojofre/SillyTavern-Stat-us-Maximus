@@ -17,6 +17,18 @@
 	border-radius: 1vh;
 }
 
+div[name="templatesAndPopupsWrapper"] {
+    .status-value-uid-options * {
+        border-radius: 0;
+    }
+
+    .status-value-uid-options {
+        z-index: 9999;
+        overflow-y: scroll;
+        max-height: 15vh;
+    }
+}
+
 @media screen and (max-width: 1000px) {
     .popup.wide_dialogue_popup:has(.stat-us-max-popup) {
         width: 97vw !important;
@@ -377,22 +389,8 @@
         display: block;
     }
 
-    .status-value-uid-options {
-        position: absolute;
-        place-self: end;
-        overflow-x: hidden;
-        overflow-y: scroll;
-    }
-
-    .status-value-uid-options::-webkit-scrollbar {
-        display: none;
-    }
     .menu_button:hover {
         background-color: color-mix(in srgb, var(--SmartThemeBlurTintColor) 70%, white);
-    }
-
-    details[open] .status-value-uid-options {
-        max-height: 15vh;
     }
 
     .text-line {

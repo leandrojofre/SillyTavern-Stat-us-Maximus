@@ -7,7 +7,7 @@ import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
 import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups.js";
 import { startListeners } from "./source/js/eventListeners.js";
-import { lodash } from "../../../../lib.js";
+import { lodash, Popper } from "../../../../lib.js";
 
 // * Extension variables
 
@@ -22,7 +22,8 @@ import { lodash } from "../../../../lib.js";
     - [ ] Button on right nav panel to open user metadata - one for active and another for all
     - [ ] Use alt title if description is empty
     - [ ] Global Stat not attached to character
-    - [ ] Fix chat UI select button using a similar approach to character export button - thanks Ross
+    - [X] Fix chat UI select button using a similar approach to character export button - thanks Ross
+
     - [ ] Before I loose the idea - Update chat UI on input input, this would allow sick tricks like modifying a variable value from an input inside the set var macro - That would require
         - [ ] Parsing ST variables on input (and parsing mine's first)
         - [ ] Figure out how to update the UI without loosing focus of the input (maybe when the input looses focus?)
@@ -217,11 +218,23 @@ function replaceSkip(str, search, replaceWith, targetIndex) {
     });
 }
 
+/**@type {object[]}*/
+export let callbacksValueUID = [];
+
+$('html').on('touchstart mousedown', async function (e) {
+    const clickTarget = $(e.target);
+
+    for (const obj of callbacksValueUID) obj.callback(clickTarget);
+});
+
 function addTracker(status, mesID, character) {
     const $chat = document.getElementById("chat");
     const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
 
+    callbacksValueUID = callbacksValueUID.filter(obj => obj.target !== character.avatar);
+
     destroyElement(`.mes .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
+    destroyElement(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`);
 
     if (!entriesText || status.depth < 0) return;
 
@@ -244,12 +257,7 @@ function addTracker(status, mesID, character) {
                     <span class="status-separator"></span>
                     <span class="status-description d-contents"></span>
                 </p>
-                <details class="status-value-uid m-0 place-items-baseline">
-                    <summary>
-                        <div class="menu_button menu_button_icon fa-solid fa-list-1-2 m-0" tabindex="0"></div>
-                    </summary>
-                    <div class="status-value-uid-options border p-0 scrollbar-none"></div>
-                </details>
+                <button class="status-value-uid menu_button menu_button_icon fa-solid fa-list-1-2 m-0" aria-describedby="tooltip"></button>
             </div>
         </td>
     `;
@@ -263,8 +271,8 @@ function addTracker(status, mesID, character) {
                 <div class="d-flex w-100 flex-center-between p-10px">
                     <span>Status - ${character.name}</span>
                     <div class="d-flex flex-center">
-                        <div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0" tabindex="0"></div>
-                        <div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0" tabindex="0"></div>
+                        <div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0"></div>
+                        <div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0"></div>
                     </div>
                 </div>
             </th>
@@ -328,8 +336,9 @@ function addTracker(status, mesID, character) {
 
         if (!extensionSettings.editNumbersFromChat)
             return `
-            <span class="d-none original-text">${escapedText}</span>
-            <span class="text-line">${parsedText}</span>`;
+                <span class="d-none original-text">${escapedText}</span>
+                <span class="text-line">${parsedText}</span>
+            `;
 
         let newText = `<span class="text-line">${parsedText}</span>`;
 
@@ -450,7 +459,17 @@ function addTracker(status, mesID, character) {
         form.removeAttribute('action');
 
         const killSwitch = el(newRow, ".kill-switch");
-        const selectValueUID = el(newRow, 'details.status-value-uid');
+        const selectValueUID = el(newRow, '.status-value-uid');
+        const optionsValueUID = document.createElement("div");
+        optionsValueUID.setAttribute("role", "tooltip");
+        optionsValueUID.setAttribute("avatar-target", character.avatar);
+        optionsValueUID.style.display = "none";
+        optionsValueUID.classList.add("status-value-uid-options", "list-group");
+
+        const selectValueUIDPopper = Popper.createPopper(selectValueUID, optionsValueUID, {placement: "left"});
+        let isPopperOpen = false;
+
+        el(document, 'div[name="templatesAndPopupsWrapper"]').append(optionsValueUID);
 
         // Set Values
         el(form, 'input[name="key"]').value = entry.key;
@@ -510,7 +529,7 @@ function addTracker(status, mesID, character) {
             const option = document.createElement("div");
             option.setAttribute("value", String(alt_val.uid));
             option.innerText = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
-            option.classList.add("w-auto", "menu_button", "interactable", "m-0");
+            option.classList.add("list-group-item");
 
             option.addEventListener("click", () => {
                 const alt = getCharAltValue(character, entry.uid, option.getAttribute("value"));
@@ -518,11 +537,15 @@ function addTracker(status, mesID, character) {
                 el(form, 'input[name="value"]').value = alt.value;
                 el(form, 'input[name="value_uid"]').value = alt.uid;
 
+                isPopperOpen = false;
+                optionsValueUID.style.display = "none";
+                selectValueUIDPopper.update();
+
                 updateDescription(alt.value, '.status-description', 'value');
                 safeDispatch(form);
             });
 
-            el(newRow, '.status-value-uid-options').append(option);
+            optionsValueUID.append(option);
         }
 
         selectValueUID.value = String(entry.value_uid);
@@ -540,6 +563,27 @@ function addTracker(status, mesID, character) {
             clearTimeout(formDebounceTimer);
 
             formDebounceTimer = window.setTimeout(() => form.requestSubmit(), DEBOUNCE_MS);
+        });
+
+        selectValueUID.addEventListener('click', function () {
+            isPopperOpen = !isPopperOpen;
+            optionsValueUID.style.display = isPopperOpen ? "block" : "none";
+            selectValueUIDPopper.update();
+        });
+
+        callbacksValueUID.push({
+            target: character.avatar,
+            callback: (/**@type {JQuery<HTMLElement>}*/clickTarget) => {
+                if (
+                    isPopperOpen
+                    && clickTarget.closest(selectValueUID).length == 0
+                    && clickTarget.closest(optionsValueUID).length == 0
+                ) {
+                    isPopperOpen = false;
+                    optionsValueUID.style.display = "none";
+                    selectValueUIDPopper.update();
+                }
+            }
         });
 
         killSwitch.addEventListener("click", (e) => {
