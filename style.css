@@ -23,7 +23,7 @@ div[name="templatesAndPopupsWrapper"] {
     }
 
     .status-value-uid-options {
-        z-index: 3000;
+        z-index: 40;
         overflow-y: scroll;
         max-height: 15vh;
     }
