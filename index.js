@@ -218,20 +218,32 @@ function replaceSkip(str, search, replaceWith, targetIndex) {
     });
 }
 
-/**@type {object[]}*/
-export let callbacksValueUID = [];
-
+/** On click
+    @type {object[]}
+*/
+export let callbacksClickValueUID = [];
 $('html').on('touchstart mousedown', async function (e) {
     const clickTarget = $(e.target);
 
-    for (const obj of callbacksValueUID) obj.callback(clickTarget);
+    for (const obj of callbacksClickValueUID) obj.callback(clickTarget);
+});
+
+/** On scroll
+    @type {object[]}
+*/
+export let callbacksScrollValueUID = [];
+$('#chat').on('scroll', async function (e) {
+    const scrollTarget = $(e.target);
+
+    for (const obj of callbacksScrollValueUID) obj.callback(scrollTarget);
 });
 
 function addTracker(status, mesID, character) {
     const $chat = document.getElementById("chat");
     const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
 
-    callbacksValueUID = callbacksValueUID.filter(obj => obj.target !== character.avatar);
+    callbacksClickValueUID = callbacksClickValueUID.filter(obj => obj.target !== character.avatar);
+    callbacksScrollValueUID = callbacksScrollValueUID.filter(obj => obj.target !== character.avatar);
 
     destroyElement(`.mes .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
     destroyElement(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`);
@@ -571,7 +583,7 @@ function addTracker(status, mesID, character) {
             selectValueUIDPopper.update();
         });
 
-        callbacksValueUID.push({
+        callbacksClickValueUID.push({
             target: character.avatar,
             callback: (/**@type {JQuery<HTMLElement>}*/clickTarget) => {
                 if (
@@ -584,6 +596,11 @@ function addTracker(status, mesID, character) {
                     selectValueUIDPopper.update();
                 }
             }
+        });
+
+        callbacksScrollValueUID.push({
+            target: character.avatar,
+            callback: (/**@type {JQuery<HTMLElement>}*/scrollTarget) => selectValueUIDPopper.update()
         });
 
         killSwitch.addEventListener("click", (e) => {
