@@ -499,6 +499,14 @@ function addTracker(status, mesID, character) {
             if (!extensionSettings.editNumbersFromChat) return;
 
             el(newRow, el_target)
+            .querySelectorAll('input[type="text"]')
+            .forEach((/**@type {HTMLInputElement}*/input) => {
+                input.onkeydown = (event) => {
+                    if (/[{}\n]/.test(event.key)) event.preventDefault();
+                }
+            });
+
+            el(newRow, el_target)
             .querySelectorAll('input.chat-input-editor')
             .forEach((/**@type {HTMLInputElement}*/input) => {
                 if (input.type === "checkbox") {
