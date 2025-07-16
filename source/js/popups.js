@@ -1,10 +1,11 @@
-import { extension_prompt_roles } from "../../../../../../script.js";
+import { characters, extension_prompt_roles } from "../../../../../../script.js";
 import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
+import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
 import { log, destroyElement, fetchStatus } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus } from "./statusControls.js";
+import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus } from "./statusControls.js";
 
 /*  # TODO
     - [X] Select for alt_values
@@ -63,6 +64,66 @@ async function popupDeleteConfirm(del_name = "this") {
         onClose: () => destroyElement(delete_css_block)
     });
 };
+
+/** Transfers the status data of the selected `char`
+    @param {object} char
+    @returns {Promise<boolean>}
+*/
+async function transferPopup(char) {
+    const transferContainer = document.createElement("div");
+    transferContainer.classList.add("stat-us-max-popup");
+
+    const transferWrapper = document.createElement("div");
+    transferWrapper.classList.add("d-flex", "flex-col");
+    transferWrapper.innerHTML = `<span>${t`Transfer ${char.name} stats`}</span>`;
+
+    const defOption = document.createElement("option");
+    defOption.value = null;
+    defOption.innerText = t`--Select target--`;
+
+    const selectParticipant = document.createElement("select");
+    selectParticipant.classList.add("flex-grow-1", "px-5px", "m-0");
+    selectParticipant.append(defOption);
+
+    const participants = [
+        ...Object
+            .entries(power_user.personas)
+            .map(([key, value]) => {return {name: value, avatar: key, is_user: true}}),
+        ...characters
+    ].filter(c => c.avatar !== char.avatar);
+
+    for (const participant of participants) {
+        const option = document.createElement("option");
+        option.value = String(participant.avatar);
+        option.innerText = String(participant.name);
+        selectParticipant.append(option);
+    }
+
+    transferWrapper.append(selectParticipant);
+    transferContainer.append(transferWrapper);
+
+    const popupResult = await callGenericPopup(transferContainer, POPUP_TYPE.CONFIRM, "", {
+        okButton: t`Confirm`,
+        cancelButton: t`Cancel`
+    });
+
+    log(popupResult, char.avatar, selectParticipant.value);
+
+    if (!popupResult) return false;
+
+    const target = participants.find(c => c.avatar === selectParticipant.value);
+
+    if (!target) return false;
+
+    const success = transferCharStatus(char, target);
+
+    // @ts-ignore
+    if (success) toastr.success(t`Status transferred successfully`);
+    // @ts-ignore
+    else toastr.error(t`An error occurred - Status could not be transferred`);
+
+    return success ? true : false;
+}
 
 function getFullCharAvatar(status) {
     // TODO getThumbnailUrl - on next release
@@ -124,6 +185,9 @@ export async function formStatusSingleChar(char) {
     textareaStatusSuffix.value = escapeNewlines(metadata.suffix);
     textareaStatusSuffix.classList.add("text_pole", "mw-15");
 
+    const transferStatsBtn = document.createElement("div");
+    transferStatsBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-truck-arrow-right", "interactable");
+
     const expandEntriesBtn = document.createElement("div");
     expandEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-expand", "interactable");
 
@@ -142,6 +206,7 @@ export async function formStatusSingleChar(char) {
         textareaStatusSeparator,
         textareaStatusPrefix,
         textareaStatusSuffix,
+        transferStatsBtn,
         expandEntriesBtn,
         compressEntriesBtn,
         newStatBtn
@@ -449,6 +514,10 @@ export async function formStatusSingleChar(char) {
         suffixDebounceTimer = window.setTimeout(() => {
             saveMetadataDebounced();
         }, DEBOUNCE_MS);
+    });
+
+    transferStatsBtn.addEventListener("click", async () => {
+        await transferPopup(char);
     });
 
     // @ts-ignore

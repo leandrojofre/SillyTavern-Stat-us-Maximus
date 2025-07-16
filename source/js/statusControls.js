@@ -336,6 +336,13 @@ export function getCharStatus(character) {
         return false;
 }
 
+/**
+    @param {object} character
+    @param {object} target
+    @param {object} [options]
+    @param {boolean} [options.deleteOriginal=false]
+    @returns {boolean}
+*/
 export function transferCharStatus(character, target, {deleteOriginal = false} = {}) {
     try {
         const originalStatus = getCharStatus(character);
@@ -348,7 +355,7 @@ export function transferCharStatus(character, target, {deleteOriginal = false} =
         if (!targetStatus) return false;
 
         for (const [key, value] of Object.entries(originalStatus)) {
-            if (key === "avatar") continue;
+            if (key === "avatar" || key === "depth" || key === "last_mes_id" || key === "is_user") continue;
             if (key === "entries" )
                 for (const entry of value) {
                     const newUID = getFreeDataUid(targetStatus[key]);
@@ -360,6 +367,8 @@ export function transferCharStatus(character, target, {deleteOriginal = false} =
         }
 
         if (deleteOriginal) deleteCharStatus(character);
+
+        saveMetadataDebounced();
 
         return true;
     } catch (error) {
