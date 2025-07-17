@@ -20,7 +20,7 @@ import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCh
     - [X] Per-character open menu buttons on group list and in right nav UI for solo chats
     - [X] Open/close all entries - per character
     - [ ] Status transfer button
-    - [ ] Status clone button
+    - [X] Status clone button
     - [ ] Status delete button
     - [X] Entries block prefix/suffix
     - [ ] Custom depth buttons - dynamic depth if undefined
@@ -65,17 +65,17 @@ async function popupDeleteConfirm(del_name = "this") {
     });
 };
 
-/** Transfers the status data of the selected `char`
+/** Clones the status data of the selected `char`
     @param {object} char
-    @returns {Promise<boolean>}
+    @returns {Promise<boolean>|Promise<object>}
 */
-async function transferPopup(char) {
-    const transferContainer = document.createElement("div");
-    transferContainer.classList.add("stat-us-max-popup");
+async function clonePopup(char) {
+    const cloneContainer = document.createElement("div");
+    cloneContainer.classList.add("stat-us-max-popup");
 
-    const transferWrapper = document.createElement("div");
-    transferWrapper.classList.add("d-flex", "flex-col");
-    transferWrapper.innerHTML = `<span>${t`Transfer ${char.name} stats`}</span>`;
+    const cloneWrapper = document.createElement("div");
+    cloneWrapper.classList.add("d-flex", "flex-col");
+    cloneWrapper.innerHTML = `<span>${t`Clone ${char.name} stats`}</span>`;
 
     const defOption = document.createElement("option");
     defOption.value = null;
@@ -99,30 +99,40 @@ async function transferPopup(char) {
         selectParticipant.append(option);
     }
 
-    transferWrapper.append(selectParticipant);
-    transferContainer.append(transferWrapper);
+    const inputOnlyEntries = document.createElement("input");
+    inputOnlyEntries.type = "checkbox";
 
-    const popupResult = await callGenericPopup(transferContainer, POPUP_TYPE.CONFIRM, "", {
+    const spanOnlyEntries = document.createElement("span");
+    spanOnlyEntries.innerText = t`Transfer only entries`;
+
+    const labelOnlyEntries = document.createElement("label");
+    labelOnlyEntries.classList.add("flex-container");
+    labelOnlyEntries.append(
+        inputOnlyEntries,
+        spanOnlyEntries
+    );
+
+    cloneWrapper.append(labelOnlyEntries, selectParticipant);
+    cloneContainer.append(cloneWrapper);
+
+    const popupResult = await callGenericPopup(cloneContainer, POPUP_TYPE.CONFIRM, "", {
         okButton: t`Confirm`,
         cancelButton: t`Cancel`
     });
 
-    log(popupResult, char.avatar, selectParticipant.value);
-
     if (!popupResult) return false;
 
     const target = participants.find(c => c.avatar === selectParticipant.value);
-
-    if (!target) return false;
-
-    const success = transferCharStatus(char, target);
+    const success = !target ? false : transferCharStatus(char, target, {onlySendEntries: inputOnlyEntries.checked});
 
     // @ts-ignore
-    if (success) toastr.success(t`Status transferred successfully`);
+    if (success) toastr.success(t`Status clone successfully`);
     // @ts-ignore
-    else toastr.error(t`An error occurred - Status could not be transferred`);
+    else toastr.error(t`An error occurred - Status could not be clone`);
 
-    return success ? true : false;
+    destroyElement(cloneContainer);
+
+    return success ? target : false;
 }
 
 function getFullCharAvatar(status) {
@@ -185,8 +195,8 @@ export async function formStatusSingleChar(char) {
     textareaStatusSuffix.value = escapeNewlines(metadata.suffix);
     textareaStatusSuffix.classList.add("text_pole", "mw-15");
 
-    const transferStatsBtn = document.createElement("div");
-    transferStatsBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-truck-arrow-right", "interactable");
+    const cloneStatsBtn = document.createElement("div");
+    cloneStatsBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-truck-arrow-right", "interactable");
 
     const expandEntriesBtn = document.createElement("div");
     expandEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-expand", "interactable");
@@ -206,7 +216,7 @@ export async function formStatusSingleChar(char) {
         textareaStatusSeparator,
         textareaStatusPrefix,
         textareaStatusSuffix,
-        transferStatsBtn,
+        cloneStatsBtn,
         expandEntriesBtn,
         compressEntriesBtn,
         newStatBtn
@@ -313,11 +323,11 @@ export async function formStatusSingleChar(char) {
 
     /** Create Menu container and assemble Menu */
     const content = document.createElement("div");
-    content.id = "stat-us-max-popup-form-holder-" + metadata.last_mes_id;
     content.classList.add("d-flex", "flex-col", "gap-5px", "pt-5px");
 
     const container = document.createElement("div");
-    container.id = "stat-us-max-popup-" + metadata.last_mes_id;
+    container.dataset.char = metadata.avatar;
+    container.dataset.isUser = metadata.is_user;
     container.classList.add("stat-us-max-popup");
     container.append(wrapper, content);
 
@@ -368,7 +378,6 @@ export async function formStatusSingleChar(char) {
             // @ts-ignore
             if (!data[i]) return toastr.warning(t`Data for new entry is empty - index=${i}`);
 
-            newRow.id = `stat-us-max-popup-form-${data[i].uid}`;
             newRow.dataset.uid = data[i].uid;
             newRow.removeAttribute('action');
 
@@ -516,8 +525,10 @@ export async function formStatusSingleChar(char) {
         }, DEBOUNCE_MS);
     });
 
-    transferStatsBtn.addEventListener("click", async () => {
-        await transferPopup(char);
+    cloneStatsBtn.addEventListener("click", async () => {
+        const cloneResult = await clonePopup(char);
+
+        if (!cloneResult) return;
     });
 
     // @ts-ignore

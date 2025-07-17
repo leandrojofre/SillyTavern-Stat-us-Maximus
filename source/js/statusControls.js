@@ -341,9 +341,10 @@ export function getCharStatus(character) {
     @param {object} target
     @param {object} [options]
     @param {boolean} [options.deleteOriginal=false]
+    @param {boolean} [options.onlySendEntries=false]
     @returns {boolean}
 */
-export function transferCharStatus(character, target, {deleteOriginal = false} = {}) {
+export function transferCharStatus(character, target, {deleteOriginal = false, onlySendEntries = false} = {}) {
     try {
         const originalStatus = getCharStatus(character);
 
@@ -354,15 +355,20 @@ export function transferCharStatus(character, target, {deleteOriginal = false} =
         if (!targetStatus) targetStatus = createCharStatus(target);
         if (!targetStatus) return false;
 
-        for (const [key, value] of Object.entries(originalStatus)) {
-            if (key === "avatar" || key === "depth" || key === "last_mes_id" || key === "is_user") continue;
-            if (key === "entries" )
-                for (const entry of value) {
-                    const newUID = getFreeDataUid(targetStatus[key]);
+        const sendEntries = (entries) => {
+            for (const entry of entries) {
+                const newUID = getFreeDataUid(targetStatus.entries);
 
-                    entry.uid = newUID;
-                    targetStatus[key].push(entry);
-                }
+                entry.uid = newUID;
+                targetStatus.entries.push(entry);
+            }
+        };
+
+        const data = onlySendEntries ? {entries: originalStatus.entries} : originalStatus;
+
+        for (const [key, value] of Object.entries(data)) {
+            if (key === "avatar" || key === "depth" || key === "last_mes_id" || key === "is_user") continue;
+            if (key === "entries") sendEntries(value);
             else targetStatus[key] = value;
         }
 
