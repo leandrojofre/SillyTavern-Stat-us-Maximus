@@ -20,7 +20,7 @@ import { lodash, Popper } from "../../../../lib.js";
     - [X] Hide description on disable
     - [X] Reduce font-size
     - [ ] Button on right nav panel to open user metadata - one for active and another for all
-    - [ ] Use alt title if description is empty
+    - [X] Use alt title if description is empty
     - [ ] Global Stat not attached to character
     - [X] Fix chat UI select button using a similar approach to character export button - thanks Ross
 
@@ -471,6 +471,8 @@ function addTracker(status, mesID, character) {
         form.removeAttribute('action');
 
         const killSwitch = el(newRow, ".kill-switch");
+        const descriptionValue = (entry.value === "") ? (entry.alt_values.find(alt => alt.uid === entry.value_uid).key) : (entry.value);
+
         const selectValueUID = el(newRow, '.status-value-uid');
         const optionsValueUID = document.createElement("div");
         optionsValueUID.setAttribute("role", "tooltip");
@@ -543,7 +545,7 @@ function addTracker(status, mesID, character) {
         }
 
         updateDescription(entry.key, '.status-title', 'key');
-        updateDescription(entry.value, '.status-description', 'value');
+        updateDescription(descriptionValue, '.status-description', 'value');
 
         for (const alt_val of entry.alt_values) {
             const option = document.createElement("div");
@@ -561,7 +563,7 @@ function addTracker(status, mesID, character) {
                 optionsValueUID.style.display = "none";
                 selectValueUIDPopper.update();
 
-                updateDescription(alt.value, '.status-description', 'value');
+                updateDescription((alt.value === "") ? (alt.key) : (alt.value), '.status-description', 'value');
                 safeDispatch(form);
             });
 
@@ -728,11 +730,13 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
             if (!entry.enabled) continue;
             if (promptValue !== "") promptValue += status.separator;
 
+            const value = (entry.value === "") ? (entry.alt_values.find(alt => alt.uid === entry.value_uid).key) : (entry.value);
+
             promptValue += entry.key;
 
-            if (entry.key !== "" && entry.value !== "") promptValue += entry.separator;
+            if (entry.key !== "" && value !== "") promptValue += entry.separator;
 
-            promptValue += entry.value;
+            promptValue += value;
         };
 
         if (!promptValue) continue;
