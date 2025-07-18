@@ -193,7 +193,10 @@ export async function formStatusSingleChar(char) {
     textareaStatusSuffix.type = "text";
     textareaStatusSuffix.placeholder = t`Status suffix...`;
     textareaStatusSuffix.value = escapeNewlines(metadata.suffix);
-    textareaStatusSuffix.classList.add("text_pole", "mw-15");
+    const deleteStatsBtn = document.createElement("div");
+    deleteStatsBtn.title = "Delete character's Status";
+    deleteStatsBtn.dataset.i18n = "Delete character's Status";
+    deleteStatsBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "m-0");
 
     const cloneStatsBtn = document.createElement("div");
     cloneStatsBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-truck-arrow-right", "interactable");
@@ -529,6 +532,44 @@ export async function formStatusSingleChar(char) {
         const cloneResult = await clonePopup(char);
 
         if (!cloneResult) return;
+    });
+
+    deleteStatsBtn.addEventListener("click", async () => {
+        if (await popupDeleteConfirm(`${char.name}'s status data`) === 0) return;
+
+        const success = deleteCharStatus(char);
+
+        if (success) {
+            const refreshButton = document.createElement("div");
+            refreshButton.title = "Re-create Status data";
+            refreshButton.dataset.i18n = "Re-create Status data";
+            refreshButton.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-arrows-rotate", "interactable");
+
+            const refreshSpan = document.createElement("span");
+            refreshSpan.dataset.i18n = `Re-create ${char.name}'s Status data`;
+            refreshSpan.innerText = `Re-create ${char.name}'s Status data`;
+
+            const refreshContainer = document.createElement("div");
+            refreshContainer.classList.add("d-flex", "flex-wrap", "flex-center");
+            refreshContainer.append(
+                refreshButton,
+                refreshSpan
+            );
+
+            refreshButton.addEventListener("click", () => {
+                /**@type {HTMLDivElement}*/
+                const newContainer = formStatusSingleChar(char);
+                const nodesArray = Array.from(newContainer.childNodes);
+
+                destroyElement(container.childNodes);
+
+                container.append(...nodesArray);
+            }, {once: true});
+
+            destroyElement(container.childNodes);
+
+            container.append(refreshContainer);
+        }
     });
 
     // @ts-ignore
