@@ -311,6 +311,8 @@ export function createCharStatus(character, depth = -1) {
 
         chat_metadata.stat_us_maximus.push(status);
 
+        saveMetadataDebounced();
+
         return status;
     } catch (error) {
         // @ts-ignore
@@ -332,6 +334,56 @@ export function getCharStatus(character) {
         return chat_metadata.stat_us_maximus.find((status) => status.avatar === character.avatar) ?? false;
     else
         return false;
+}
+
+/**
+    @param {object} character
+    @param {object} target
+    @param {object} [options]
+    @param {boolean} [options.deleteOriginal=false]
+    @param {boolean} [options.onlySendEntries=false]
+    @returns {boolean}
+*/
+export function transferCharStatus(character, target, {deleteOriginal = false, onlySendEntries = false} = {}) {
+    try {
+        const originalStatus = getCharStatus(character);
+
+        if (!originalStatus) return false;
+
+        let targetStatus = getCharStatus(target);
+
+        if (!targetStatus) targetStatus = createCharStatus(target);
+        if (!targetStatus) return false;
+
+        const sendEntries = (entries) => {
+            for (const entry of entries) {
+                const newUID = getFreeDataUid(targetStatus.entries);
+
+                entry.uid = newUID;
+                targetStatus.entries.push(entry);
+            }
+        };
+
+        const data = onlySendEntries ? {entries: originalStatus.entries} : originalStatus;
+
+        for (const [key, value] of Object.entries(data)) {
+            if (key === "avatar" || key === "depth" || key === "last_mes_id" || key === "is_user") continue;
+            if (key === "entries") sendEntries(value);
+            else targetStatus[key] = value;
+        }
+
+        if (deleteOriginal) deleteCharStatus(character);
+
+        saveMetadataDebounced();
+
+        return true;
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to transfer Status Metadata - Check the browser console for more details`);
+        console.error(error);
+
+        return false;
+    }
 }
 
 export function deleteCharStatus(character) {

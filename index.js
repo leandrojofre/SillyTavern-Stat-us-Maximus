@@ -1,5 +1,5 @@
 import { extension_settings, saveMetadataDebounced } from "../../../extensions.js";
-import { saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar } from "../../../../script.js";
+import { saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar, substituteParams } from "../../../../script.js";
 import { getGroupMembers, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
 import { createCharStatus, getCharAltValue, getCharStatus, updateCharEntry } from "./source/js/statusControls.js";
@@ -7,6 +7,7 @@ import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
 import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups.js";
 import { startListeners } from "./source/js/eventListeners.js";
+import { lodash, Popper } from "../../../../lib.js";
 
 // * Extension variables
 
@@ -19,8 +20,13 @@ import { startListeners } from "./source/js/eventListeners.js";
     - [X] Hide description on disable
     - [X] Reduce font-size
     - [ ] Button on right nav panel to open user metadata - one for active and another for all
-    - [ ] Use alt title if description is empty
+    - [X] Use alt title if description is empty
     - [ ] Global Stat not attached to character
+    - [X] Fix chat UI select button using a similar approach to character export button - thanks Ross
+
+    - [ ] Before I loose the idea - Update chat UI on input input, this would allow sick tricks like modifying a variable value from an input inside the set var macro - That would require
+        - [ ] Parsing ST variables on input (and parsing mine's first)
+        - [ ] Figure out how to update the UI without loosing focus of the input (maybe when the input looses focus?)
 
     I need to refine this roadmap
     - [ ] Create a template builder ? from the settings
@@ -47,7 +53,6 @@ const defaultSettings = {
     debug: false
 };
 
-// TODO See how to implement ([A-z_]+::)? to add input names with mass edition
 const regexTextInput = /({{text)(::[^}\n]*)?(}})/g;
 const regexNumberInput = /({{number)(::[\d]+(\.[\d]+)?)?(}})/g;
 const regexBooleanInput = /({{boolean)(::((false)|(true))::[^}\n]+::[^}\n]+)?(}})/g;
@@ -203,11 +208,45 @@ function getAllParticipantsInChat(chat) {
     return chars;
 }
 
+function replaceSkip(str, search, replaceWith, targetIndex) {
+    let count = -1;
+
+    return str.replaceAll(search, match => {
+        count++;
+        log (search, match, count, targetIndex, count === targetIndex);
+        return count === targetIndex ? replaceWith : match;
+    });
+}
+
+/** On click
+    @type {object[]}
+*/
+export let callbacksClickValueUID = [];
+$('html').on('touchstart mousedown', async function (e) {
+    const clickTarget = $(e.target);
+
+    for (const obj of callbacksClickValueUID) obj.callback(clickTarget);
+});
+
+/** On scroll
+    @type {object[]}
+*/
+export let callbacksScrollValueUID = [];
+$('#chat').on('scroll', async function (e) {
+    const scrollTarget = $(e.target);
+
+    for (const obj of callbacksScrollValueUID) obj.callback(scrollTarget);
+});
+
 function addTracker(status, mesID, character) {
     const $chat = document.getElementById("chat");
     const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
 
+    callbacksClickValueUID = callbacksClickValueUID.filter(obj => obj.target !== character.avatar);
+    callbacksScrollValueUID = callbacksScrollValueUID.filter(obj => obj.target !== character.avatar);
+
     destroyElement(`.mes .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
+    destroyElement(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`);
 
     if (!entriesText || status.depth < 0) return;
 
@@ -225,17 +264,12 @@ function addTracker(status, mesID, character) {
             </form>
             <div class="d-flex flex-center-between gap-15px fs-90p text-muted hover-highlight">
                 <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state." data-i18n="Toggle entry's active state."></div>
-                <p class="text-left flex-grow-1 m-0">
-                    <span class="status-title fw-bolder"></span>
+                <p class="text-left flex-grow-1 m-0 d-table">
+                    <span class="status-title fw-bolder d-contents"></span>
                     <span class="status-separator"></span>
-                    <span class="status-description d-table"></span>
+                    <span class="status-description d-contents"></span>
                 </p>
-                <details class="status-value-uid m-0 place-items-baseline">
-                    <summary>
-                        <div class="menu_button menu_button_icon fa-solid fa-list-1-2 m-0" tabindex="0"></div>
-                    </summary>
-                    <div class="status-value-uid-options border p-0 scrollbar-none"></div>
-                </details>
+                <button class="status-value-uid menu_button menu_button_icon fa-solid fa-list-1-2 m-0" aria-describedby="tooltip"></button>
             </div>
         </td>
     `;
@@ -249,8 +283,8 @@ function addTracker(status, mesID, character) {
                 <div class="d-flex w-100 flex-center-between p-10px">
                     <span>Status - ${character.name}</span>
                     <div class="d-flex flex-center">
-                        <div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0" tabindex="0"></div>
-                        <div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0" tabindex="0"></div>
+                        <div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0"></div>
+                        <div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0"></div>
                     </div>
                 </div>
             </th>
@@ -309,85 +343,117 @@ function addTracker(status, mesID, character) {
     });
 
     const createInputs = (/**@type {String}*/text) => {
-        if (!extensionSettings.editNumbersFromChat) return text;
+        const escapedText = lodash.escape(text);
+        const parsedText = lodash.escape(substituteParams(processMacros(text, {char: character, processInputs: false}))).replaceAll(/\n/g, "<br>");
 
-        let newText = "<span>" + text + "</span>";
+        if (!extensionSettings.editNumbersFromChat)
+            return `
+                <span class="d-none original-text">${escapedText}</span>
+                <span class="text-line">${parsedText}</span>
+            `;
 
-        text.match(regexTextInput)
-            ?.forEach(match => {
-                const value = match.replaceAll(/(({{text(::)?)|(}}))/g, "");
-                const input = `<input type="text" value="${value}" class="text_pole w-auto m-0 chat-input-editor">`;
+        let newText = `<span class="text-line">${parsedText}</span>`;
 
-                newText = newText.replace(match, `</span>${input}<span>`);
-            });
+        newText = newText.replaceAll(regexTextInput, (match) => {
+            const value = match.replaceAll(/(({{text(::)?)|(}}))/g, "");
+            const input = `<input type="text" value="${value}" class="text_pole m-0 chat-input-editor">`;
 
-        text.match(regexNumberInput)
-            ?.forEach(match => {
-                const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
-                const input = `<input type="number" value="${value === "" ? "0" : value}" class="text_pole w-auto m-0 chat-input-editor">`;
+            return input;
+        });
 
-                newText = newText.replace(match, `</span>${input}<span>`);
-            });
+        newText = newText.replaceAll(regexNumberInput, (match) => {
+            const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
+            const input = `<input type="number" value="${value === "" ? "0" : value}" class="text_pole m-0 chat-input-editor">`;
 
-        text.match(regexBooleanInput)
-            ?.forEach(match => {
-                const props = match.replaceAll(/(({{boolean(::)?)|(}}))/g, "").split("::");
-                const checked = props[0] ?? "true";
-                const trueValue = props[1] ?? "true";
-                const falseValue = props[2] ?? "false";
-                const input = `
-                    <input type="checkbox" ${checked === "true" ? "checked" : ""} data-true="${trueValue}" data-false="${falseValue}" class="m-0 chat-input-editor">
-                    <span class="ignore"> ${checked === "true" ? trueValue : falseValue}</span>
-                `;
+            return input;
+        });
 
-                newText = newText.replace(match, `</span>${input}<span>`);
-            });
+        newText = newText.replaceAll(regexBooleanInput, (match) => {
+            const props = match.replaceAll(/(({{boolean(::)?)|(}}))/g, "").split("::");
+            const checked = props[0] ?? "true";
+            const trueValue = props[1] ?? "true";
+            const falseValue = props[2] ?? "false";
+            const input = `
+                <input type="checkbox" ${checked === "true" ? "checked" : ""} data-true="${trueValue}" data-false="${falseValue}" class="m-0 chat-input-editor">
+                <span class="ignore"> ${checked === "true" ? trueValue : falseValue}</span>
+            `;
 
-        text.match(regexRangeInput)
-            ?.forEach(match => {
-                const props = match.replaceAll(/(({{range::)|(}}))/g, "").split("::");
-                const min = props[0];
-                const max = props[1];
-                const step = props[2];
-                const value = props[3];
-                const input = `
-                    <span class="d-flex flex-col flex-center gap-0 chat-input-editor ignore">
-                        <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider">
-                        <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input">
-                    </span>
-                `;
+            return input;
+        });
 
-                newText = newText.replace(match, `</span>${input}<span>`);
-            });
+        newText = newText.replaceAll(regexRangeInput, (match) => {
+            const props = match.replaceAll(/(({{range::)|(}}))/g, "").split("::");
+            const min = props[0];
+            const max = props[1];
+            const step = props[2];
+            const value = props[3];
+            const input = `
+                <span class="d-flex flex-col flex-center gap-0 chat-input-editor ignore">
+                    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider">
+                    <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input">
+                </span>
+            `;
 
-        return newText.replace("<span></span>", "");
+            return input;
+        });
+
+        return `<span class="d-none original-text">${escapedText}</span>${newText}`;
     }
 
     const createInputStrings = (parent, target) => {
-        let newValue = "";
+        /**@type {HTMLElement}*/const targetEl = el(parent, target);
+        /**@type {NodeListOf<HTMLElement>}*/const chunks = targetEl.querySelectorAll('.chat-input-editor');
+        let newValue = targetEl.querySelector('.d-none.original-text').textContent;
 
-        for (const child of el(parent, target).children) {
-            if (child instanceof HTMLSpanElement && !child.classList.contains("ignore"))
-                newValue += child.textContent;
+        let countRange = -1;
+        let countText = -1;
+        let countNumber = -1;
+        let countBoolean = -1;
 
-            if (child instanceof HTMLSpanElement && child.classList.contains("chat-input-editor")) {
-                /**@type {HTMLSpanElement}*/const inputNumber = child.querySelector('input[type="number"]');
+        for (const chunk of chunks) {
+            let match;
+            let index;
+            let newMacro = "";
+
+            if (chunk instanceof HTMLSpanElement) {
+                /**@type {HTMLInputElement}*/const inputNumber = chunk.querySelector('input[type="number"]');
                 const min = inputNumber.min;
                 const max = inputNumber.max;
                 const step = inputNumber.step;
                 const value = inputNumber.value;
-                newValue += `{{range::${min}::${max}::${step}::${value}}}`;
+                index = ++countRange;
+                match = regexRangeInput;
+                newMacro = `{{range::${min}::${max}::${step}::${value}}}`;
             }
 
-            if (child instanceof HTMLInputElement) {
-                if (child.type === "text") newValue += "{{text" + (child.value.length > 0 ? "::" : "") + child.value + "}}";
-                if (child.type === "number") newValue += "{{number" + (child.value.length > 0 ? "::" : "") + child.value + "}}";
-                if (child.type === "checkbox") {
-                    const trueValue = child.dataset.true;
-                    const falseValue = child.dataset.false;
-                    newValue += `{{boolean::${child.checked}::${trueValue}::${falseValue}}}`;
+            if (chunk instanceof HTMLInputElement) {
+                if (chunk.type === "text") {
+                    const value = chunk.value;
+                    index = ++countText;
+                    match = regexTextInput;
+                    newMacro = `{{text${value.length > 0 ? "::" : ""}${value}}}`;
+                }
+
+                if (chunk.type === "number") {
+                    const value = chunk.value;
+                    index = ++countNumber;
+                    match = regexNumberInput;
+                    newMacro = `{{number${value.length > 0 ? "::" : ""}${value}}}`;
+                }
+
+                if (chunk.type === "checkbox") {
+                    const value = chunk.checked;
+                    const trueValue = chunk.dataset.true;
+                    const falseValue = chunk.dataset.false;
+                    index = ++countBoolean;
+                    match = regexBooleanInput;
+                    newMacro = `{{boolean::${value}::${trueValue}::${falseValue}}}`;
                 }
             }
+
+            if (!newMacro || !match || index < 0) continue;
+
+            newValue = replaceSkip(newValue, match, newMacro, index);
         }
 
         return newValue;
@@ -405,7 +471,19 @@ function addTracker(status, mesID, character) {
         form.removeAttribute('action');
 
         const killSwitch = el(newRow, ".kill-switch");
-        const selectValueUID = el(newRow, 'details.status-value-uid');
+        const descriptionValue = (entry.value === "") ? (entry.alt_values.find(alt => alt.uid === entry.value_uid).key) : (entry.value);
+
+        const selectValueUID = el(newRow, '.status-value-uid');
+        const optionsValueUID = document.createElement("div");
+        optionsValueUID.setAttribute("role", "tooltip");
+        optionsValueUID.setAttribute("avatar-target", character.avatar);
+        optionsValueUID.style.display = "none";
+        optionsValueUID.classList.add("status-value-uid-options", "list-group");
+
+        const selectValueUIDPopper = Popper.createPopper(selectValueUID, optionsValueUID, {placement: "left"});
+        let isPopperOpen = false;
+
+        el(document, 'div[name="templatesAndPopupsWrapper"]').append(optionsValueUID);
 
         // Set Values
         el(form, 'input[name="key"]').value = entry.key;
@@ -413,32 +491,32 @@ function addTracker(status, mesID, character) {
         el(form, 'input[name="enabled"]').value = entry.enabled;
         el(form, 'input[name="value_uid"]').value = entry.value_uid;
 
-        el(newRow, '.status-separator').innerHTML = entry.separator.replaceAll(/\n/g, "<br>");
+        el(newRow, '.status-separator').innerHTML = lodash.escape(entry.separator);
 
         const updateDescription = (text, el_target, form_target) => {
             destroyElement(el(newRow, el_target).children);
 
             el(newRow, el_target).innerHTML = createInputs(text);
 
+            if (!extensionSettings.editNumbersFromChat) return;
+
+            el(newRow, el_target)
+            .querySelectorAll('input[type="text"]')
+            .forEach((/**@type {HTMLInputElement}*/input) => {
+                input.onkeydown = (event) => {
+                    if (/[{}\n]/.test(event.key)) event.preventDefault();
+                }
+            });
+
             el(newRow, el_target)
             .querySelectorAll('input.chat-input-editor')
             .forEach((/**@type {HTMLInputElement}*/input) => {
-                const extraWidth = input.type === "number" ? 3.5 : 1;
-
-                input.style.width = `calc(${String(input.value).length}ch + ${extraWidth}ch)`;
-
                 if (input.type === "checkbox") {
-                    input.style.width = "var(--mainFontSize)";
                     input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
                 };
 
                 input.addEventListener("input", () => {
-                    const extraWidth = input.type === "number" ? 3.5 : 1;
-
-                    input.style.width = `calc(${String(input.value).length}ch + ${extraWidth}ch)`;
-
                     if (input.type === "checkbox") {
-                        input.style.width = "var(--mainFontSize)";
                         input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
                     };
 
@@ -453,15 +531,12 @@ function addTracker(status, mesID, character) {
                 /**@type {HTMLInputElement}*/const inputNumber = span.querySelector('input[type="number"]');
                 /**@type {HTMLInputElement}*/const inputRange = span.querySelector('input[type="range"]');
 
-                span.style.width = `calc(${String(inputNumber.value).length + 8.5}ch)`;
-
                 span.addEventListener("input", (e) => {
                     /**@type {HTMLInputElement}*/
+                    // @ts-ignore
                     const original = e.target;
                     inputNumber.value = original.value;
                     inputRange.value = original.value;
-
-                    span.style.width = `calc(${String(inputNumber.value).length + 8.5}ch)`;
 
                     el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
                     safeDispatch(form);
@@ -470,13 +545,13 @@ function addTracker(status, mesID, character) {
         }
 
         updateDescription(entry.key, '.status-title', 'key');
-        updateDescription(entry.value, '.status-description', 'value');
+        updateDescription(descriptionValue, '.status-description', 'value');
 
         for (const alt_val of entry.alt_values) {
             const option = document.createElement("div");
             option.setAttribute("value", String(alt_val.uid));
             option.innerText = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
-            option.classList.add("w-auto", "menu_button", "interactable", "m-0");
+            option.classList.add("list-group-item");
 
             option.addEventListener("click", () => {
                 const alt = getCharAltValue(character, entry.uid, option.getAttribute("value"));
@@ -484,11 +559,15 @@ function addTracker(status, mesID, character) {
                 el(form, 'input[name="value"]').value = alt.value;
                 el(form, 'input[name="value_uid"]').value = alt.uid;
 
-                updateDescription(alt.value, '.status-description', 'value');
+                isPopperOpen = false;
+                optionsValueUID.style.display = "none";
+                selectValueUIDPopper.update();
+
+                updateDescription((alt.value === "") ? (alt.key) : (alt.value), '.status-description', 'value');
                 safeDispatch(form);
             });
 
-            el(newRow, '.status-value-uid-options').append(option);
+            optionsValueUID.append(option);
         }
 
         selectValueUID.value = String(entry.value_uid);
@@ -506,6 +585,32 @@ function addTracker(status, mesID, character) {
             clearTimeout(formDebounceTimer);
 
             formDebounceTimer = window.setTimeout(() => form.requestSubmit(), DEBOUNCE_MS);
+        });
+
+        selectValueUID.addEventListener('click', function () {
+            isPopperOpen = !isPopperOpen;
+            optionsValueUID.style.display = isPopperOpen ? "block" : "none";
+            selectValueUIDPopper.update();
+        });
+
+        callbacksClickValueUID.push({
+            target: character.avatar,
+            callback: (/**@type {JQuery<HTMLElement>}*/clickTarget) => {
+                if (
+                    isPopperOpen
+                    && clickTarget.closest(selectValueUID).length == 0
+                    && clickTarget.closest(optionsValueUID).length == 0
+                ) {
+                    isPopperOpen = false;
+                    optionsValueUID.style.display = "none";
+                    selectValueUIDPopper.update();
+                }
+            }
+        });
+
+        callbacksScrollValueUID.push({
+            target: character.avatar,
+            callback: (/**@type {JQuery<HTMLElement>}*/scrollTarget) => selectValueUIDPopper.update()
         });
 
         killSwitch.addEventListener("click", (e) => {
@@ -537,7 +642,7 @@ function addTracker(status, mesID, character) {
     toggleVisibility(statusTableBody, status.is_collapsed ?? false);
 }
 
-export function processMacros(text, {char = false, processInputs = true} = {}) {
+export function processMacros(text, {char = undefined, processInputs = true} = {}) {
     let newText = text;
 
     if (char) {
@@ -625,11 +730,13 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
             if (!entry.enabled) continue;
             if (promptValue !== "") promptValue += status.separator;
 
+            const value = (entry.value === "") ? (entry.alt_values.find(alt => alt.uid === entry.value_uid).key) : (entry.value);
+
             promptValue += entry.key;
 
-            if (entry.key !== "" && entry.value !== "") promptValue += entry.separator;
+            if (entry.key !== "" && value !== "") promptValue += entry.separator;
 
-            promptValue += entry.value;
+            promptValue += value;
         };
 
         if (!promptValue) continue;

@@ -1,7 +1,7 @@
 import { chat, chat_metadata, event_types, eventSource, scrollChatToBottom } from "../../../../../../script.js";
 import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { selected_group } from "../../../../../group-chats.js";
-import { addGroupStatusButtons, extensionSettings, fetchStatus, getActiveParticipants, getStatusDepth, log } from "../../index.js";
+import { addGroupStatusButtons, callbacksClickValueUID, callbacksScrollValueUID, extensionSettings, fetchStatus, getActiveParticipants, getStatusDepth, log } from "../../index.js";
 import { createCharStatus, fillMissingMetadata, getCharStatus } from "./statusControls.js";
 
 /*
@@ -23,7 +23,6 @@ export function startListeners() {
                 if (!getCharStatus(char)) createCharStatus(char, getStatusDepth(chat, char));
             }
 
-        saveMetadataDebounced();
         addGroupStatusButtons();
     });
 
@@ -43,6 +42,9 @@ export function startListeners() {
         if (!args[0]) return;
         if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
         if (selected_group) addGroupStatusButtons();
+
+        callbacksClickValueUID.splice(0);
+        callbacksScrollValueUID.splice(0);
 
         fillMissingMetadata();
         fetchStatus({forceUIUpdate: true});
