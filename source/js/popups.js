@@ -5,7 +5,7 @@ import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
 import { log, destroyElement, fetchStatus } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus } from "./statusControls.js";
+import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus } from "./statusControls.js";
 
 /*  # TODO
     - [X] Select for alt_values
@@ -19,12 +19,11 @@ import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCh
     - [X] Drag and drop for entries
     - [X] Per-character open menu buttons on group list and in right nav UI for solo chats
     - [X] Open/close all entries - per character
-    - [ ] Status transfer button
     - [X] Status clone button
-    - [ ] Status delete button
+    - [X] Status delete button
     - [X] Entries block prefix/suffix
     - [ ] Custom depth buttons - dynamic depth if undefined
-    - [ ] Fucking labels
+    - [X] Fucking labels
 */
 
 export function escapeNewlines(str) {
@@ -67,7 +66,7 @@ async function popupDeleteConfirm(del_name = "this") {
 
 /** Clones the status data of the selected `char`
     @param {object} char
-    @returns {Promise<boolean>|Promise<object>}
+    @returns {Promise<boolean|object>}
 */
 async function clonePopup(char) {
     const cloneContainer = document.createElement("div");
@@ -141,13 +140,39 @@ function getFullCharAvatar(status) {
     else return "/thumbnail?type=avatar&file=" + status.avatar;
 }
 
-export async function formStatusSingleChar(char) {
+export function formStatusSingleChar(char) {
     let metadata = getCharStatus(char);
 
     if (!metadata) metadata = createCharStatus(char);
 
     // @ts-ignore
     if (!metadata) return toastr.error(t`No metadata was found for the character -${char?.name}-`);
+
+    const createInputLabel = (/**@type {HTMLInputElement|HTMLSelectElement}*/input, mw = "auto") => {
+        const labelTemplateSpan = document.createElement("small");
+        labelTemplateSpan.dataset.i18n = input.placeholder ?? input.ariaPlaceholder;
+        labelTemplateSpan.innerText = input.placeholder ?? input.ariaPlaceholder;
+        labelTemplateSpan.classList.add("text-center", "input-label");
+
+        const labelTemplate = document.createElement("div");
+        labelTemplate.classList.add("d-flex", "flex-col", "gap-0", "flex-grow-1", mw);
+        labelTemplate.append(
+            labelTemplateSpan,
+            input
+        );
+
+        return labelTemplate;
+    }
+
+    const createButtonsWrapper = (/**@type {HTMLDivElement[]}*/buttons, lessPadding) => {
+        const buttonsWrapper = document.createElement("div");
+        buttonsWrapper.classList.add("d-flex", "flex-center-start", "buttons-wrapper");
+        buttonsWrapper.append(...buttons);
+
+        if (lessPadding) buttonsWrapper.classList.add("gap-5px");
+
+        return buttonsWrapper;
+    }
 
     /** Create Menu header. */
     const avatar = document.createElement("img");
@@ -160,7 +185,8 @@ export async function formStatusSingleChar(char) {
     avatarContainer.append(avatar);
 
     const selectEntryRole = document.createElement("select");
-    selectEntryRole.classList.add("flex-grow-1", "px-5px", "m-0", "mw-15");
+    selectEntryRole.ariaPlaceholder = t`Select prompt role`;
+    selectEntryRole.classList.add("flex-grow-1", "px-5px", "m-0");
 
     for (const role of Object.values(extension_prompt_roles)) {
         const option = document.createElement("option");
@@ -179,50 +205,64 @@ export async function formStatusSingleChar(char) {
 
     const textareaStatusSeparator = document.createElement("input");
     textareaStatusSeparator.type = "text";
-    textareaStatusSeparator.placeholder = t`Entries separator...`;
+    textareaStatusSeparator.placeholder = t`Entries separator`;
     textareaStatusSeparator.value = escapeNewlines(metadata.separator);
-    textareaStatusSeparator.classList.add("text_pole", "mw-15");
+    textareaStatusSeparator.classList.add("text_pole", "m-0");
 
     const textareaStatusPrefix = document.createElement("input");
     textareaStatusPrefix.type = "text";
-    textareaStatusPrefix.placeholder = t`Status prefix...`;
+    textareaStatusPrefix.placeholder = t`Status prefix`;
     textareaStatusPrefix.value = escapeNewlines(metadata.prefix);
-    textareaStatusPrefix.classList.add("text_pole", "mw-15");
+    textareaStatusPrefix.classList.add("text_pole", "m-0");
 
     const textareaStatusSuffix = document.createElement("input");
     textareaStatusSuffix.type = "text";
-    textareaStatusSuffix.placeholder = t`Status suffix...`;
+    textareaStatusSuffix.placeholder = t`Status suffix`;
     textareaStatusSuffix.value = escapeNewlines(metadata.suffix);
+    textareaStatusSuffix.classList.add("text_pole", "m-0");
+
     const deleteStatsBtn = document.createElement("div");
     deleteStatsBtn.title = "Delete character's Status";
     deleteStatsBtn.dataset.i18n = "Delete character's Status";
     deleteStatsBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "m-0");
 
     const cloneStatsBtn = document.createElement("div");
-    cloneStatsBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-truck-arrow-right", "interactable");
+    cloneStatsBtn.title = "Clone Status entry into a chat participant";
+    cloneStatsBtn.dataset.i18n = "Clone Status entry into a chat participant";
+    cloneStatsBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-truck-arrow-right", "interactable", "m-0");
 
     const expandEntriesBtn = document.createElement("div");
-    expandEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-expand", "interactable");
+    expandEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-expand", "interactable", "m-0");
 
     const compressEntriesBtn = document.createElement("div");
-    compressEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-compress", "interactable");
+    compressEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-compress", "interactable", "m-0");
 
     const newStatBtn = document.createElement("div");
-    newStatBtn.title = t`Add an status to ${char.name}`
-    newStatBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable");
+    newStatBtn.title = `Add an status to ${char.name}`;
+    newStatBtn.dataset.i18n = `Add an status to ${char.name}`;
+    newStatBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable", "m-0");
+
+    const statInputsWrapper = document.createElement("div");
+    statInputsWrapper.classList.add("d-flex", "flex-end-start", "w-100", "gap-5px", "stat-wrapper");
+    statInputsWrapper.append(
+        createInputLabel(selectEntryRole),
+        createInputLabel(textareaStatusSeparator),
+        createInputLabel(textareaStatusPrefix),
+        createInputLabel(textareaStatusSuffix),
+        createButtonsWrapper([
+            deleteStatsBtn,
+            cloneStatsBtn,
+            expandEntriesBtn,
+            compressEntriesBtn,
+            newStatBtn
+        ], true)
+    );
 
     const wrapper = document.createElement("div");
-    wrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px", "gap-5px", "flex-wrap");
+    wrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px");
     wrapper.append(
         avatarContainer,
-        selectEntryRole,
-        textareaStatusSeparator,
-        textareaStatusPrefix,
-        textareaStatusSuffix,
-        cloneStatsBtn,
-        expandEntriesBtn,
-        compressEntriesBtn,
-        newStatBtn
+        statInputsWrapper
     );
 
     /** Create input template */
@@ -246,16 +286,18 @@ export async function formStatusSingleChar(char) {
     const textareaKey = document.createElement("input");
     textareaKey.type = "text";
     textareaKey.name = "key";
-    textareaKey.placeholder = t`Status title...`;
-    textareaKey.classList.add("text_pole");
+    textareaKey.placeholder = t`Entry title`;
+    textareaKey.classList.add("text_pole", "m-0");
 
     const textareaSeparator = document.createElement("input");
     textareaSeparator.type = "text";
     textareaSeparator.name = "separator";
-    textareaSeparator.placeholder = t`Title/value separator...`;
-    textareaSeparator.classList.add("text_pole", "mw-25", "m-0");
+    textareaSeparator.placeholder = t`Title/description separator`;
+    textareaSeparator.classList.add("text_pole", "m-0", "mw-25");
 
     const deleteStatRowBtn = document.createElement("div");
+    deleteStatRowBtn.title = "Delete Status entry";
+    deleteStatRowBtn.dataset.i18n = "Delete Status entry";
     deleteStatRowBtn.classList.add("menu_button", "fa-fw", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "delete-row", "big-button");
 
     const drawerHeader = document.createElement("div");
@@ -272,14 +314,15 @@ export async function formStatusSingleChar(char) {
 
     /** - Value */
     const selectAltValues = document.createElement("select");
+    selectAltValues.ariaPlaceholder = t`Select entry description`;
     selectAltValues.name = "value_uid";
-    selectAltValues.classList.add("flex-grow-1", "px-5px", "m-0", "mw-25");
+    selectAltValues.classList.add("flex-grow-1", "px-5px", "m-0");
 
     const textareaAltKey = document.createElement("input");
     textareaAltKey.type = "text";
     textareaAltKey.name = "alt_key";
-    textareaAltKey.placeholder = t`Alt description title...`;
-    textareaAltKey.classList.add("text_pole", "mw-25", "m-0");
+    textareaAltKey.placeholder = t`Alt description title`;
+    textareaAltKey.classList.add("text_pole", "m-0");
 
     const warningAltKey = document.createElement("i");
     warningAltKey.classList.add("fa-solid", "fa-circle-exclamation", "interactable");
@@ -289,26 +332,28 @@ export async function formStatusSingleChar(char) {
     const addAltValues = document.createElement("div");
     addAltValues.title = "Add alt descriptions";
     addAltValues.dataset.i18n = "Add alt descriptions";
-    addAltValues.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable", "add_alt_value", "big-button");
+    addAltValues.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable", "add_alt_value", "big-button", "m-0");
 
     const delAltValues = document.createElement("div");
     delAltValues.title = "Delete current alt description";
     delAltValues.dataset.i18n = "Delete current alt description";
-    delAltValues.classList.add("menu_button", "fa-fw", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "del_alt_value", "big-button");
+    delAltValues.classList.add("menu_button", "fa-fw", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "del_alt_value", "big-button", "m-0");
 
     const settingsInputs = document.createElement("div");
-    settingsInputs.classList.add("d-flex", "flex-center-start");
+    settingsInputs.classList.add("d-flex", "flex-end-start");
     settingsInputs.append(
-        selectAltValues,
-        textareaAltKey,
-        warningAltKey,
-        addAltValues,
-        delAltValues
+        createInputLabel(selectAltValues, "mw-25"),
+        createInputLabel(textareaAltKey, "mw-25"),
+        createButtonsWrapper([
+            warningAltKey,
+            addAltValues,
+            delAltValues
+        ])
     );
 
     const textareaValue = document.createElement("textarea");
     textareaValue.name = "value";
-    textareaValue.placeholder = t`Status description...`;
+    textareaValue.placeholder = t`Entry description...`;
     textareaValue.classList.add("text_pole", "m-0");
 
     const drawerContentContainer = document.createElement("div");
@@ -407,9 +452,7 @@ export async function formStatusSingleChar(char) {
             newRow.addEventListener("input", () => {
                 clearTimeout(formDebounceTimer);
 
-                formDebounceTimer = window.setTimeout(() => {
-                    newRow.requestSubmit();
-                }, DEBOUNCE_MS);
+                formDebounceTimer = window.setTimeout(() => newRow.requestSubmit(), DEBOUNCE_MS);
             });
 
             el(newRow, 'select[name="value_uid"]').addEventListener("change", () => {
@@ -436,13 +479,11 @@ export async function formStatusSingleChar(char) {
             el(newRow, 'input[name="alt_key"]').addEventListener("keyup", () => {
                 clearTimeout(altKeyDebounceTimer);
 
-                altKeyDebounceTimer = window.setTimeout(() => {
-                    refreshAltValues(
-                        newRow,
-                        getCharEntry(char, data[i].uid).alt_values,
-                        el(newRow, 'select[name="value_uid"]').value
-                    );
-                }, DEBOUNCE_MS);
+                altKeyDebounceTimer = window.setTimeout(() => refreshAltValues(
+                    newRow,
+                    getCharEntry(char, data[i].uid).alt_values,
+                    el(newRow, 'select[name="value_uid"]').value
+                ), DEBOUNCE_MS);
             });
 
             el(newRow, ".add_alt_value").addEventListener("click", () => {
@@ -503,9 +544,7 @@ export async function formStatusSingleChar(char) {
 
         clearTimeout(separatorDebounceTimer);
 
-        separatorDebounceTimer = window.setTimeout(() => {
-            saveMetadataDebounced();
-        }, DEBOUNCE_MS);
+        separatorDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
     });
 
     textareaStatusPrefix.addEventListener("input", () => {
@@ -513,9 +552,7 @@ export async function formStatusSingleChar(char) {
 
         clearTimeout(prefixDebounceTimer);
 
-        prefixDebounceTimer = window.setTimeout(() => {
-            saveMetadataDebounced();
-        }, DEBOUNCE_MS);
+        prefixDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
     });
 
     textareaStatusSuffix.addEventListener("input", () => {
@@ -523,9 +560,7 @@ export async function formStatusSingleChar(char) {
 
         clearTimeout(suffixDebounceTimer);
 
-        suffixDebounceTimer = window.setTimeout(() => {
-            saveMetadataDebounced();
-        }, DEBOUNCE_MS);
+        suffixDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
     });
 
     cloneStatsBtn.addEventListener("click", async () => {
