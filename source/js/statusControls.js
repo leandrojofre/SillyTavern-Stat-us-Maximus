@@ -365,7 +365,8 @@ export function transferCharStatus(character, target, {deleteOriginal = false, o
             }
         };
 
-        const data = onlySendEntries ? {entries: originalStatus.entries} : originalStatus;
+        const originalStatusCloned = structuredClone(originalStatus);
+        const data = onlySendEntries ? {entries: originalStatusCloned.entries} : originalStatusCloned;
 
         for (const [key, value] of Object.entries(data)) {
             if (key === "avatar" || key === "depth" || key === "last_mes_id" || key === "is_user") continue;

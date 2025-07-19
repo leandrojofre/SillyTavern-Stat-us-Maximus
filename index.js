@@ -506,7 +506,7 @@ function addTracker(status, mesID, character) {
         el(form, 'input[name="value"]').value = entry.value;
         el(form, 'input[name="value_uid"]').value = entry.value_uid;
 
-        el(newRow, '.status-separator').innerHTML = lodash.escape(entry.separator);
+        el(newRow, '.status-separator').innerHTML = lodash.escape(entry.separator).replaceAll(/\n/g, "<br>");
 
         const updateDescription = (text, el_target, form_target) => {
             destroyElement(el(newRow, el_target).children);
@@ -673,6 +673,9 @@ function addTracker(status, mesID, character) {
 
     /** Insert table in chat */
     const messText = $chat.querySelector(`.mes[mesid="${status.last_mes_id}"] .mes_text`);
+
+    if (!messText) return;
+
     messText.parentNode.insertBefore(statusTableContainer, messText);
     toggleVisibility(statusTableBody, status.is_collapsed ?? false);
 }
