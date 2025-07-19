@@ -346,12 +346,6 @@ function addTracker(status, mesID, character) {
         el.classList.toggle("d-none", state);
     };
 
-    /** @param {HTMLElement} target */
-    const safeDispatch = (target, type = 'input', options = { bubbles: true, cancelable: true }) => {
-        const event = new Event(type, options);
-        target.dispatchEvent(event);
-    };
-
     statusTable.querySelector(".menu_button.fa-pen").addEventListener("click", async () => {
         const metadata = chat_metadata.stat_us_maximus;
 
@@ -621,13 +615,6 @@ function addTracker(status, mesID, character) {
 
             const selectValueUIDPopper = Popper.createPopper(selectValueUID, optionsValueUID, {
                 modifiers: [{
-                    name: "computeStyles",
-                    options: {
-                        adaptive: false,
-                        gpuAcceleration: false,
-                        roundOffsets: false
-                    }
-                }, {
                     name: "eventListeners",
                     enabled: false
                 }],
