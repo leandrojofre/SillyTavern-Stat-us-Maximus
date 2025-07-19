@@ -27,6 +27,11 @@ div[name="templatesAndPopupsWrapper"] {
     }
 
     .status-value-uid-options {
+        display: none;
+    }
+
+    .status-value-uid-options[data-show] {
+        display: block;
         z-index: 40;
         overflow-y: scroll;
         max-height: 15vh;
@@ -462,5 +467,20 @@ div[name="templatesAndPopupsWrapper"] {
 
     .input-label {
         display: var(--stum-input-label-display);
+    }
+    
+    .status-value-uid-options * {
+        border-radius: 0;
+    }
+
+    .status-value-uid-options {
+        display: none;
+    }
+
+    .status-value-uid-options[data-show] {
+        display: block;
+        z-index: 40;
+        overflow-y: scroll;
+        max-height: 15vh;
     }
 }

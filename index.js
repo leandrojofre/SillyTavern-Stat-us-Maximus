@@ -232,32 +232,43 @@ const onCallbacksClick = (e) => {
 
 document.getElementById("sheld").addEventListener('pointerdown', onCallbacksClick);
 
-/** On scroll
-    @type {object[]}
-*/
-export let callbacksScrollValueUID = [];
+SillyTavern.stumTest = () => log(callbacksClickValueUID);
 
-const onCallbacksScroll = lodash.throttle(
-    (e) => {
-        const scrollTarget = $(e.target);
+function showPopper(popperInstance, tooltip) {
+    tooltip.setAttribute('data-show', '');
 
-        for (const obj of callbacksScrollValueUID) obj.callback(scrollTarget);
-    },
-    60,
-    {
-        leading: false,
-        trailing: true
-    }
-);
+    popperInstance.setOptions((options) => ({
+        ...options,
+        modifiers: [
+            ...options.modifiers
+        ]
+    }));
 
-document.getElementById("chat").addEventListener("scroll", onCallbacksScroll);
+    popperInstance.update();
+}
+
+function hidePopper(popperInstance, tooltip) {
+    tooltip.removeAttribute('data-show');
+
+    popperInstance.setOptions((options) => ({
+        ...options,
+        modifiers: [
+            ...options.modifiers
+        ]
+    }));
+}
 
 function addTracker(status, mesID, character) {
     const $chat = document.getElementById("chat");
     const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
 
-    callbacksClickValueUID = callbacksClickValueUID.filter(obj => obj.target !== character.avatar);
-    callbacksScrollValueUID = callbacksScrollValueUID.filter(obj => obj.target !== character.avatar);
+    callbacksClickValueUID = callbacksClickValueUID.filter(obj => {
+        const result = obj.target !== character.avatar;
+
+        if (!result) obj.popper?.destroy();
+
+        return result;
+    });
 
     destroyElement(`.mes .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
     destroyElement(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`);
@@ -496,16 +507,6 @@ function addTracker(status, mesID, character) {
             descriptionTarget = "alt_key";
         }
 
-        /**@type {HTMLSelectElement}*/
-        const selectValueUID = el(newRow, '.status-value-uid');
-        const optionsValueUID = document.createElement("div");
-        optionsValueUID.setAttribute("role", "tooltip");
-        optionsValueUID.setAttribute("avatar-target", character.avatar);
-        optionsValueUID.style.display = "none";
-        optionsValueUID.classList.add("status-value-uid-options", "list-group");
-
-        el(document, 'div[name="templatesAndPopupsWrapper"]').append(optionsValueUID);
-
         // Set Values
         el(form, 'input[name="enabled"]').value = entry.enabled;
         el(form, 'input[name="key"]').value = entry.key;
@@ -569,8 +570,6 @@ function addTracker(status, mesID, character) {
         updateDescription(entry.key, '.status-title', 'key');
         updateDescription(descriptionValue, '.status-description', descriptionTarget);
 
-        selectValueUID.value = String(entry.value_uid);
-
         // Add listeners
         form.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -604,12 +603,36 @@ function addTracker(status, mesID, character) {
             el(newRow, '.hover-highlight').classList.toggle('disabled', !state);
         });
 
+        /**@type {HTMLSelectElement}*/
+        const selectValueUID = el(newRow, '.status-value-uid');
+
         if (entry.alt_values.length <= 1) toggleVisibility(selectValueUID, true);
         else {
             /** Only load swipes selector if there are more than one option */
+            const optionsValueUID = document.createElement("div");
+            optionsValueUID.setAttribute("role", "tooltip");
+            optionsValueUID.setAttribute("avatar-target", character.avatar);
+            optionsValueUID.classList.add("status-value-uid-options", "list-group");
 
-            const selectValueUIDPopper = Popper.createPopper(selectValueUID, optionsValueUID, {placement: "left"});
-            let isPopperOpen = false;
+            // el(document, 'div[name="templatesAndPopupsWrapper"]').append(optionsValueUID);
+            newRow.append(optionsValueUID);
+
+            selectValueUID.value = String(entry.value_uid);
+
+            const selectValueUIDPopper = Popper.createPopper(selectValueUID, optionsValueUID, {
+                modifiers: [{
+                    name: "computeStyles",
+                    options: {
+                        adaptive: false,
+                        gpuAcceleration: false,
+                        roundOffsets: false
+                    }
+                }, {
+                    name: "eventListeners",
+                    enabled: false
+                }],
+                placement: "left"
+            });
 
             for (const alt_val of entry.alt_values) {
                 const option = document.createElement("div");
@@ -617,15 +640,13 @@ function addTracker(status, mesID, character) {
                 option.innerText = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
                 option.classList.add("list-group-item");
 
-                option.addEventListener("click", () => {
+                option.addEventListener("click", async () => {
                     const alt = getCharAltValue(character, entry.uid, option.getAttribute("value"));
 
                     el(form, 'input[name="value"]').value = alt.value;
                     el(form, 'input[name="value_uid"]').value = alt.uid;
 
-                    isPopperOpen = false;
-                    optionsValueUID.style.display = "none";
-                    selectValueUIDPopper.update();
+                    hidePopper(selectValueUIDPopper, optionsValueUID);
 
                     let formText = alt.value;
                     let formTarget = "value";
@@ -643,29 +664,21 @@ function addTracker(status, mesID, character) {
             }
 
             selectValueUID.addEventListener('click', function () {
-                isPopperOpen = !isPopperOpen;
-                optionsValueUID.style.display = isPopperOpen ? "block" : "none";
-                selectValueUIDPopper.update();
-            });
+                showPopper(selectValueUIDPopper, optionsValueUID);
 
-            callbacksClickValueUID.push({
-                target: character.avatar,
-                callback: async (clickTarget) => {
-                    if (
-                        isPopperOpen
-                        && !clickTarget.closest(`div[avatar-target="${character.avatar}"] select.status-value-uid`)
-                        && !clickTarget.closest(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`)
-                    ) {
-                        isPopperOpen = false;
-                        optionsValueUID.style.display = "none";
-                        selectValueUIDPopper.update();
+                callbacksClickValueUID.push({
+                    target: character.avatar,
+                    popper: selectValueUIDPopper,
+                    callback: (clickTarget) => {
+                        if (
+                            !clickTarget.closest(`div[avatar-target="${character.avatar}"] select.status-value-uid`) &&
+                            !clickTarget.closest(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`)
+                        ) {
+                            hidePopper(selectValueUIDPopper, optionsValueUID);
+                            callbacksClickValueUID = callbacksClickValueUID.filter(obj => obj.target !== character.avatar);
+                        }
                     }
-                }
-            });
-
-            callbacksScrollValueUID.push({
-                target: character.avatar,
-                callback: async (scrollTarget) => selectValueUIDPopper.update()
+                });
             });
         }
 
