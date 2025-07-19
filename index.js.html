@@ -260,32 +260,41 @@ const onCallbacksClick = (e) => {
 
 document.getElementById("sheld").addEventListener('pointerdown', onCallbacksClick);
 
-/** On scroll
-    @type {object[]}
-*/
-export let callbacksScrollValueUID = [];
+function showPopper(popperInstance, tooltip) {
+    tooltip.setAttribute('data-show', '');
 
-const onCallbacksScroll = lodash.throttle(
-    (e) => {
-        const scrollTarget = $(e.target);
+    popperInstance.setOptions((options) => ({
+        ...options,
+        modifiers: [
+            ...options.modifiers
+        ]
+    }));
 
-        for (const obj of callbacksScrollValueUID) obj.callback(scrollTarget);
-    },
-    60,
-    {
-        leading: false,
-        trailing: true
-    }
-);
+    popperInstance.update();
+}
 
-document.getElementById("chat").addEventListener("scroll", onCallbacksScroll);
+function hidePopper(popperInstance, tooltip) {
+    tooltip.removeAttribute('data-show');
+
+    popperInstance.setOptions((options) => ({
+        ...options,
+        modifiers: [
+            ...options.modifiers
+        ]
+    }));
+}
 
 function addTracker(status, mesID, character) {
     const $chat = document.getElementById("chat");
     const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
 
-    callbacksClickValueUID = callbacksClickValueUID.filter(obj => obj.target !== character.avatar);
-    callbacksScrollValueUID = callbacksScrollValueUID.filter(obj => obj.target !== character.avatar);
+    callbacksClickValueUID = callbacksClickValueUID.filter(obj => {
+        const result = obj.target !== character.avatar;
+
+        if (!result) obj.popper?.destroy();
+
+        return result;
+    });
 
     destroyElement(`.mes .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
     destroyElement(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`);
@@ -361,12 +370,6 @@ function addTracker(status, mesID, character) {
     /** @param {HTMLElement} el */
     const toggleVisibility = (el, state) => {
         el.classList.toggle("d-none", state);
-    };
-
-    /** @param {HTMLElement} target */
-    const safeDispatch = (target, type = 'input', options = { bubbles: true, cancelable: true }) => {
-        const event = new Event(type, options);
-        target.dispatchEvent(event);
     };
 
     statusTable.querySelector(".menu_button.fa-pen").addEventListener("click", async () => {
@@ -524,16 +527,6 @@ function addTracker(status, mesID, character) {
             descriptionTarget = "alt_key";
         }
 
-        /**@type {HTMLSelectElement}*/
-        const selectValueUID = el(newRow, '.status-value-uid');
-        const optionsValueUID = document.createElement("div");
-        optionsValueUID.setAttribute("role", "tooltip");
-        optionsValueUID.setAttribute("avatar-target", character.avatar);
-        optionsValueUID.style.display = "none";
-        optionsValueUID.classList.add("status-value-uid-options", "list-group");
-
-        el(document, 'div[name="templatesAndPopupsWrapper"]').append(optionsValueUID);
-
         // Set Values
         el(form, 'input[name="enabled"]').value = entry.enabled;
         el(form, 'input[name="key"]').value = entry.key;
@@ -597,8 +590,6 @@ function addTracker(status, mesID, character) {
         updateDescription(entry.key, '.status-title', 'key');
         updateDescription(descriptionValue, '.status-description', descriptionTarget);
 
-        selectValueUID.value = String(entry.value_uid);
-
         // Add listeners
         form.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -632,12 +623,29 @@ function addTracker(status, mesID, character) {
             el(newRow, '.hover-highlight').classList.toggle('disabled', !state);
         });
 
+        /**@type {HTMLSelectElement}*/
+        const selectValueUID = el(newRow, '.status-value-uid');
+
         if (entry.alt_values.length &lt;= 1) toggleVisibility(selectValueUID, true);
         else {
             /** Only load swipes selector if there are more than one option */
+            const optionsValueUID = document.createElement("div");
+            optionsValueUID.setAttribute("role", "tooltip");
+            optionsValueUID.setAttribute("avatar-target", character.avatar);
+            optionsValueUID.classList.add("status-value-uid-options", "list-group");
 
-            const selectValueUIDPopper = Popper.createPopper(selectValueUID, optionsValueUID, {placement: "left"});
-            let isPopperOpen = false;
+            // el(document, 'div[name="templatesAndPopupsWrapper"]').append(optionsValueUID);
+            newRow.append(optionsValueUID);
+
+            selectValueUID.value = String(entry.value_uid);
+
+            const selectValueUIDPopper = Popper.createPopper(selectValueUID, optionsValueUID, {
+                modifiers: [{
+                    name: "eventListeners",
+                    enabled: false
+                }],
+                placement: "left"
+            });
 
             for (const alt_val of entry.alt_values) {
                 const option = document.createElement("div");
@@ -645,15 +653,14 @@ function addTracker(status, mesID, character) {
                 option.innerText = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
                 option.classList.add("list-group-item");
 
-                option.addEventListener("click", () => {
+                option.addEventListener("click", async () => {
                     const alt = getCharAltValue(character, entry.uid, option.getAttribute("value"));
 
+                    el(form, 'input[name="alt_key"]').value = alt.key;
                     el(form, 'input[name="value"]').value = alt.value;
                     el(form, 'input[name="value_uid"]').value = alt.uid;
 
-                    isPopperOpen = false;
-                    optionsValueUID.style.display = "none";
-                    selectValueUIDPopper.update();
+                    hidePopper(selectValueUIDPopper, optionsValueUID);
 
                     let formText = alt.value;
                     let formTarget = "value";
@@ -671,29 +678,21 @@ function addTracker(status, mesID, character) {
             }
 
             selectValueUID.addEventListener('click', function () {
-                isPopperOpen = !isPopperOpen;
-                optionsValueUID.style.display = isPopperOpen ? "block" : "none";
-                selectValueUIDPopper.update();
-            });
+                showPopper(selectValueUIDPopper, optionsValueUID);
 
-            callbacksClickValueUID.push({
-                target: character.avatar,
-                callback: async (clickTarget) => {
-                    if (
-                        isPopperOpen
-                        &amp;&amp; !clickTarget.closest(`div[avatar-target="${character.avatar}"] select.status-value-uid`)
-                        &amp;&amp; !clickTarget.closest(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`)
-                    ) {
-                        isPopperOpen = false;
-                        optionsValueUID.style.display = "none";
-                        selectValueUIDPopper.update();
+                callbacksClickValueUID.push({
+                    target: character.avatar,
+                    popper: selectValueUIDPopper,
+                    callback: (clickTarget) => {
+                        if (
+                            !clickTarget.closest(`div[avatar-target="${character.avatar}"] select.status-value-uid`) &amp;&amp;
+                            !clickTarget.closest(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`)
+                        ) {
+                            hidePopper(selectValueUIDPopper, optionsValueUID);
+                            callbacksClickValueUID = callbacksClickValueUID.filter(obj => obj.target !== character.avatar);
+                        }
                     }
-                }
-            });
-
-            callbacksScrollValueUID.push({
-                target: character.avatar,
-                callback: async (scrollTarget) => selectValueUIDPopper.update()
+                });
             });
         }
 
@@ -1019,13 +1018,13 @@ function initButtons() {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#acceptedAltEntryFields">acceptedAltEntryFields</a></li><li><a href="global.html#acceptedEntryFields">acceptedEntryFields</a></li><li><a href="global.html#buildUIDsComment">buildUIDsComment</a></li><li><a href="global.html#callbacksClickValueUID">callbacksClickValueUID</a></li><li><a href="global.html#callbacksScrollValueUID">callbacksScrollValueUID</a></li><li><a href="global.html#clonePopup">clonePopup</a></li><li><a href="global.html#commandCreateEntry">commandCreateEntry</a></li><li><a href="global.html#commandCreateEntryAltValue">commandCreateEntryAltValue</a></li><li><a href="global.html#commandCreateStatus">commandCreateStatus</a></li><li><a href="global.html#commandDeleteAltEntry">commandDeleteAltEntry</a></li><li><a href="global.html#commandDeleteChatStatus">commandDeleteChatStatus</a></li><li><a href="global.html#commandDeleteEntry">commandDeleteEntry</a></li><li><a href="global.html#commandDeleteStatus">commandDeleteStatus</a></li><li><a href="global.html#commandGetAltEntryField">commandGetAltEntryField</a></li><li><a href="global.html#commandGetAltEntryUID">commandGetAltEntryUID</a></li><li><a href="global.html#commandGetEntryField">commandGetEntryField</a></li><li><a href="global.html#commandGetEntryUID">commandGetEntryUID</a></li><li><a href="global.html#commandSetAltEntryField">commandSetAltEntryField</a></li><li><a href="global.html#commandSetEntryField">commandSetEntryField</a></li><li><a href="global.html#commandSwitchEntryValue">commandSwitchEntryValue</a></li><li><a href="global.html#customEnumProviders">customEnumProviders</a></li><li><a href="global.html#destroyElement">destroyElement</a></li><li><a href="global.html#displaySettings">displaySettings</a></li><li><a href="global.html#fillMissingMetadata">fillMissingMetadata</a></li><li><a href="global.html#getCharStatus">getCharStatus</a></li><li><a href="global.html#getLastDisplayPosition">getLastDisplayPosition</a></li><li><a href="global.html#getParticipantFromName">getParticipantFromName</a></li><li><a href="global.html#loadHTMLSettings">loadHTMLSettings</a></li><li><a href="global.html#refreshCharEntryDisplay">refreshCharEntryDisplay</a></li><li><a href="global.html#registerSlashCommands">registerSlashCommands</a></li><li><a href="global.html#setSettings">setSettings</a></li><li><a href="global.html#settingsBooleanButton">settingsBooleanButton</a></li><li><a href="global.html#transferCharStatus">transferCharStatus</a></li><li><a href="global.html#updateCharEntry">updateCharEntry</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#acceptedAltEntryFields">acceptedAltEntryFields</a></li><li><a href="global.html#acceptedEntryFields">acceptedEntryFields</a></li><li><a href="global.html#buildUIDsComment">buildUIDsComment</a></li><li><a href="global.html#callbacksClickValueUID">callbacksClickValueUID</a></li><li><a href="global.html#clonePopup">clonePopup</a></li><li><a href="global.html#commandCreateEntry">commandCreateEntry</a></li><li><a href="global.html#commandCreateEntryAltValue">commandCreateEntryAltValue</a></li><li><a href="global.html#commandCreateStatus">commandCreateStatus</a></li><li><a href="global.html#commandDeleteAltEntry">commandDeleteAltEntry</a></li><li><a href="global.html#commandDeleteChatStatus">commandDeleteChatStatus</a></li><li><a href="global.html#commandDeleteEntry">commandDeleteEntry</a></li><li><a href="global.html#commandDeleteStatus">commandDeleteStatus</a></li><li><a href="global.html#commandGetAltEntryField">commandGetAltEntryField</a></li><li><a href="global.html#commandGetAltEntryUID">commandGetAltEntryUID</a></li><li><a href="global.html#commandGetEntryField">commandGetEntryField</a></li><li><a href="global.html#commandGetEntryUID">commandGetEntryUID</a></li><li><a href="global.html#commandSetAltEntryField">commandSetAltEntryField</a></li><li><a href="global.html#commandSetEntryField">commandSetEntryField</a></li><li><a href="global.html#commandSwitchEntryValue">commandSwitchEntryValue</a></li><li><a href="global.html#customEnumProviders">customEnumProviders</a></li><li><a href="global.html#destroyElement">destroyElement</a></li><li><a href="global.html#displaySettings">displaySettings</a></li><li><a href="global.html#fillMissingMetadata">fillMissingMetadata</a></li><li><a href="global.html#getCharStatus">getCharStatus</a></li><li><a href="global.html#getLastDisplayPosition">getLastDisplayPosition</a></li><li><a href="global.html#getParticipantFromName">getParticipantFromName</a></li><li><a href="global.html#loadHTMLSettings">loadHTMLSettings</a></li><li><a href="global.html#refreshCharEntryDisplay">refreshCharEntryDisplay</a></li><li><a href="global.html#registerSlashCommands">registerSlashCommands</a></li><li><a href="global.html#setSettings">setSettings</a></li><li><a href="global.html#settingsBooleanButton">settingsBooleanButton</a></li><li><a href="global.html#transferCharStatus">transferCharStatus</a></li><li><a href="global.html#updateCharEntry">updateCharEntry</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jul 19 2025 04:43:30 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jul 19 2025 07:35:55 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>
