@@ -9,18 +9,24 @@ You might want to add additional HTML elements to ST. It's good practice to sepa
 		</div>
 		<div id="stat-us-max-settings-window" class="inline-drawer-content" style="padding: 0.5vh;">
 
-			<div class="flex-container flex-column separator-bottom">
+			<div class="flex-container flex-column separator-bottom stat-us-max-custom-css">
 				<b>Settings</b>
 
 				<label class="flex-container">
 					<input id="stat-us-max-edit-numbers-from-chat" stat-us-max-setting="editNumbersFromChat" type="checkbox" />
-					Replaces numbers in your entries value with numeric inputs
+					Replaces input macros in the chat UI with their respective inputs - Check the docs
 				</label>
 
 				<label class="flex-container">
 					<input id="stat-us-max-auto-detect-participants" stat-us-max-setting="autoDetectParticipants" type="checkbox" />
 					Automatically add Status data to active participants in the chat
 				</label>
+
+				<div class="flex-container w-100">
+					<a id="stat-us-max-check-docs" title="Link to the repository" class="menu_button w-100" type="button" target="_blank" href="https://github.com/leandrojofre/SillyTavern-Stat-us-Maximus?tab=readme-ov-file#features">
+                        Open the docs
+                    </a>
+				</div>
 			</div>
 
 			<div class="flex-container flex-column">
