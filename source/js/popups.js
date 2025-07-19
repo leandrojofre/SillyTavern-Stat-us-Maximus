@@ -333,8 +333,8 @@ export function formStatusSingleChar(char) {
 
     const warningAltKey = document.createElement("i");
     warningAltKey.classList.add("fa-solid", "fa-circle-exclamation", "interactable");
-    warningAltKey.title = "This is not used in the prompt";
-    warningAltKey.dataset.i18n = "This is not used in the prompt";
+    warningAltKey.title = "This is only used in the prompt if description is empty";
+    warningAltKey.dataset.i18n = "This is only used in the prompt if description is empty";
 
     const addAltValues = document.createElement("div");
     addAltValues.title = "Add alt descriptions";
