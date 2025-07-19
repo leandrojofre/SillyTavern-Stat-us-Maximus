@@ -10,7 +10,12 @@ import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { fetchStatus, getParticipant, log } from "../../index.js";
-import { addCharAltValue, addCharEntry, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry } from "./statusControls.js";
+import { addCharAltValue, addCharEntry, createCharStatus, deleteCharStatus, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry } from "./statusControls.js";
+
+/*  # TODO
+    - [X] Command to create Status data
+    - [X] Command to delete Status data
+*/
 
 /** Takes an object with a key and value and generates a comment
     @param {object} entry
@@ -43,8 +48,7 @@ const acceptedEntryFields = {
     key: "Title of the entry",
     value: "Value of the entry",
     separator: "Separator between the key and value",
-    value_uid: "Unique identifier of the selected alt value (select menu of the entry - starts at 0)",
-    display_position: "Order at which the entry gets inserted (starts at 0)"
+    // display_position: "Order at which the entry gets inserted (starts at 0)"
 }
 
 /** Accepted alt key values and their descriptions */
@@ -121,6 +125,62 @@ const customEnumProviders = {
         if (!entry || !entry?.alt_values?.length) return [];
 
         return entry.alt_values.map(alt => new SlashCommandEnumValue(String(alt.uid), buildUIDsComment(alt), enumTypes.number, enumIcons.key));
+    }
+}
+
+/** Creates status data for a character
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.isuser - Wether to search for personas or characters
+    @returns {Promise<String>} UID of the new entry or empty string
+*/
+async function commandCreateStatus(args, value) {
+    try {
+        const {char = "", isuser = "false"} = args;
+        const parsed_isuser = isuser === "true";
+        const character = getParticipant(char, parsed_isuser, {field: "name"});
+
+        if (!character) throw new Error(`The character "${args?.char}" could not be found`);
+
+        const status = createCharStatus(character);
+
+        if (!status) return "false";
+
+        return "true";
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
+        return "false";
+    }
+}
+
+/** Deletes the status data a character
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.isuser - Wether to search for personas or characters
+    @returns {Promise<String>} UID of the new entry or empty string
+*/
+async function commandDeleteStatus(args, value) {
+    try {
+        const {char = "", isuser = "false"} = args;
+        const parsed_isuser = isuser === "true";
+        const character = getParticipant(char, parsed_isuser, {field: "name"});
+
+        if (!character) throw new Error(`The character "${args?.char}" could not be found`);
+
+        const success = deleteCharStatus(character);
+
+        if (!success) return "false";
+
+        fetchStatus({forceUIUpdate: true});
+
+        return "true";
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
+        return "false";
     }
 }
 
@@ -538,6 +598,78 @@ async function commandDeleteChatStatus() {
 
 /** Register all slash commands into SillyTavern */
 export function registerSlashCommands() {
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-create-status",
+            callback: commandCreateStatus,
+            returns: 'True or False',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: () => [...commonEnumProviders.characters()(), ...commonEnumProviders.personas()]
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - false by default',
+                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    isRequired: false,
+                    enumProvider: commonEnumProviders.boolean()
+                })
+            ],
+            helpString: `
+            <div>
+                Creates status data for the selected character in the active chat and returns true. If the character already has data, this does nothing and returns false.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-create-status char="Tom"</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-delete-status",
+            callback: commandDeleteStatus,
+            returns: 'True or False',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: () => [...commonEnumProviders.characters()(), ...commonEnumProviders.personas()]
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - false by default',
+                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    isRequired: false,
+                    enumProvider: commonEnumProviders.boolean()
+                })
+            ],
+            helpString: `
+            <div>
+                Deletes status data of the selected character in the active chat and returns true. If the deletion fails, this does nothing and returns false.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-delete-status char="Tom"</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
             name: "stum-create-entry",

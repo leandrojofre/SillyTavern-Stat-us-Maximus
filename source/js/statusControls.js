@@ -141,7 +141,7 @@ export function addCharEntry(character, entry_key = "", entry_value = "") {
             enabled: true,
             key: entry_key,
             value: entry_value,
-            separator: "",
+            separator: char_status.def_entry_separator,
             value_uid: 0,
             display_position: getLastDisplayPosition(char_status.entries),
             alt_values: []
@@ -294,21 +294,34 @@ export function removeCharEntry(character, entry_uid = -1) {
     }
 }
 
-export function createCharStatus(character, depth) {
-    const status = {
-        avatar: character.avatar,
-        role: extension_prompt_roles.SYSTEM,
-        separator: "\n",
-        depth: depth,
-        last_mes_id: chat.length - depth - 1,
-        is_user: character.is_user ?? false,
-        is_collapsed: false,
-        entries: []
-    };
+export function createCharStatus(character, depth = -1) {
+    try {
+        const status = {
+            avatar: character.avatar,
+            role: extension_prompt_roles.SYSTEM,
+            separator: "\n",
+            def_entry_separator: "",
+            prefix: "",
+            suffix: "",
+            depth: depth,
+            last_mes_id: (depth >= 0) ? (chat.length - depth - 1) : (-1),
+            is_user: character.is_user ?? false,
+            is_collapsed: false,
+            entries: []
+        };
 
-    chat_metadata.stat_us_maximus.push(status);
+        chat_metadata.stat_us_maximus.push(status);
 
-    return status;
+        saveMetadataDebounced();
+
+        return status;
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to create Status Metadata - Check the browser console for more details`);
+        console.error(error);
+
+        return false;
+    }
 }
 
 /**
@@ -324,10 +337,82 @@ export function getCharStatus(character) {
         return false;
 }
 
+/**
+    @param {object} character
+    @param {object} target
+    @param {object} [options]
+    @param {boolean} [options.deleteOriginal=false]
+    @param {boolean} [options.onlySendEntries=false]
+    @returns {boolean}
+*/
+export function transferCharStatus(character, target, {deleteOriginal = false, onlySendEntries = false} = {}) {
+    try {
+        const originalStatus = getCharStatus(character);
+
+        if (!originalStatus) return false;
+
+        let targetStatus = getCharStatus(target);
+
+        if (!targetStatus) targetStatus = createCharStatus(target);
+        if (!targetStatus) return false;
+
+        const sendEntries = (entries) => {
+            for (const entry of entries) {
+                const newUID = getFreeDataUid(targetStatus.entries);
+
+                entry.uid = newUID;
+                targetStatus.entries.push(entry);
+            }
+        };
+
+        const data = onlySendEntries ? {entries: originalStatus.entries} : originalStatus;
+
+        for (const [key, value] of Object.entries(data)) {
+            if (key === "avatar" || key === "depth" || key === "last_mes_id" || key === "is_user") continue;
+            if (key === "entries") sendEntries(value);
+            else targetStatus[key] = value;
+        }
+
+        if (deleteOriginal) deleteCharStatus(character);
+
+        saveMetadataDebounced();
+
+        return true;
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to transfer Status Metadata - Check the browser console for more details`);
+        console.error(error);
+
+        return false;
+    }
+}
+
+export function deleteCharStatus(character) {
+    try {
+        if (!chat_metadata?.stat_us_maximus) return false;
+
+        chat_metadata.stat_us_maximus = chat_metadata.stat_us_maximus
+            .filter(stat => stat.avatar !== character.avatar);
+
+        saveMetadataDebounced();
+
+        return true;
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to delete Status Metadata - Check the browser console for more details`);
+        console.error(error);
+
+        return false;
+    }
+}
+
 const statusTemplate = {
     avatar: "",
     role: extension_prompt_roles.SYSTEM,
     separator: "\n",
+    def_entry_separator: "",
+    prefix: "",
+    suffix: "",
     depth: -1,
     last_mes_id: -1,
     is_user: false,

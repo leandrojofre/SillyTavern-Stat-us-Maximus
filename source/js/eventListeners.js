@@ -1,8 +1,8 @@
-import { chat, event_types, eventSource, scrollChatToBottom } from "../../../../../../script.js";
+import { chat, chat_metadata, event_types, eventSource, scrollChatToBottom } from "../../../../../../script.js";
 import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { selected_group } from "../../../../../group-chats.js";
-import { addGroupStatusButtons, fetchStatus, getActiveParticipants, getStatusDepth, log } from "../../index.js";
-import { createCharStatus, getCharStatus } from "./statusControls.js";
+import { addGroupStatusButtons, callbacksClickValueUID, callbacksScrollValueUID, extensionSettings, fetchStatus, getActiveParticipants, getStatusDepth, log } from "../../index.js";
+import { createCharStatus, fillMissingMetadata, getCharStatus } from "./statusControls.js";
 
 /*
     ? event_types.GROUP_UPDATED doesn't matter, status will update when that character sends a message
@@ -18,11 +18,11 @@ export function startListeners() {
     eventSource.on(event_types.GROUP_UPDATED, async (...args) => {
         log("GROUP_UPDATED", args);
 
-        for (const char of getActiveParticipants()) {
-            if (!getCharStatus(char)) createCharStatus(char, getStatusDepth(chat, char));
-        }
+        if (extensionSettings.autoDetectParticipants)
+            for (const char of getActiveParticipants()) {
+                if (!getCharStatus(char)) createCharStatus(char, getStatusDepth(chat, char));
+            }
 
-        saveMetadataDebounced();
         addGroupStatusButtons();
     });
 
@@ -31,12 +31,22 @@ export function startListeners() {
         addGroupStatusButtons();
     });
 
+    eventSource.on('groupSelected', async (...args) => { // WTF - Why isn't this in event_types?
+        log("groupSelected", args);
+        addGroupStatusButtons();
+    });
+
     eventSource.on(event_types.CHAT_CHANGED, async (...args) => {
         log("CHAT_CHANGED", args);
 
         if (!args[0]) return;
+        if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
         if (selected_group) addGroupStatusButtons();
 
+        callbacksClickValueUID.splice(0);
+        callbacksScrollValueUID.splice(0);
+
+        fillMissingMetadata();
         fetchStatus({forceUIUpdate: true});
         scrollChatToBottom();
     });
