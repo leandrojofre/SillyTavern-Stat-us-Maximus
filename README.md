@@ -4,9 +4,9 @@ This extension adds a menu per character to have your notes, it is basically a s
 
 **This is still in development! Please submit any bug you find and feature you want! Either as a GitHub issue or through the ST Discord.**
 
-<img width="100%" src="https://github.com/user-attachments/assets/66bb967f-76b7-4b32-a0ce-bebbe818abe9">
-<img width="100%" src="https://github.com/user-attachments/assets/5019ebf9-87e8-441d-95a4-446cdf050d28">
-<img width="100%" src="https://github.com/user-attachments/assets/7c41659b-3c4c-4844-86fb-cb25284c59d7">
+<img width="100%" alt="image" src="https://github.com/user-attachments/assets/7eca247f-5f52-49de-8e9e-ad983fe9e547" />
+<img width="100%" alt="image" src="https://github.com/user-attachments/assets/75e2f304-ca02-4ed8-ae79-6f41f92586e2" />
+<img width="100%" alt="image" src="https://github.com/user-attachments/assets/02eb098a-8174-4169-9bde-5c9608317e70" />
 
 ## Features
 
