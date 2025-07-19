@@ -38,7 +38,12 @@ import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { fetchStatus, getParticipant, log } from "../../index.js";
-import { addCharAltValue, addCharEntry, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry } from "./statusControls.js";
+import { addCharAltValue, addCharEntry, createCharStatus, deleteCharStatus, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry } from "./statusControls.js";
+
+/*  # TODO
+    - [X] Command to create Status data
+    - [X] Command to delete Status data
+*/
 
 /** Takes an object with a key and value and generates a comment
     @param {object} entry
@@ -71,8 +76,7 @@ const acceptedEntryFields = {
     key: "Title of the entry",
     value: "Value of the entry",
     separator: "Separator between the key and value",
-    value_uid: "Unique identifier of the selected alt value (select menu of the entry - starts at 0)",
-    display_position: "Order at which the entry gets inserted (starts at 0)"
+    // display_position: "Order at which the entry gets inserted (starts at 0)"
 }
 
 /** Accepted alt key values and their descriptions */
@@ -149,6 +153,62 @@ const customEnumProviders = {
         if (!entry || !entry?.alt_values?.length) return [];
 
         return entry.alt_values.map(alt => new SlashCommandEnumValue(String(alt.uid), buildUIDsComment(alt), enumTypes.number, enumIcons.key));
+    }
+}
+
+/** Creates status data for a character
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.isuser - Wether to search for personas or characters
+    @returns {Promise&lt;String>} UID of the new entry or empty string
+*/
+async function commandCreateStatus(args, value) {
+    try {
+        const {char = "", isuser = "false"} = args;
+        const parsed_isuser = isuser === "true";
+        const character = getParticipant(char, parsed_isuser, {field: "name"});
+
+        if (!character) throw new Error(`The character "${args?.char}" could not be found`);
+
+        const status = createCharStatus(character);
+
+        if (!status) return "false";
+
+        return "true";
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
+        return "false";
+    }
+}
+
+/** Deletes the status data a character
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.isuser - Wether to search for personas or characters
+    @returns {Promise&lt;String>} UID of the new entry or empty string
+*/
+async function commandDeleteStatus(args, value) {
+    try {
+        const {char = "", isuser = "false"} = args;
+        const parsed_isuser = isuser === "true";
+        const character = getParticipant(char, parsed_isuser, {field: "name"});
+
+        if (!character) throw new Error(`The character "${args?.char}" could not be found`);
+
+        const success = deleteCharStatus(character);
+
+        if (!success) return "false";
+
+        fetchStatus({forceUIUpdate: true});
+
+        return "true";
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+
+        return "false";
     }
 }
 
@@ -566,6 +626,78 @@ async function commandDeleteChatStatus() {
 
 /** Register all slash commands into SillyTavern */
 export function registerSlashCommands() {
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-create-status",
+            callback: commandCreateStatus,
+            returns: 'True or False',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: () => [...commonEnumProviders.characters()(), ...commonEnumProviders.personas()]
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - false by default',
+                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    isRequired: false,
+                    enumProvider: commonEnumProviders.boolean()
+                })
+            ],
+            helpString: `
+            &lt;div>
+                Creates status data for the selected character in the active chat and returns true. If the character already has data, this does nothing and returns false.
+            &lt;/div>
+            &lt;div>
+                &lt;strong>Example&lt;/strong>
+                &lt;ul>
+                    &lt;li>
+                        &lt;pre>&lt;code>/stum-create-status char="Tom"&lt;/code>&lt;/pre>
+                    &lt;/li>
+                &lt;/ul>
+            &lt;/div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-delete-status",
+            callback: commandDeleteStatus,
+            returns: 'True or False',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: () => [...commonEnumProviders.characters()(), ...commonEnumProviders.personas()]
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - false by default',
+                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    isRequired: false,
+                    enumProvider: commonEnumProviders.boolean()
+                })
+            ],
+            helpString: `
+            &lt;div>
+                Deletes status data of the selected character in the active chat and returns true. If the deletion fails, this does nothing and returns false.
+            &lt;/div>
+            &lt;div>
+                &lt;strong>Example&lt;/strong>
+                &lt;ul>
+                    &lt;li>
+                        &lt;pre>&lt;code>/stum-delete-status char="Tom"&lt;/code>&lt;/pre>
+                    &lt;/li>
+                &lt;/ul>
+            &lt;/div>`,
+        })
+    );
+
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
             name: "stum-create-entry",
@@ -1130,13 +1262,13 @@ export function registerSlashCommands() {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#acceptedAltEntryFields">acceptedAltEntryFields</a></li><li><a href="global.html#acceptedEntryFields">acceptedEntryFields</a></li><li><a href="global.html#buildUIDsComment">buildUIDsComment</a></li><li><a href="global.html#commandCreateEntry">commandCreateEntry</a></li><li><a href="global.html#commandCreateEntryAltValue">commandCreateEntryAltValue</a></li><li><a href="global.html#commandDeleteAltEntry">commandDeleteAltEntry</a></li><li><a href="global.html#commandDeleteChatStatus">commandDeleteChatStatus</a></li><li><a href="global.html#commandDeleteEntry">commandDeleteEntry</a></li><li><a href="global.html#commandGetAltEntryField">commandGetAltEntryField</a></li><li><a href="global.html#commandGetAltEntryUID">commandGetAltEntryUID</a></li><li><a href="global.html#commandGetEntryField">commandGetEntryField</a></li><li><a href="global.html#commandGetEntryUID">commandGetEntryUID</a></li><li><a href="global.html#commandSetAltEntryField">commandSetAltEntryField</a></li><li><a href="global.html#commandSetEntryField">commandSetEntryField</a></li><li><a href="global.html#commandSwitchEntryValue">commandSwitchEntryValue</a></li><li><a href="global.html#customEnumProviders">customEnumProviders</a></li><li><a href="global.html#destroyElement">destroyElement</a></li><li><a href="global.html#displaySettings">displaySettings</a></li><li><a href="global.html#fillMissingMetadata">fillMissingMetadata</a></li><li><a href="global.html#getCharStatus">getCharStatus</a></li><li><a href="global.html#getLastDisplayPosition">getLastDisplayPosition</a></li><li><a href="global.html#getParticipantFromName">getParticipantFromName</a></li><li><a href="global.html#loadHTMLSettings">loadHTMLSettings</a></li><li><a href="global.html#refreshCharEntryDisplay">refreshCharEntryDisplay</a></li><li><a href="global.html#registerSlashCommands">registerSlashCommands</a></li><li><a href="global.html#setSettings">setSettings</a></li><li><a href="global.html#settingsBooleanButton">settingsBooleanButton</a></li><li><a href="global.html#updateCharEntry">updateCharEntry</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#acceptedAltEntryFields">acceptedAltEntryFields</a></li><li><a href="global.html#acceptedEntryFields">acceptedEntryFields</a></li><li><a href="global.html#buildUIDsComment">buildUIDsComment</a></li><li><a href="global.html#callbacksClickValueUID">callbacksClickValueUID</a></li><li><a href="global.html#callbacksScrollValueUID">callbacksScrollValueUID</a></li><li><a href="global.html#clonePopup">clonePopup</a></li><li><a href="global.html#commandCreateEntry">commandCreateEntry</a></li><li><a href="global.html#commandCreateEntryAltValue">commandCreateEntryAltValue</a></li><li><a href="global.html#commandCreateStatus">commandCreateStatus</a></li><li><a href="global.html#commandDeleteAltEntry">commandDeleteAltEntry</a></li><li><a href="global.html#commandDeleteChatStatus">commandDeleteChatStatus</a></li><li><a href="global.html#commandDeleteEntry">commandDeleteEntry</a></li><li><a href="global.html#commandDeleteStatus">commandDeleteStatus</a></li><li><a href="global.html#commandGetAltEntryField">commandGetAltEntryField</a></li><li><a href="global.html#commandGetAltEntryUID">commandGetAltEntryUID</a></li><li><a href="global.html#commandGetEntryField">commandGetEntryField</a></li><li><a href="global.html#commandGetEntryUID">commandGetEntryUID</a></li><li><a href="global.html#commandSetAltEntryField">commandSetAltEntryField</a></li><li><a href="global.html#commandSetEntryField">commandSetEntryField</a></li><li><a href="global.html#commandSwitchEntryValue">commandSwitchEntryValue</a></li><li><a href="global.html#customEnumProviders">customEnumProviders</a></li><li><a href="global.html#destroyElement">destroyElement</a></li><li><a href="global.html#displaySettings">displaySettings</a></li><li><a href="global.html#fillMissingMetadata">fillMissingMetadata</a></li><li><a href="global.html#getCharStatus">getCharStatus</a></li><li><a href="global.html#getLastDisplayPosition">getLastDisplayPosition</a></li><li><a href="global.html#getParticipantFromName">getParticipantFromName</a></li><li><a href="global.html#loadHTMLSettings">loadHTMLSettings</a></li><li><a href="global.html#refreshCharEntryDisplay">refreshCharEntryDisplay</a></li><li><a href="global.html#registerSlashCommands">registerSlashCommands</a></li><li><a href="global.html#setSettings">setSettings</a></li><li><a href="global.html#settingsBooleanButton">settingsBooleanButton</a></li><li><a href="global.html#transferCharStatus">transferCharStatus</a></li><li><a href="global.html#updateCharEntry">updateCharEntry</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Mon Jul 07 2025 21:07:30 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jul 19 2025 02:52:57 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>
