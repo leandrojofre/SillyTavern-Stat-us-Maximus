@@ -259,6 +259,7 @@ function addTracker(status, mesID, character) {
             <form>
                 <input type="hidden" name="enabled">
                 <input type="hidden" name="key">
+                <input type="hidden" name="alt_key">
                 <input type="hidden" name="value">
                 <input type="hidden" name="value_uid">
             </form>
@@ -321,8 +322,8 @@ function addTracker(status, mesID, character) {
 
     /** @param {HTMLElement} target */
     const safeDispatch = (target, type = 'input', options = { bubbles: true, cancelable: true }) => {
-        const evt = new Event(type, options);
-        target.dispatchEvent(evt);
+        const event = new Event(type, options);
+        target.dispatchEvent(event);
     };
 
     statusTable.querySelector(".menu_button.fa-pen").addEventListener("click", async () => {
@@ -471,7 +472,14 @@ function addTracker(status, mesID, character) {
         form.removeAttribute('action');
 
         const killSwitch = el(newRow, ".kill-switch");
-        const descriptionValue = (entry.value === "") ? (entry.alt_values.find(alt => alt.uid === entry.value_uid).key) : (entry.value);
+
+        let descriptionValue = entry.value;
+        let descriptionTarget = "value";
+
+        if (descriptionValue === "") {
+            descriptionValue = entry.alt_values.find(alt => alt.uid === entry.value_uid).key;
+            descriptionTarget = "alt_key";
+        }
 
         const selectValueUID = el(newRow, '.status-value-uid');
         const optionsValueUID = document.createElement("div");
@@ -486,9 +494,10 @@ function addTracker(status, mesID, character) {
         el(document, 'div[name="templatesAndPopupsWrapper"]').append(optionsValueUID);
 
         // Set Values
-        el(form, 'input[name="key"]').value = entry.key;
-        el(form, 'input[name="value"]').value = entry.value;
         el(form, 'input[name="enabled"]').value = entry.enabled;
+        el(form, 'input[name="key"]').value = entry.key;
+        el(form, 'input[name="alt_key"]').value = entry.alt_values.find(alt => alt.uid === entry.value_uid).key;
+        el(form, 'input[name="value"]').value = entry.value;
         el(form, 'input[name="value_uid"]').value = entry.value_uid;
 
         el(newRow, '.status-separator').innerHTML = lodash.escape(entry.separator);
@@ -545,7 +554,7 @@ function addTracker(status, mesID, character) {
         }
 
         updateDescription(entry.key, '.status-title', 'key');
-        updateDescription(descriptionValue, '.status-description', 'value');
+        updateDescription(descriptionValue, '.status-description', descriptionTarget);
 
         for (const alt_val of entry.alt_values) {
             const option = document.createElement("div");
@@ -563,7 +572,15 @@ function addTracker(status, mesID, character) {
                 optionsValueUID.style.display = "none";
                 selectValueUIDPopper.update();
 
-                updateDescription((alt.value === "") ? (alt.key) : (alt.value), '.status-description', 'value');
+                let formText = alt.value;
+                let formTarget = "value";
+
+                if (formText === "") {
+                    formText = alt.key;
+                    formTarget = "alt_key";
+                }
+
+                updateDescription(formText, '.status-description', formTarget);
                 safeDispatch(form);
             });
 
