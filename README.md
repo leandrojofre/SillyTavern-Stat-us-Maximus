@@ -18,7 +18,7 @@ This extension adds a menu per character to have your notes, it is basically a s
 - The status can be send as system, user or assistant - default system.
 - With macros, you can set inputs in the chat UI to quick edit entries without opening menus.
 - You can set swipes or alt values for each stat entry.
-- You can copy and paste (truck button) entries between characters in the popup Menu.
+- You can copy and paste entries between characters from the popup Menu (truck button).
 
 ### Menus
 - From the magic wand button (left to the input bar), you can open a popup menu to manage every character status.
