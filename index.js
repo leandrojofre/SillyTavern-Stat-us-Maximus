@@ -232,8 +232,6 @@ const onCallbacksClick = (e) => {
 
 document.getElementById("sheld").addEventListener('pointerdown', onCallbacksClick);
 
-SillyTavern.stumTest = () => log(callbacksClickValueUID);
-
 function showPopper(popperInstance, tooltip) {
     tooltip.setAttribute('data-show', '');
 
