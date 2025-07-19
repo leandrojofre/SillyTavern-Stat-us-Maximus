@@ -1,3 +1,7 @@
+:root {
+    --stum-input-label-display: block;
+}
+
 #stat-us-max-settings-window div.flex-container.flex-column,
 #stat-us-max-settings-window label.flex-container.flex-column {
 	flex-direction: column;
@@ -454,5 +458,9 @@ div[name="templatesAndPopupsWrapper"] {
             font-family: monospace;
             border: unset;
         }
+    }
+
+    .input-label {
+        display: var(--stum-input-label-display);
     }
 }

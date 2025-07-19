@@ -50,6 +50,7 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const defaultSettings = {
     editNumbersFromChat: false,
     autoDetectParticipants: true,
+    hideInputLabels: false,
     debug: false
 };
 
@@ -805,6 +806,13 @@ const settingsCallbacks = {
     /**	Triggers on editNumbersFromChat change. */
     editNumbersFromChat: () => {
         fetchStatus({forceUIUpdate: true});
+    },
+
+    /**	Triggers on hideInputLabels change. */
+    hideInputLabels: () => {
+        const newDisplay = extensionSettings.hideInputLabels ? 'none' : 'block';
+
+        document.documentElement.style.setProperty('--stum-input-label-display', newDisplay);
     }
 }
 
@@ -827,6 +835,7 @@ function settingsBooleanButton(event) {
 function displaySettings() {
     console.debug("[" + extensionName + "]", `Auto detect participants is ${extensionSettings.autoDetectParticipants ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Edit numbers from chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Hide input labels is ${extensionSettings.hideInputLabels ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Debug mode is ${extensionSettings.debug ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", structuredClone(extensionSettings));
 }
@@ -840,6 +849,7 @@ async function loadHTMLSettings() {
     // Event Listeners for the extension HTML
     $("#stat-us-max-auto-detect-participants").on("input", settingsBooleanButton);
     $("#stat-us-max-edit-numbers-from-chat").on("input", settingsBooleanButton);
+    $("#stat-us-max-hide-input-labels").on("input", settingsBooleanButton);
     $("#stat-us-max-debug").on("input", settingsBooleanButton);
     $("#stat-us-max-check-configuration").on("click", displaySettings);
 
@@ -850,6 +860,7 @@ async function loadHTMLSettings() {
 function setSettings() {
     $("#stat-us-max-auto-detect-participants").prop("checked", extensionSettings.autoDetectParticipants);
     $("#stat-us-max-edit-numbers-from-chat").prop("checked", extensionSettings.editNumbersFromChat);
+    $("#stat-us-max-hide-input-labels").prop("checked", extensionSettings.hideInputLabels);
     $("#stat-us-max-debug").prop("checked", extensionSettings.debug).trigger("input");
 }
 
