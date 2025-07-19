@@ -715,12 +715,21 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
     if (!metadata?.length) chars.push(...getAllParticipantsInChat(realChat));
     else chars.push(...getActiveParticipants(chars));
 
-    const statuses = chars.map(character => getCharStatus(character));
+    const raw_statuses = chars.map(character => getCharStatus(character));
 
     for (const key of Object.keys(extension_prompts))
         if (key.includes(extensionName.toLowerCase())) delete extension_prompts[key];
 
-    if (!statuses.length) return;
+    const statuses = raw_statuses.filter(stat => stat !== false);
+
+    log(structuredClone(metadata), structuredClone(chars), structuredClone(raw_statuses), structuredClone(statuses), statuses.length)
+
+    if (statuses.length < 1) {
+        log(statuses.length)
+        destroyElement(`.stat-us-max-custom-css.table-container`);
+        destroyElement(`.status-value-uid-options.list-group`);
+        return
+    }
 
     for (let i = 0; i < statuses.length; i++) {
         const character = chars[i];
