@@ -230,7 +230,7 @@ const onCallbacksClick = (e) => {
     for (const obj of callbacksClickValueUID) obj.callback(clickTarget);
 };
 
-document.addEventListener('pointerdown', onCallbacksClick);
+document.getElementById("sheld").addEventListener('pointerdown', onCallbacksClick);
 
 /** On scroll
     @type {object[]}
@@ -243,7 +243,7 @@ const onCallbacksScroll = lodash.throttle(
 
         for (const obj of callbacksScrollValueUID) obj.callback(scrollTarget);
     },
-    75,
+    60,
     {
         leading: false,
         trailing: true
@@ -504,9 +504,6 @@ function addTracker(status, mesID, character) {
         optionsValueUID.style.display = "none";
         optionsValueUID.classList.add("status-value-uid-options", "list-group");
 
-        const selectValueUIDPopper = Popper.createPopper(selectValueUID, optionsValueUID, {placement: "left"});
-        let isPopperOpen = false;
-
         el(document, 'div[name="templatesAndPopupsWrapper"]').append(optionsValueUID);
 
         // Set Values
@@ -572,37 +569,6 @@ function addTracker(status, mesID, character) {
         updateDescription(entry.key, '.status-title', 'key');
         updateDescription(descriptionValue, '.status-description', descriptionTarget);
 
-        for (const alt_val of entry.alt_values) {
-            const option = document.createElement("div");
-            option.setAttribute("value", String(alt_val.uid));
-            option.innerText = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
-            option.classList.add("list-group-item");
-
-            option.addEventListener("click", () => {
-                const alt = getCharAltValue(character, entry.uid, option.getAttribute("value"));
-
-                el(form, 'input[name="value"]').value = alt.value;
-                el(form, 'input[name="value_uid"]').value = alt.uid;
-
-                isPopperOpen = false;
-                optionsValueUID.style.display = "none";
-                selectValueUIDPopper.update();
-
-                let formText = alt.value;
-                let formTarget = "value";
-
-                if (formText === "") {
-                    formText = alt.key;
-                    formTarget = "alt_key";
-                }
-
-                updateDescription(formText, '.status-description', formTarget);
-                form.dispatchEvent(inputEvent);
-            });
-
-            optionsValueUID.append(option);
-        }
-
         selectValueUID.value = String(entry.value_uid);
 
         // Add listeners
@@ -618,32 +584,6 @@ function addTracker(status, mesID, character) {
             clearTimeout(formDebounceTimer);
 
             formDebounceTimer = window.setTimeout(() => form.requestSubmit(), DEBOUNCE_MS);
-        });
-
-        selectValueUID.addEventListener('click', function () {
-            isPopperOpen = !isPopperOpen;
-            optionsValueUID.style.display = isPopperOpen ? "block" : "none";
-            selectValueUIDPopper.update();
-        });
-
-        callbacksClickValueUID.push({
-            target: character.avatar,
-            callback: (clickTarget) => {
-                if (
-                    isPopperOpen
-                    && !clickTarget.closest(`div[avatar-target="${character.avatar}"] select.status-value-uid`)
-                    && !clickTarget.closest(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`)
-                ) {
-                    isPopperOpen = false;
-                    optionsValueUID.style.display = "none";
-                    selectValueUIDPopper.update();
-                }
-            }
-        });
-
-        callbacksScrollValueUID.push({
-            target: character.avatar,
-            callback: (scrollTarget) => selectValueUIDPopper.update()
         });
 
         killSwitch.addEventListener("click", (e) => {
@@ -665,6 +605,69 @@ function addTracker(status, mesID, character) {
         });
 
         if (entry.alt_values.length <= 1) toggleVisibility(selectValueUID, true);
+        else {
+            /** Only load swipes selector if there are more than one option */
+
+            const selectValueUIDPopper = Popper.createPopper(selectValueUID, optionsValueUID, {placement: "left"});
+            let isPopperOpen = false;
+
+            for (const alt_val of entry.alt_values) {
+                const option = document.createElement("div");
+                option.setAttribute("value", String(alt_val.uid));
+                option.innerText = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
+                option.classList.add("list-group-item");
+
+                option.addEventListener("click", () => {
+                    const alt = getCharAltValue(character, entry.uid, option.getAttribute("value"));
+
+                    el(form, 'input[name="value"]').value = alt.value;
+                    el(form, 'input[name="value_uid"]').value = alt.uid;
+
+                    isPopperOpen = false;
+                    optionsValueUID.style.display = "none";
+                    selectValueUIDPopper.update();
+
+                    let formText = alt.value;
+                    let formTarget = "value";
+
+                    if (formText === "") {
+                        formText = alt.key;
+                        formTarget = "alt_key";
+                    }
+
+                    updateDescription(formText, '.status-description', formTarget);
+                    form.dispatchEvent(inputEvent);
+                });
+
+                optionsValueUID.append(option);
+            }
+
+            selectValueUID.addEventListener('click', function () {
+                isPopperOpen = !isPopperOpen;
+                optionsValueUID.style.display = isPopperOpen ? "block" : "none";
+                selectValueUIDPopper.update();
+            });
+
+            callbacksClickValueUID.push({
+                target: character.avatar,
+                callback: async (clickTarget) => {
+                    if (
+                        isPopperOpen
+                        && !clickTarget.closest(`div[avatar-target="${character.avatar}"] select.status-value-uid`)
+                        && !clickTarget.closest(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`)
+                    ) {
+                        isPopperOpen = false;
+                        optionsValueUID.style.display = "none";
+                        selectValueUIDPopper.update();
+                    }
+                }
+            });
+
+            callbacksScrollValueUID.push({
+                target: character.avatar,
+                callback: async (scrollTarget) => selectValueUIDPopper.update()
+            });
+        }
 
         statusTableBody.append(newRow);
     }
