@@ -630,6 +630,7 @@ function addTracker(status, mesID, character) {
                 option.addEventListener("click", async () => {
                     const alt = getCharAltValue(character, entry.uid, option.getAttribute("value"));
 
+                    el(form, 'input[name="alt_key"]').value = alt.key;
                     el(form, 'input[name="value"]').value = alt.value;
                     el(form, 'input[name="value_uid"]').value = alt.uid;
 
