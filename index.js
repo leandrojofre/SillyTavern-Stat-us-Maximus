@@ -722,10 +722,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
     const statuses = raw_statuses.filter(stat => stat !== false);
 
-    log(structuredClone(metadata), structuredClone(chars), structuredClone(raw_statuses), structuredClone(statuses), statuses.length)
-
     if (statuses.length < 1) {
-        log(statuses.length)
         destroyElement(`.stat-us-max-custom-css.table-container`);
         destroyElement(`.status-value-uid-options.list-group`);
         return
