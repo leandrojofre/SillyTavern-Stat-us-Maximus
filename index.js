@@ -223,21 +223,34 @@ function replaceSkip(str, search, replaceWith, targetIndex) {
     @type {object[]}
 */
 export let callbacksClickValueUID = [];
-$('html').on('touchstart mousedown', async function (e) {
-    const clickTarget = $(e.target);
+
+const onCallbacksClick = (e) => {
+    const clickTarget = e.target;
 
     for (const obj of callbacksClickValueUID) obj.callback(clickTarget);
-});
+};
+
+document.addEventListener('pointerdown', onCallbacksClick);
 
 /** On scroll
     @type {object[]}
 */
 export let callbacksScrollValueUID = [];
-$('#chat').on('scroll', async function (e) {
-    const scrollTarget = $(e.target);
 
-    for (const obj of callbacksScrollValueUID) obj.callback(scrollTarget);
-});
+const onCallbacksScroll = lodash.throttle(
+    (e) => {
+        const scrollTarget = $(e.target);
+
+        for (const obj of callbacksScrollValueUID) obj.callback(scrollTarget);
+    },
+    75,
+    {
+        leading: false,
+        trailing: true
+    }
+);
+
+document.getElementById("chat").addEventListener("scroll", onCallbacksScroll);
 
 function addTracker(status, mesID, character) {
     const $chat = document.getElementById("chat");
@@ -302,6 +315,7 @@ function addTracker(status, mesID, character) {
     statusTableContainer.append(statusTable);
 
     /** Event listeners */
+    const inputEvent = new Event("input", { bubbles: true, cancelable: true });
     const DEBOUNCE_MS = 400;
     let formDebounceTimer;
 
@@ -482,6 +496,7 @@ function addTracker(status, mesID, character) {
             descriptionTarget = "alt_key";
         }
 
+        /**@type {HTMLSelectElement}*/
         const selectValueUID = el(newRow, '.status-value-uid');
         const optionsValueUID = document.createElement("div");
         optionsValueUID.setAttribute("role", "tooltip");
@@ -531,7 +546,7 @@ function addTracker(status, mesID, character) {
                     };
 
                     el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
-                    safeDispatch(form);
+                    form.dispatchEvent(inputEvent);
                 });
             });
 
@@ -549,7 +564,7 @@ function addTracker(status, mesID, character) {
                     inputRange.value = original.value;
 
                     el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
-                    safeDispatch(form);
+                    form.dispatchEvent(inputEvent);
                 });
             });
         }
@@ -582,7 +597,7 @@ function addTracker(status, mesID, character) {
                 }
 
                 updateDescription(formText, '.status-description', formTarget);
-                safeDispatch(form);
+                form.dispatchEvent(inputEvent);
             });
 
             optionsValueUID.append(option);
@@ -613,11 +628,11 @@ function addTracker(status, mesID, character) {
 
         callbacksClickValueUID.push({
             target: character.avatar,
-            callback: (/**@type {JQuery<HTMLElement>}*/clickTarget) => {
+            callback: (clickTarget) => {
                 if (
                     isPopperOpen
-                    && clickTarget.closest(selectValueUID).length == 0
-                    && clickTarget.closest(optionsValueUID).length == 0
+                    && !clickTarget.closest(`div[avatar-target="${character.avatar}"] select.status-value-uid`)
+                    && !clickTarget.closest(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`)
                 ) {
                     isPopperOpen = false;
                     optionsValueUID.style.display = "none";
@@ -628,7 +643,7 @@ function addTracker(status, mesID, character) {
 
         callbacksScrollValueUID.push({
             target: character.avatar,
-            callback: (/**@type {JQuery<HTMLElement>}*/scrollTarget) => selectValueUIDPopper.update()
+            callback: (scrollTarget) => selectValueUIDPopper.update()
         });
 
         killSwitch.addEventListener("click", (e) => {
@@ -639,7 +654,7 @@ function addTracker(status, mesID, character) {
                 el(newRow, '.hover-highlight').classList.toggle('disabled', !state);
             });
 
-            safeDispatch(form);
+            form.dispatchEvent(inputEvent);
         });
 
         // Set up UI
