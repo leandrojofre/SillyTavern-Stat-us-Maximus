@@ -150,8 +150,8 @@ export function formStatusSingleChar(char) {
 
     const createInputLabel = (/**@type {HTMLInputElement|HTMLSelectElement}*/input, mw = "auto") => {
         const labelTemplateSpan = document.createElement("small");
-        labelTemplateSpan.dataset.i18n = input.placeholder ?? input.ariaPlaceholder;
-        labelTemplateSpan.innerText = input.placeholder ?? input.ariaPlaceholder;
+        labelTemplateSpan.dataset.i18n = (input instanceof HTMLInputElement) ? input.placeholder : input.ariaPlaceholder;
+        labelTemplateSpan.innerText = (input instanceof HTMLInputElement) ? input.placeholder : input.ariaPlaceholder;
         labelTemplateSpan.classList.add("text-center", "input-label");
 
         const labelTemplate = document.createElement("div");
@@ -164,7 +164,7 @@ export function formStatusSingleChar(char) {
         return labelTemplate;
     }
 
-    const createButtonsWrapper = (/**@type {HTMLDivElement[]}*/buttons, lessPadding) => {
+    const createButtonsWrapper = (/**@type {HTMLElement[]}*/buttons, lessPadding) => {
         const buttonsWrapper = document.createElement("div");
         buttonsWrapper.classList.add("d-flex", "flex-center-start", "buttons-wrapper");
         buttonsWrapper.append(...buttons);
@@ -209,6 +209,12 @@ export function formStatusSingleChar(char) {
     textareaStatusSeparator.value = escapeNewlines(metadata.separator);
     textareaStatusSeparator.classList.add("text_pole", "m-0");
 
+    const textareaDefEntrySeparator = document.createElement("input");
+    textareaDefEntrySeparator.type = "text";
+    textareaDefEntrySeparator.placeholder = t`Def. title/description separator`;
+    textareaDefEntrySeparator.value = escapeNewlines(metadata.def_entry_separator);
+    textareaDefEntrySeparator.classList.add("text_pole", "m-0");
+
     const textareaStatusPrefix = document.createElement("input");
     textareaStatusPrefix.type = "text";
     textareaStatusPrefix.placeholder = t`Status prefix`;
@@ -247,6 +253,7 @@ export function formStatusSingleChar(char) {
     statInputsWrapper.append(
         createInputLabel(selectEntryRole),
         createInputLabel(textareaStatusSeparator),
+        createInputLabel(textareaDefEntrySeparator),
         createInputLabel(textareaStatusPrefix),
         createInputLabel(textareaStatusSuffix),
         createButtonsWrapper([
@@ -384,6 +391,7 @@ export function formStatusSingleChar(char) {
     let formDebounceTimer;
     let altKeyDebounceTimer;
     let separatorDebounceTimer;
+    let defEntrySeparatorDebounceTimer;
     let prefixDebounceTimer;
     let suffixDebounceTimer;
 
@@ -545,6 +553,14 @@ export function formStatusSingleChar(char) {
         clearTimeout(separatorDebounceTimer);
 
         separatorDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
+    });
+
+    textareaDefEntrySeparator.addEventListener("input", () => {
+        metadata.def_entry_separator = un_escapeNewlines(textareaDefEntrySeparator.value);
+
+        clearTimeout(defEntrySeparatorDebounceTimer);
+
+        defEntrySeparatorDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
     });
 
     textareaStatusPrefix.addEventListener("input", () => {
