@@ -196,6 +196,10 @@ div[name="templatesAndPopupsWrapper"] {
         text-align: center;
     }
 
+    .text-quote {
+        color: var(--SmartThemeQuoteColor);
+    }
+
     .separator-x {
         border-bottom: 1px solid;
         border-color: var(--stat-us-border-color) !important;
@@ -374,15 +378,18 @@ div[name="templatesAndPopupsWrapper"] {
         color: currentColor;
     }
 
-    .kill-switch.fa-toggle-on {
+    .kill-switch.fa-toggle-on,
+    .status-value-uid {
         color: var(--SmartThemeQuoteColor);
     }
 
-    .kill-switch {
+    .kill-switch,
+    .status-value-uid {
         font-size: x-large;
     }
 
-    .kill-switch:hover {
+    .kill-switch:hover,
+    .status-value-uid:hover {
         cursor: pointer;
     }
 
@@ -449,6 +456,43 @@ div[name="templatesAndPopupsWrapper"] {
         min-width: 5ch;
     }
 
+    .chat-input-icon {
+        font-weight: bolder;
+        vertical-align: baseline;
+    }
+
+    .select-none {
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    .fake-input {
+        position: absolute;
+        inset: 0;
+        width: 0;
+        height: 0;
+        opacity: 0;
+        border: none;
+        background: transparent;
+    }
+
+    .fake-selection {
+        background-color: var(--SmartThemeBodyColor);
+        color: var(--SmartThemeBlurTintColor);
+    }
+
+    .fake-caret {
+        display: inline-block;
+        width: 3px;
+        background-color: var(--SmartThemeBodyColor);
+        animation: blink 1s step-end infinite;
+        height: 1em;
+    }
+
+    @keyframes blink {
+        50% { opacity: 0; }
+    }
+
     span.chat-input-editor {
         display: inline-flex;
         vertical-align: middle;
@@ -468,7 +512,7 @@ div[name="templatesAndPopupsWrapper"] {
     .input-label {
         display: var(--stum-input-label-display);
     }
-    
+
     .status-value-uid-options * {
         border-radius: 0;
     }
