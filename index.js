@@ -359,6 +359,10 @@ function addTracker(status, mesID, character) {
 
     const el = (target, class_name) => target.querySelector(class_name);
 
+    const dispatchInput = (/**@type {HTMLElement}*/target) => {
+        setTimeout(() => target.dispatchEvent(inputEvent), 10);
+    }
+
     /** @param {HTMLElement} el */
     const toggleSwitch = (el, callback = (param) => {}) => {
         // True if the final state is on
@@ -574,7 +578,7 @@ function addTracker(status, mesID, character) {
                         input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
 
                         el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
-                        form.dispatchEvent(inputEvent);
+                        dispatchInput(form);
                     });
                 } else {
                     input.nextElementSibling.textContent = " " + (input.value ?? "");
@@ -609,19 +613,18 @@ function addTracker(status, mesID, character) {
                         updateDisplay();
 
                         el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
-                        form.dispatchEvent(inputEvent);
+                        dispatchInput(form);
                     });
 
                     if (input.classList.contains("type-number")) {
                         input.addEventListener('keydown', (e) => {
-                            if (isNaN(Number(input.value))) return setTimeout(() => input.dispatchEvent(inputEvent), 10);
+                            if (!["ArrowUp", "ArrowDown"].includes(e.key)) return setTimeout(updateDisplay, 10);
 
                             e.preventDefault();
 
-                            if (e.key === "ArrowUp") input.value = Number(input.value) + 1;
-                            if (e.key === "ArrowDown") input.value = Number(input.value) - 1;
+                            input.value = String(Number(input.value) + ((e.key === "ArrowUp") ? 1 : -1));
 
-                            setTimeout(() => input.dispatchEvent(inputEvent), 10);
+                            dispatchInput(input);
                         });
                     } else {
                         input.addEventListener('keydown', () => setTimeout(updateDisplay, 10));
@@ -647,7 +650,7 @@ function addTracker(status, mesID, character) {
                     inputRange.value = original.value;
 
                     el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
-                    form.dispatchEvent(inputEvent);
+                    dispatchInput(form);
                 });
             });
         }
@@ -667,7 +670,7 @@ function addTracker(status, mesID, character) {
         form.addEventListener("input", () => {
             clearTimeout(formDebounceTimer);
 
-            formDebounceTimer = window.setTimeout(() => form.requestSubmit(), DEBOUNCE_MS);
+            formDebounceTimer = setTimeout(() => form.requestSubmit(), DEBOUNCE_MS);
         });
 
         killSwitch.addEventListener("click", (e) => {
@@ -678,7 +681,7 @@ function addTracker(status, mesID, character) {
                 el(newRow, '.hover-highlight').classList.toggle('disabled', !state);
             });
 
-            form.dispatchEvent(inputEvent);
+            dispatchInput(form);
         });
 
         // Set up UI
@@ -737,7 +740,7 @@ function addTracker(status, mesID, character) {
                     }
 
                     updateDescription(formText, '.status-description', formTarget);
-                    form.dispatchEvent(inputEvent);
+                    dispatchInput(form);
                 });
 
                 optionsValueUID.append(option);
