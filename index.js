@@ -272,7 +272,7 @@ function getCaretOffset(span, x, y) {
     return Math.min(offset, span.textContent.length);
 }
 
-function renderCaret(span, text, caretPos, selectEnd) {
+function renderCaret(span, text, caretPos, selectEnd = caretPos) {
     const esc = s => lodash.escape(s);
 
     if (caretPos < 0) return span.innerText = text;
@@ -283,6 +283,12 @@ function renderCaret(span, text, caretPos, selectEnd) {
 
     if (!selected) span.innerHTML = `${before}<span class="fake-caret"></span>${after}`;
     else span.innerHTML = `${before}<span class="fake-selection">${selected}</span>${after}`;
+}
+
+function updateCaretDisplay(input, lastInputValue) {
+    const pos = input.selectionStart;
+    const finalPos = input.selectionEnd;
+    renderCaret(input.nextElementSibling, lastInputValue, pos, finalPos);
 }
 
 function addTracker(status, mesID, character) {
@@ -583,15 +589,9 @@ function addTracker(status, mesID, character) {
                 } else {
                     input.nextElementSibling.textContent = " " + (input.value ?? "");
 
-                    const evTargets = [input.nextElementSibling, input.previousElementSibling];
+                    const eventTargets = [input.nextElementSibling, input.previousElementSibling];
 
-                    function updateDisplay() {
-                        const pos = input.selectionStart;
-                        const finalPos = input.selectionEnd;
-                        renderCaret(input.nextElementSibling, lastValid, pos, finalPos);
-                    }
-
-                    evTargets.forEach((/**@type {HTMLSpanElement}*/span) => span.addEventListener("click", (e) => {
+                    eventTargets.forEach((/**@type {HTMLSpanElement}*/span) => span.addEventListener("click", (e) => {
                         e.preventDefault();
                         const x = e.clientX, y = e.clientY;
 
@@ -610,7 +610,7 @@ function addTracker(status, mesID, character) {
                             else input.value = lastValid;
                         } else lastValid = input.value;
 
-                        updateDisplay();
+                        updateCaretDisplay(input, lastValid);
 
                         el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
                         dispatchInput(form);
@@ -618,7 +618,7 @@ function addTracker(status, mesID, character) {
 
                     if (input.classList.contains("type-number")) {
                         input.addEventListener('keydown', (e) => {
-                            if (!["ArrowUp", "ArrowDown"].includes(e.key)) return setTimeout(updateDisplay, 10);
+                            if (!["ArrowUp", "ArrowDown"].includes(e.key)) return setTimeout(() => updateCaretDisplay(input, lastValid), 10);
 
                             e.preventDefault();
 
@@ -627,11 +627,11 @@ function addTracker(status, mesID, character) {
                             dispatchInput(input);
                         });
                     } else {
-                        input.addEventListener('keydown', () => setTimeout(updateDisplay, 10));
+                        input.addEventListener('keydown', () => setTimeout(() => updateCaretDisplay(input, lastValid), 10));
                     }
 
-                    input.addEventListener('focus', updateDisplay);
-                    input.addEventListener('select', updateDisplay);
+                    input.addEventListener('focus', () => updateCaretDisplay(input, lastValid));
+                    input.addEventListener('select', () => updateCaretDisplay(input, lastValid));
                     input.addEventListener('blur', () => renderCaret(input.nextElementSibling, lastValid, -1));
                 }
             });
