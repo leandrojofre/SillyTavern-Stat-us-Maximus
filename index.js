@@ -256,29 +256,13 @@ function hidePopper(popperInstance, tooltip) {
     }));
 }
 
-function getCaretOffset(span, x, y) {
-    let offset = span.textContent.length;
-
-    if (document.caretPositionFromPoint) {
-        const pos = document.caretPositionFromPoint(x, y);
-        offset = pos.offset;
-    }
-    else if (document.caretRangeFromPoint) {
-        // For firef*x
-        const range = document.caretRangeFromPoint(x, y);
-        offset = range.startOffset;
-    }
-
-    return Math.min(offset, span.textContent.length);
-}
-
 function renderCaret(span, text, caretPos, selectEnd = caretPos) {
     const esc = s => lodash.escape(s);
 
-    if (caretPos < 0) return span.innerText = text;
+    if (caretPos < 0) return span.textContent = text;
 
     const before = esc(text.slice(0, caretPos));
-    const selected = esc(text.slice(caretPos, selectEnd));
+    const selected = caretPos !== selectEnd ? esc(text.slice(caretPos, selectEnd)) : false;
     const after = esc(text.slice(selectEnd));
 
     if (!selected) span.innerHTML = `${before}<span class="fake-caret"></span>${after}`;
@@ -286,9 +270,32 @@ function renderCaret(span, text, caretPos, selectEnd = caretPos) {
 }
 
 function updateCaretDisplay(input, lastInputValue) {
-    const pos = input.selectionStart;
-    const finalPos = input.selectionEnd;
-    renderCaret(input.nextElementSibling, lastInputValue, pos, finalPos);
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    renderCaret(input.nextElementSibling, lastInputValue, start, end);
+}
+
+/**
+    @param {HTMLElement} elem
+    @returns {object}
+*/
+function getSelectedTextInElem(elem) {
+    const selection = window.getSelection();
+
+    if (!selection?.rangeCount) return {start: -1, end: -1};
+
+    const range = selection.getRangeAt(0);
+
+    if (elem.contains(range.startContainer) && elem.contains(range.endContainer))
+        return {start: range.startOffset, end: range.endOffset};
+
+    else if (elem.contains(range.startContainer))
+        return {start: range.startOffset, end: elem.textContent.length};
+
+    else if (elem.contains(range.endContainer))
+        return {start: 0, end: range.endOffset};
+
+    else return {start: -1, end: -1};
 }
 
 function addTracker(status, mesID, character) {
@@ -416,8 +423,8 @@ function addTracker(status, mesID, character) {
             const value = match.replaceAll(/(({{text(::)?)|(}}))/g, "");
             const input = `
                 <span class="fa-solid fa-t m-0 chat-input-icon select-none"></span>
-                <input type="text" value="${value}" class="type-text fake-input chat-input-editor" size="0">
-                <span class="text-quote select-none">${value}</span>
+                <input type="text" value="${value}" class="type-text fake-input chat-input-editor" autocomplete="off" size="0">
+                <span class="text-quote">${value}</span>
             `;
 
             return input;
@@ -428,7 +435,7 @@ function addTracker(status, mesID, character) {
             const input = `
                 <span class="fa-solid fa-n m-0 chat-input-icon select-none"></span>
                 <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0">
-                <span class="text-quote select-none">${value}</span>
+                <span class="text-quote">${value}</span>
             `;
 
             return input;
@@ -574,8 +581,6 @@ function addTracker(status, mesID, character) {
             el(newRow, el_target)
             .querySelectorAll('input.chat-input-editor')
             .forEach((/**@type {HTMLInputElement}*/input) => {
-                let lastValid = input.value;
-                let caretIndex;
 
                 if (input.type === "checkbox") {
                     input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
@@ -587,20 +592,33 @@ function addTracker(status, mesID, character) {
                         dispatchInput(form);
                     });
                 } else {
+                    const eventTargets = [input.nextElementSibling, input.previousElementSibling];
+                    let lastValid = input.value;
+
                     input.nextElementSibling.textContent = " " + (input.value ?? "");
 
-                    const eventTargets = [input.nextElementSibling, input.previousElementSibling];
+                    eventTargets.forEach((/**@type {HTMLSpanElement}*/span) => {
+                        let spanSelected = false;
 
-                    eventTargets.forEach((/**@type {HTMLSpanElement}*/span) => span.addEventListener("click", (e) => {
-                        e.preventDefault();
-                        const x = e.clientX, y = e.clientY;
+                        span.addEventListener("pointerdown", (e) => {
+                            if (spanSelected) return;
 
-                        if (span.classList.contains("chat-input-icon")) caretIndex = input.value.length;
-                        else caretIndex = getCaretOffset(span, x, y);
+                            spanSelected = true;
+                        });
 
-                        input.setSelectionRange(caretIndex, caretIndex);
-                        input.focus();
-                    }));
+                        document.addEventListener("click", (e) => {
+                            if (!spanSelected) return;
+
+                            spanSelected = false;
+                            let selection;
+
+                            if (span.classList.contains("chat-input-icon")) selection = {start: input.value.length, end: input.value.length};
+                            else selection = getSelectedTextInElem(span);
+
+                            input.setSelectionRange(selection.start, selection.end);
+                            input.focus();
+                        });
+                    });
 
                     input.addEventListener("input", () => {
                         if (input.hasAttribute("pattern")) {
@@ -610,14 +628,12 @@ function addTracker(status, mesID, character) {
                             else input.value = lastValid;
                         } else lastValid = input.value;
 
-                        updateCaretDisplay(input, lastValid);
-
                         el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
                         dispatchInput(form);
                     });
 
                     if (input.classList.contains("type-number")) {
-                        input.addEventListener('keydown', (e) => {
+                        input.addEventListener("keydown", (e) => {
                             if (!["ArrowUp", "ArrowDown"].includes(e.key)) return setTimeout(() => updateCaretDisplay(input, lastValid), 10);
 
                             e.preventDefault();
@@ -625,14 +641,14 @@ function addTracker(status, mesID, character) {
                             input.value = String(Number(input.value) + ((e.key === "ArrowUp") ? 1 : -1));
 
                             dispatchInput(input);
+                            setTimeout(() => updateCaretDisplay(input, lastValid), 10);
                         });
                     } else {
-                        input.addEventListener('keydown', () => setTimeout(() => updateCaretDisplay(input, lastValid), 10));
+                        input.addEventListener("keydown", () => setTimeout(() => updateCaretDisplay(input, lastValid), 10));
                     }
 
-                    input.addEventListener('focus', () => updateCaretDisplay(input, lastValid));
-                    input.addEventListener('select', () => updateCaretDisplay(input, lastValid));
-                    input.addEventListener('blur', () => renderCaret(input.nextElementSibling, lastValid, -1));
+                    input.addEventListener("focus", () => updateCaretDisplay(input, lastValid));
+                    input.addEventListener("blur", () => renderCaret(input.nextElementSibling, lastValid, -1));
                 }
             });
 
@@ -718,7 +734,7 @@ function addTracker(status, mesID, character) {
             for (const alt_val of entry.alt_values) {
                 const option = document.createElement("div");
                 option.setAttribute("value", String(alt_val.uid));
-                option.innerText = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
+                option.textContent = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
                 option.classList.add("list-group-item");
 
                 option.addEventListener("click", async () => {
