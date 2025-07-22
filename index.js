@@ -79,7 +79,7 @@ export function destroyElement(element) {
     elem.find('*').each(function() {
         const child = $(this);
 
-        // Destroy even listeners
+        // Destroy event listeners
         child.off();
 
         // Clean jQuery custom library elements
@@ -448,7 +448,7 @@ function addTracker(status, mesID, character) {
             const falseValue = props[2] ?? "false";
             const input = `
                 <input type="checkbox" ${checked === "true" ? "checked" : ""} data-true="${trueValue}" data-false="${falseValue}" class="type-checkbox m-0 chat-input-editor">
-                <span class="text-quote select-none"> ${checked === "true" ? trueValue : falseValue}</span>
+                <span class="text-quote"> ${checked === "true" ? trueValue : falseValue}</span>
             `;
 
             return input;
