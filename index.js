@@ -1179,22 +1179,22 @@ function initButtons() {
     });
 
     const charStatusMenu = document.createElement("div");
-    charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px");
-    charStatusMenu.append(charStatusSpan, personasStatusOpenPopupBtn, personaStatusOpenPopupBtn, charStatusOpenPopupBtn);
+    charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px", "separator-bottom");
+    charStatusMenu.append(charStatusSpan, charStatusOpenPopupBtn, personaStatusOpenPopupBtn, personasStatusOpenPopupBtn);
 
     const charStatusContainer = document.createElement("div");
     charStatusContainer.classList.add("stat-us-max-custom-css");
     charStatusContainer.append(charStatusMenu);
 
-    const hr = document.createElement("hr");
     const creatorNotesBlock = document.getElementById("spoiler_free_desc");
-    creatorNotesBlock.before(charStatusContainer, hr);
+    creatorNotesBlock.before(charStatusContainer);
 
     /** Group menu */
     // @ts-ignore
     /** @type {HTMLElement} */const groupStatusContainer = charStatusContainer.cloneNode(true);
     groupStatusContainer.classList.add("wide100p");
     groupStatusContainer.firstElementChild.classList.add("border", "border-faded");
+    groupStatusContainer.firstElementChild.classList.remove("separator-bottom");
 
     const groupPersonasBtn = groupStatusContainer.querySelector('.menu_button.fa-users-cog');
     groupPersonasBtn.addEventListener("click", async () => {

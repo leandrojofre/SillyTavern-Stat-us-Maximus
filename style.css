@@ -393,6 +393,10 @@ div[name="templatesAndPopupsWrapper"] {
         margin-bottom: 5px;
     }
 
+    .mb-10px {
+        margin-bottom: 10px;
+    }
+
     .inline-drawer {
         border: 1px solid;
         border-color: var(--stat-us-border-color) !important;
