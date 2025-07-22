@@ -224,8 +224,8 @@ div[name="templatesAndPopupsWrapper"] {
         font-weight: bolder;
     }
 
-    .fs-large {
-        font-size: large;
+    .fs-normal {
+        font-size: var(--mainFontSize);
     }
 
     .fs-90p {
