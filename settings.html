@@ -13,23 +13,8 @@ You might want to add additional HTML elements to ST. It's good practice to sepa
 				<b>Settings</b>
 
 				<label class="flex-container">
-					<input id="stat-us-max-edit-numbers-from-chat" stat-us-max-setting="editNumbersFromChat" type="checkbox" />
-					Replace input macros in the chat UI with their respective inputs - Check the docs
-				</label>
-
-				<label class="flex-container">
 					<input id="stat-us-max-auto-detect-participants" stat-us-max-setting="autoDetectParticipants" type="checkbox" />
 					Automatically add Status data to active participants in the chat
-				</label>
-
-				<label class="flex-container">
-					<input id="stat-us-max-hide-input-labels" stat-us-max-setting="hideInputLabels" type="checkbox" />
-					Hide input labels in the popup menu
-				</label>
-
-				<label class="d-flex flex-col flex-start-center gap-5px">
-                    <small class="text-quote">Set the CSS size of range inputs in the chat</small>
-					<input id="stat-us-max-range-input-width" stat-us-max-setting="rangeInputWidth" type="text" pattern="[^\s]" class="text_pole textarea_compact m-0" />
 				</label>
 
 				<div class="flex-container w-100">
@@ -37,6 +22,29 @@ You might want to add additional HTML elements to ST. It's good practice to sepa
                         Open the docs
                     </a>
 				</div>
+			</div>
+
+			<div class="flex-container flex-column separator-bottom">
+				<b>Chat UI</b>
+
+				<label class="flex-container">
+					<input id="stat-us-max-edit-numbers-from-chat" stat-us-max-setting="editNumbersFromChat" type="checkbox" />
+					Replace input macros in the chat UI with their respective inputs - Check the docs
+				</label>
+
+				<label class="d-flex flex-col flex-start-center gap-5px">
+                    <small class="text-quote">Set the CSS size of range inputs</small>
+					<input id="stat-us-max-range-input-width" stat-us-max-setting="rangeInputWidth" type="text" pattern="[^\s]" class="text_pole textarea_compact mt-0" />
+				</label>
+			</div>
+
+			<div class="flex-container flex-column separator-bottom">
+				<b>Popup Menus</b>
+
+				<label class="flex-container">
+					<input id="stat-us-max-hide-input-labels" stat-us-max-setting="hideInputLabels" type="checkbox" />
+					Hide input labels
+				</label>
 			</div>
 
 			<div class="flex-container flex-column">
