@@ -1,4 +1,4 @@
-import { log } from "../../index.js";
+import { deleteCharTracker, log } from "../../index.js";
 import { chat, chat_metadata, extension_prompt_roles } from "../../../../../../script.js";
 import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { t } from "../../../../../i18n.js";
@@ -396,6 +396,7 @@ export function deleteCharStatus(character) {
             .filter(stat => stat.avatar !== character.avatar);
 
         saveMetadataDebounced();
+        deleteCharTracker(character);
 
         return true;
     } catch (error) {

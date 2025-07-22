@@ -299,10 +299,7 @@ function getSelectedTextInElem(elem) {
     else return {start: -1, end: -1};
 }
 
-function addTracker(status, mesID, character) {
-    const $chat = document.getElementById("chat");
-    const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
-
+export function deleteCharTracker(character) {
     callbacksClickValueUID = callbacksClickValueUID.filter(obj => {
         const result = obj.target !== character.avatar;
 
@@ -313,6 +310,13 @@ function addTracker(status, mesID, character) {
 
     destroyElement(`.mes .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
     destroyElement(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`);
+}
+
+function addTracker(status, mesID, character) {
+    const $chat = document.getElementById("chat");
+    const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
+
+    deleteCharTracker(character);
 
     if (!entriesText || status.depth < 0) return;
 
