@@ -1176,9 +1176,7 @@ function initButtons() {
     });
 
     const groupChatsBlock = document.getElementById("rm_group_chats_block");
-    groupChatsBlock
-        .querySelector('.inline-drawer')
-        .after(hr.cloneNode(), groupStatusContainer, hr.cloneNode());
+    groupChatsBlock.querySelector('.inline-drawer').after(groupStatusContainer);
 }
 
 (async function initExtension() {
