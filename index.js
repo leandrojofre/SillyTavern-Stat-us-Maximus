@@ -427,7 +427,7 @@ function addTracker(status, mesID, character) {
         newText = newText.replaceAll(regexTextInput, (match) => {
             const value = match.replaceAll(/(({{text(::)?)|(}}))/g, "");
             const input = `
-                <span class="fa-solid fa-t m-0 chat-input-icon select-none"></span>
+                <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
                 <input type="text" value="${value}" class="type-text fake-input chat-input-editor" autocomplete="off" size="0">
                 <span class="text-quote">${value}</span>
             `;
@@ -438,7 +438,7 @@ function addTracker(status, mesID, character) {
         newText = newText.replaceAll(regexNumberInput, (match) => {
             const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
             const input = `
-                <span class="fa-solid fa-n m-0 chat-input-icon select-none">
+                <span class="fa-solid fa-n m-0 chat-input-icon select-none cursor-pointer">
                     <span class="fa-solid fa-minus-square m-0 chat-input-icon select-none"></span>
                     <span class="fa-solid fa-plus-square m-0 chat-input-icon select-none"></span>
                 </span>
@@ -1112,6 +1112,8 @@ function initButtons() {
 
     const personasStatusOpenPopupBtn = document.createElement("div");
     personasStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-users-cog", "interactable", "m-0");
+    personasStatusOpenPopupBtn.title = "Open status for all the personas with status";
+    personasStatusOpenPopupBtn.dataset.i18n = "Open status for all the personas with status";
     personasStatusOpenPopupBtn.addEventListener("click", async () => {
         const metadata = chat_metadata.stat_us_maximus.filter(s => s.is_user);
         const users = [];
@@ -1130,6 +1132,8 @@ function initButtons() {
 
     const personaStatusOpenPopupBtn = document.createElement("div");
     personaStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-user-cog", "interactable", "m-0");
+    personaStatusOpenPopupBtn.title = "Open status for the active persona";
+    personaStatusOpenPopupBtn.dataset.i18n = "Open status for the active persona";
     personaStatusOpenPopupBtn.addEventListener("click", async () => {
         const user = getUser();
 
@@ -1141,6 +1145,8 @@ function initButtons() {
 
     const charStatusOpenPopupBtn = document.createElement("div");
     charStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-table", "interactable", "m-0");
+    charStatusOpenPopupBtn.title = "Open status for the active character";
+    charStatusOpenPopupBtn.dataset.i18n = "Open status for the active character";
     charStatusOpenPopupBtn.addEventListener("click", async () => {
         // @ts-ignore
         if (this_chid === undefined) return toastr.warning(t`An active character to edit could not be found`);
@@ -1199,6 +1205,8 @@ function initButtons() {
     });
 
     const groupMembersButton = groupStatusContainer.querySelector('.menu_button.fa-table');
+    groupMembersButton.title = "Open status for all group members";
+    groupMembersButton.dataset.i18n = "Open status for all group members";
     groupMembersButton.addEventListener("click", async () => {
         const chars = getActiveParticipants([{avatar: user_avatar}]);
 
