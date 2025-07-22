@@ -141,6 +141,7 @@ div[name="templatesAndPopupsWrapper"] {
     --stat-us-border-color: var(--SmartThemeBorderColor);
     --stat-us-avatar-height: var(--avatar-base-height);
     --stat-us-avatar-border-radius: 50%;
+    --stat-us-range-margin-top: 5px;
 
     select {
         color: color-mix(in srgb, var(--SmartThemeBodyColor) 50%, transparent);
@@ -223,6 +224,21 @@ div[name="templatesAndPopupsWrapper"] {
     .border-b {
         border-bottom: 1px solid;
         border-color: var(--stat-us-border-color) !important;
+    }
+
+    .border-t {
+        border-top: 1px solid;
+        border-color: var(--stat-us-border-color) !important;
+    }
+
+    .border-y {
+        border-top: 1px solid;
+        border-bottom: 1px solid;
+        border-color: var(--stat-us-border-color) !important;
+    }
+
+    .border-faded {
+        --stat-us-border-color: color-mix(in srgb, var(--SmartThemeBorderColor), transparent 25%);
     }
 
     .text_pole,
@@ -349,6 +365,11 @@ div[name="templatesAndPopupsWrapper"] {
         padding-top: 5px;
     }
 
+    .px-5px {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
     .px-10px {
         padding-left: 10px;
         padding-right: 10px;
@@ -359,9 +380,9 @@ div[name="templatesAndPopupsWrapper"] {
         padding-bottom: 5px;
     }
 
-    .px-5px {
-        padding-left: 5px;
-        padding-right: 5px;
+    .py-10px {
+        padding-top: 10px;
+        padding-bottom: 10px;
     }
 
     .m-0 {
@@ -510,7 +531,7 @@ div[name="templatesAndPopupsWrapper"] {
         max-width: unset;
 
         input[type="range"] {
-            margin-top: 5px !important;
+            margin-top: var(--stat-us-range-margin-top) !important;
         }
 
         input[type="number"] {
