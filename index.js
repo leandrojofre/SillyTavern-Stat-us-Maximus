@@ -51,6 +51,7 @@ const defaultSettings = {
     editNumbersFromChat: false,
     autoDetectParticipants: true,
     hideInputLabels: false,
+    rangeInputWidth: "auto",
     debug: false
 };
 
@@ -939,6 +940,8 @@ export function addGroupStatusButtons() {
 // * Methods in charge of controlling the extension settings
 
 const settingsCallbacks = {
+    rangeInputWidthTimeout: undefined,
+
     /**	Triggers on editNumbersFromChat change. */
     editNumbersFromChat: () => {
         fetchStatus({forceUIUpdate: true});
@@ -949,13 +952,39 @@ const settingsCallbacks = {
         const newDisplay = extensionSettings.hideInputLabels ? 'none' : 'block';
 
         document.documentElement.style.setProperty('--stum-input-label-display', newDisplay);
+    },
+
+    /**	Triggers on rangeInputWidth change. */
+    rangeInputWidth: () => {
+        clearTimeout(settingsCallbacks.rangeInputWidthTimeout);
+
+        const newWidth = String($("#stat-us-max-range-input-width").val());
+
+        settingsCallbacks.rangeInputWidthTimeout = setTimeout(() =>
+            document.documentElement.style.setProperty('--stum-range-input-width', newWidth), 100
+        );
     }
 }
 
-/** Changes a setting value and triggers a callback if there's any on settingsCallbacks. */
+/** Changes a boolean setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsBooleanButton(event) {
     const target = event.target;
     const value = Boolean($(target).prop("checked"));
+    const setting = target.getAttribute("stat-us-max-setting");
+    const callback = settingsCallbacks[setting];
+
+    extensionSettings[setting] = value;
+
+    if (callback) callback();
+
+    log("toggleSetting " + setting, value);
+    saveSettingsDebounced();
+}
+
+/** Changes a string setting value and triggers a callback if there's any on settingsCallbacks. */
+function settingsTextButton(event) {
+    const target = event.target;
+    const value = String($(target).val());
     const setting = target.getAttribute("stat-us-max-setting");
     const callback = settingsCallbacks[setting];
 
@@ -986,6 +1015,7 @@ async function loadHTMLSettings() {
     $("#stat-us-max-auto-detect-participants").on("input", settingsBooleanButton);
     $("#stat-us-max-edit-numbers-from-chat").on("input", settingsBooleanButton);
     $("#stat-us-max-hide-input-labels").on("input", settingsBooleanButton);
+    $("#stat-us-max-range-input-width").on("input", settingsTextButton);
     $("#stat-us-max-debug").on("input", settingsBooleanButton);
     $("#stat-us-max-check-configuration").on("click", displaySettings);
 
@@ -997,6 +1027,7 @@ function setSettings() {
     $("#stat-us-max-auto-detect-participants").prop("checked", extensionSettings.autoDetectParticipants);
     $("#stat-us-max-edit-numbers-from-chat").prop("checked", extensionSettings.editNumbersFromChat);
     $("#stat-us-max-hide-input-labels").prop("checked", extensionSettings.hideInputLabels).trigger("input");
+    $("#stat-us-max-range-input-width").val(extensionSettings.rangeInputWidth).trigger("input");
     $("#stat-us-max-debug").prop("checked", extensionSettings.debug).trigger("input");
 }
 
