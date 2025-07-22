@@ -68,6 +68,12 @@ div[name="templatesAndPopupsWrapper"] {
     }
 }
 
+@keyframes stumcaretblink {
+    0% { opacity: 1; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
 .popup:has(.stat-us-max-popup) {
     background-color: var(--SmartThemeBotMesBlurTintColor);
     border-color: var(--stat-us-border-color) !important;
@@ -490,13 +496,10 @@ div[name="templatesAndPopupsWrapper"] {
     .fake-caret {
         display: inline-block;
         width: 3px;
-        background-color: var(--SmartThemeBodyColor);
-        animation: blink 1s step-end infinite;
         height: 1em;
-    }
-
-    @keyframes blink {
-        50% { opacity: 0; }
+        background-color: var(--SmartThemeBodyColor);
+        animation: stumcaretblink 1s steps(1) infinite;
+        opacity: 1;
     }
 
     span.chat-input-editor {
