@@ -273,7 +273,7 @@ function renderCaret(span, text, caretPos, selectEnd = caretPos) {
 function updateCaretDisplay(input, lastInputValue) {
     const start = input.selectionStart;
     const end = input.selectionEnd;
-    renderCaret(input.nextElementSibling, lastInputValue, start, end);
+    renderCaret(input.nextElementSibling.querySelector('.value'), lastInputValue, start, end);
 }
 
 /**
@@ -429,7 +429,7 @@ function addTracker(status, mesID, character) {
             const input = `
                 <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
                 <input type="text" value="${value}" class="type-text fake-input chat-input-editor" autocomplete="off" size="0">
-                <span class="text-quote">${value}</span>
+                <span class="text-quote"><span class="value">${value}</span></span>
             `;
 
             return input;
@@ -438,12 +438,15 @@ function addTracker(status, mesID, character) {
         newText = newText.replaceAll(regexNumberInput, (match) => {
             const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
             const input = `
-                <span class="fa-solid fa-n m-0 chat-input-icon select-none cursor-pointer">
-                    <span class="fa-solid fa-minus-square m-0 chat-input-icon select-none"></span>
-                    <span class="fa-solid fa-plus-square m-0 chat-input-icon select-none"></span>
-                </span>
+                <span class="fa-solid fa-n m-0 chat-input-icon select-none cursor-pointer"></span>
                 <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0">
-                <span class="text-quote">${value}</span>
+                <span class="text-quote">
+                    <span class="value font-monospace">${value}</span>
+                    <span class="d-inline-flex gap-0 text-body cursor-pointer">
+                        <span class="fa-solid fa-caret-left m-0 chat-input-icon select-none"></span>
+                        <span class="fa-solid fa-caret-right m-0 chat-input-icon select-none opacity-60"></span>
+                    </span>
+                </span>
             `;
 
             return input;
@@ -603,7 +606,7 @@ function addTracker(status, mesID, character) {
                     const eventTargets = [input.nextElementSibling, input.previousElementSibling];
                     let lastValid = input.value;
 
-                    input.nextElementSibling.textContent = " " + (input.value ?? "");
+                    input.nextElementSibling.querySelector('.value').textContent = " " + (input.value ?? "");
 
                     eventTargets.forEach((/**@type {HTMLSpanElement}*/span) => {
                         let spanSelected = false;
@@ -626,7 +629,7 @@ function addTracker(status, mesID, character) {
                             let selection;
 
                             if (span.classList.contains("chat-input-icon")) selection = {start: input.value.length, end: input.value.length};
-                            else selection = getSelectedTextInElem(span);
+                            else selection = getSelectedTextInElem(span.querySelector('.value'));
 
                             input.setSelectionRange(selection.start, selection.end);
                             input.focus();
@@ -649,13 +652,9 @@ function addTracker(status, mesID, character) {
 
                                 setTimeout(() => input.dispatchEvent(direction), 10);
                             });
-                        }
 
-                        if (span.classList.contains("fa-n")) {
-                            /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-minus-square');
-                            /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-plus-square');
-                            const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true, cancelable: true});
-                            const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true});
+                            /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-caret-right');
+                            /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-caret-left');
 
                             minusButton.addEventListener("pointerdown", () => {
                                 input.dispatchEvent(arrowDown);
@@ -701,7 +700,7 @@ function addTracker(status, mesID, character) {
                     }
 
                     input.addEventListener("focus", () => updateCaretDisplay(input, lastValid));
-                    input.addEventListener("blur", () => renderCaret(input.nextElementSibling, lastValid, -1));
+                    input.addEventListener("blur", () => renderCaret(input.nextElementSibling.querySelector('.value'), lastValid, -1));
                 }
             });
 

@@ -208,6 +208,18 @@ div[name="templatesAndPopupsWrapper"] {
         color: var(--SmartThemeQuoteColor);
     }
 
+    .text-body {
+        color: var(--SmartThemeBodyColor);
+    }
+
+    .text-muted {
+        color: color-mix(in srgb, currentColor 85%, black);
+    }
+
+    .font-monospace {
+        font-family: monospace;
+    }
+
     .separator-x {
         border-bottom: 1px solid;
         border-color: var(--stat-us-border-color) !important;
@@ -317,8 +329,8 @@ div[name="templatesAndPopupsWrapper"] {
         font-size: calc(var(--mainFontSize) * 0.9);
     }
 
-    .text-muted {
-        color: color-mix(in srgb, currentColor 85%, black);
+    .opacity-60 {
+        opacity: 60%;
     }
 
     .disabled {
