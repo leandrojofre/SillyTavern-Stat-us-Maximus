@@ -1,5 +1,6 @@
 :root {
     --stum-input-label-display: block;
+    --stum-range-input-width: auto;
 }
 
 #stat-us-max-settings-window div.flex-container.flex-column,
@@ -65,6 +66,12 @@ div[name="templatesAndPopupsWrapper"] {
     .popup.wide_dialogue_popup:has(.stat-us-max-popup) {
         width: 90vw;
     }
+}
+
+@keyframes stumcaretblink {
+    0% { opacity: 1; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
 }
 
 .popup:has(.stat-us-max-popup) {
@@ -196,6 +203,10 @@ div[name="templatesAndPopupsWrapper"] {
         text-align: center;
     }
 
+    .text-quote {
+        color: var(--SmartThemeQuoteColor);
+    }
+
     .separator-x {
         border-bottom: 1px solid;
         border-color: var(--stat-us-border-color) !important;
@@ -233,6 +244,11 @@ div[name="templatesAndPopupsWrapper"] {
     .flex-center-start {
         justify-content: flex-start;
         align-items: center;
+    }
+
+    .flex-start-center {
+        justify-content: center;
+        align-items: flex-start;
     }
 
     .flex-end-start {
@@ -374,15 +390,18 @@ div[name="templatesAndPopupsWrapper"] {
         color: currentColor;
     }
 
-    .kill-switch.fa-toggle-on {
+    .kill-switch.fa-toggle-on,
+    .status-value-uid {
         color: var(--SmartThemeQuoteColor);
     }
 
-    .kill-switch {
+    .kill-switch,
+    .status-value-uid {
         font-size: x-large;
     }
 
-    .kill-switch:hover {
+    .kill-switch:hover,
+    .status-value-uid:hover {
         cursor: pointer;
     }
 
@@ -449,10 +468,46 @@ div[name="templatesAndPopupsWrapper"] {
         min-width: 5ch;
     }
 
+    .chat-input-icon {
+        font-weight: bolder;
+        vertical-align: baseline;
+    }
+
+    .select-none {
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    .fake-input {
+        position: absolute;
+        inset: 0;
+        width: 0;
+        height: 0;
+        opacity: 0;
+        border: none;
+        background: transparent;
+    }
+
+    .fake-selection {
+        background-color: var(--SmartThemeBodyColor);
+        color: var(--SmartThemeBlurTintColor);
+    }
+
+    .fake-caret {
+        display: inline-block;
+        width: 3px;
+        height: 1em;
+        background-color: var(--SmartThemeBodyColor);
+        animation: stumcaretblink 1s steps(1) infinite;
+        opacity: 1;
+    }
+
     span.chat-input-editor {
         display: inline-flex;
         vertical-align: middle;
-        min-width: 8ch;
+        min-width: 5ch;
+        width: var(--stum-range-input-width);
+        max-width: unset;
 
         input[type="range"] {
             margin-top: 5px !important;
@@ -468,7 +523,7 @@ div[name="templatesAndPopupsWrapper"] {
     .input-label {
         display: var(--stum-input-label-display);
     }
-    
+
     .status-value-uid-options * {
         border-radius: 0;
     }
