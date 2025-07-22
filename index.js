@@ -632,26 +632,43 @@ function addTracker(status, mesID, character) {
                             input.focus();
                         });
 
-                        if (!span.classList.contains("fa-n")) return;
+                        if (input.classList.contains("type-number") && span.classList.contains("text-quote")) {
+                            const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true, cancelable: true});
+                            const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true});
 
-                        /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-minus-square');
-                        /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-plus-square');
-                        const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true, cancelable: true});
-                        const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true});
+                            span.addEventListener("wheel", async (e) => {
+                                if (!input.matches(':focus')) return;
 
-                        minusButton.addEventListener("pointerdown", () => {
-                            input.dispatchEvent(arrowDown);
-                            incrementsCooldown = setTimeout(() => {
-                                incrementsPressed = setInterval(() => input.dispatchEvent(arrowDown), 75);
-                            }, 300);
-                        });
+                                let direction;
 
-                        plusButton.addEventListener("pointerdown", () => {
-                            input.dispatchEvent(arrowUp);
-                            incrementsCooldown = setTimeout(() => {
-                                incrementsPressed = setInterval(() => input.dispatchEvent(arrowUp), 75);
-                            }, 300);
-                        });
+                                if (e.deltaY === 0) return;
+                                if (e.deltaY < 0) direction = arrowUp;
+                                if (e.deltaY > 0) direction = arrowDown;
+
+                                setTimeout(() => input.dispatchEvent(direction), 10);
+                            });
+                        }
+
+                        if (span.classList.contains("fa-n")) {
+                            /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-minus-square');
+                            /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-plus-square');
+                            const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true, cancelable: true});
+                            const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true});
+
+                            minusButton.addEventListener("pointerdown", () => {
+                                input.dispatchEvent(arrowDown);
+                                incrementsCooldown = setTimeout(() => {
+                                    incrementsPressed = setInterval(() => input.dispatchEvent(arrowDown), 75);
+                                }, 300);
+                            });
+
+                            plusButton.addEventListener("pointerdown", () => {
+                                input.dispatchEvent(arrowUp);
+                                incrementsCooldown = setTimeout(() => {
+                                    incrementsPressed = setInterval(() => input.dispatchEvent(arrowUp), 75);
+                                }, 300);
+                            });
+                        }
                     });
 
                     input.addEventListener("input", () => {
