@@ -21,10 +21,13 @@ This extension adds a menu per character to have your notes, it is basically a s
 - You can copy and paste entries between characters from the popup Menu (truck button).
 
 ### Menus
-- From the magic wand button (left to the input bar), you can open a popup menu to manage every character status.
-- In single chats, you can open the status popup menu for a single character from the Character Managment menu (right menu).
-- In group chats, click the member avatar in the Current Members dropdown to open it's status popup menu.
-- In all chats, click the pen icon inside the status table placed in the last character message to open its popup menu.
+**Magic wand button** - From the magic wand button (left to the input bar), you can open a popup menu to manage every character status.
+
+**Character Management menu** - In single chats, you can open the status popup menu for the active chat character from the Character Management menu.
+
+**Group Management menu** - In group chats, click the member avatar in the Current Members dropdown to open its status popup menu. You can also click the left button to open the popup menu for all active group members.
+
+**All chats** - In all chats, click the pen icon at the corner of the status table, placed in the last message of each character, to open its popup menu. You can also open your personas popup from the Management menu; middle button for active persona, and right button for all personas with status data.
 
 ### Slash Commands
 - `/stum-create-status` Creates Status data for the selected character, allows you to add data for non-present chat participants.
@@ -57,7 +60,7 @@ This extension adds a menu per character to have your notes, it is basically a s
 - [ ] Shade closed entry drawers in popup menus.
 - [ ] Setting to disable confirm deletion popups.
 - [ ] Setting for default status role.
-- [ ] Per-user open status-menu buttons.
+- [X] Per-user open status-menu buttons.
 - [X] Button to delete status metadata per character.
 - [X] Expand/collapse all entries per character in popup menus.
 - [X] Status transfer button in popup menus.
