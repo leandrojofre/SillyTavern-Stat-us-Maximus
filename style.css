@@ -220,6 +220,18 @@ div[name="templatesAndPopupsWrapper"] {
         font-family: monospace;
     }
 
+    .fw-bolder {
+        font-weight: bolder;
+    }
+
+    .fs-large {
+        font-size: large;
+    }
+
+    .fs-90p {
+        font-size: calc(var(--mainFontSize) * 0.9);
+    }
+
     .separator-x {
         border-bottom: 1px solid;
         border-color: var(--stat-us-border-color) !important;
@@ -319,14 +331,6 @@ div[name="templatesAndPopupsWrapper"] {
 
     .gap-15px {
         gap: 15px;
-    }
-
-    .fw-bolder {
-        font-weight: bolder;
-    }
-
-    .fs-90p {
-        font-size: calc(var(--mainFontSize) * 0.9);
     }
 
     .opacity-60 {

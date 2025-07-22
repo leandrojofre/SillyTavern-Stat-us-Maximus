@@ -442,7 +442,7 @@ function addTracker(status, mesID, character) {
                 <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0">
                 <span class="text-quote">
                     <span class="value font-monospace">${value}</span>
-                    <span class="d-inline-flex gap-0 text-body cursor-pointer">
+                    <span class="d-inline-flex gap-0 text-body cursor-pointer fs-large">
                         <span class="fa-solid fa-caret-left m-0 chat-input-icon select-none"></span>
                         <span class="fa-solid fa-caret-right m-0 chat-input-icon select-none opacity-60"></span>
                     </span>
