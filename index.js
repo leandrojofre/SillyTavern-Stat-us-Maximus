@@ -438,7 +438,10 @@ function addTracker(status, mesID, character) {
         newText = newText.replaceAll(regexNumberInput, (match) => {
             const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
             const input = `
-                <span class="fa-solid fa-n m-0 chat-input-icon select-none"></span>
+                <span class="fa-solid fa-n m-0 chat-input-icon select-none">
+                    <span class="fa-solid fa-minus-square m-0 chat-input-icon select-none"></span>
+                    <span class="fa-solid fa-plus-square m-0 chat-input-icon select-none"></span>
+                </span>
                 <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0">
                 <span class="text-quote">${value}</span>
             `;
@@ -604,6 +607,8 @@ function addTracker(status, mesID, character) {
 
                     eventTargets.forEach((/**@type {HTMLSpanElement}*/span) => {
                         let spanSelected = false;
+                        let incrementsPressed;
+                        let incrementsCooldown;
 
                         span.addEventListener("pointerdown", (e) => {
                             if (spanSelected) return;
@@ -612,6 +617,9 @@ function addTracker(status, mesID, character) {
                         });
 
                         document.addEventListener("click", (e) => {
+                            clearInterval(incrementsPressed);
+                            clearInterval(incrementsCooldown);
+
                             if (!spanSelected) return;
 
                             spanSelected = false;
@@ -622,6 +630,27 @@ function addTracker(status, mesID, character) {
 
                             input.setSelectionRange(selection.start, selection.end);
                             input.focus();
+                        });
+
+                        if (!span.classList.contains("fa-n")) return;
+
+                        /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-minus-square');
+                        /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-plus-square');
+                        const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true, cancelable: true});
+                        const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true});
+
+                        minusButton.addEventListener("pointerdown", () => {
+                            input.dispatchEvent(arrowDown);
+                            incrementsCooldown = setTimeout(() => {
+                                incrementsPressed = setInterval(() => input.dispatchEvent(arrowDown), 75);
+                            }, 300);
+                        });
+
+                        plusButton.addEventListener("pointerdown", () => {
+                            input.dispatchEvent(arrowUp);
+                            incrementsCooldown = setTimeout(() => {
+                                incrementsPressed = setInterval(() => input.dispatchEvent(arrowUp), 75);
+                            }, 300);
                         });
                     });
 
