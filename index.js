@@ -656,14 +656,18 @@ function addTracker(status, mesID, character) {
                             /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-caret-right');
                             /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-caret-left');
 
-                            minusButton.addEventListener("pointerdown", () => {
+                            minusButton.addEventListener("pointerdown", (e) => {
+                                if (e.button === 2) return;
+
                                 input.dispatchEvent(arrowDown);
                                 incrementsCooldown = setTimeout(() => {
                                     incrementsPressed = setInterval(() => input.dispatchEvent(arrowDown), 75);
                                 }, 300);
                             });
 
-                            plusButton.addEventListener("pointerdown", () => {
+                            plusButton.addEventListener("pointerdown", (e) => {
+                                if (e.button === 2) return;
+
                                 input.dispatchEvent(arrowUp);
                                 incrementsCooldown = setTimeout(() => {
                                     incrementsPressed = setInterval(() => input.dispatchEvent(arrowUp), 75);
