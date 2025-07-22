@@ -1084,7 +1084,7 @@ function initButtons() {
         const users = [];
 
         for (const status of metadata) {
-            const user = getParticipant(status.avatar, status.is_user);
+            const user = getUser(status.avatar);
 
             if (user) users.push(user);
         }
@@ -1131,6 +1131,54 @@ function initButtons() {
     const hr = document.createElement("hr");
     const creatorNotesBlock = document.getElementById("spoiler_free_desc");
     creatorNotesBlock.before(charStatusContainer, hr);
+
+    /** Group menu */
+    // @ts-ignore
+    /** @type {HTMLElement} */const groupStatusContainer = charStatusContainer.cloneNode(true);
+    groupStatusContainer.classList.add("wide100p");
+    groupStatusContainer.firstElementChild.classList.add("border", "border-faded");
+
+    const groupPersonasBtn = groupStatusContainer.querySelector('.menu_button.fa-users-cog');
+    groupPersonasBtn.addEventListener("click", async () => {
+        const metadata = chat_metadata.stat_us_maximus.filter(s => s.is_user);
+        const users = [];
+
+        for (const status of metadata) {
+            const user = getUser(status.avatar);
+
+            if (user) users.push(user);
+        }
+
+        // @ts-ignore
+        if (!users.length) return toastr.warning(t`Personas could not be found in the metadata`);
+
+        return await popupStatusMultiChar(users);
+    });
+
+    const groupPersonaBtn = groupStatusContainer.querySelector('.menu_button.fa-user-cog');
+    groupPersonaBtn.addEventListener("click", async () => {
+        const user = getUser();
+
+        // @ts-ignore
+        if (!user) return toastr.warning(t`The persona could not be found`);
+
+        return await popupStatusSingleChar(user);
+    });
+
+    const groupMembersButton = groupStatusContainer.querySelector('.menu_button.fa-table');
+    groupMembersButton.addEventListener("click", async () => {
+        const chars = getActiveParticipants([{avatar: user_avatar}]);
+
+        // @ts-ignore
+        if (!chars.length) return toastr.warning(t`Group members could not be found in the metadata`);
+
+        return await popupStatusMultiChar(chars);
+    });
+
+    const groupChatsBlock = document.getElementById("rm_group_chats_block");
+    groupChatsBlock
+        .querySelector('.inline-drawer')
+        .after(hr.cloneNode(), groupStatusContainer, hr.cloneNode());
 }
 
 (async function initExtension() {
