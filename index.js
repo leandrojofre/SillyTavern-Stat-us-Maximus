@@ -636,8 +636,8 @@ function addTracker(status, mesID, character) {
                         });
 
                         if (input.classList.contains("type-number") && span.classList.contains("text-quote")) {
-                            const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true, cancelable: true});
-                            const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true});
+                            const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: false, cancelable: true});
+                            const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: false, cancelable: true});
 
                             span.addEventListener("wheel", async (e) => {
                                 if (!input.matches(':focus')) return;
