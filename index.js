@@ -639,6 +639,8 @@ function addTracker(status, mesID, character) {
                             span.addEventListener("wheel", async (e) => {
                                 if (!input.matches(':focus')) return;
 
+                                e.preventDefault();
+
                                 let direction;
 
                                 if (e.deltaY === 0) return;
