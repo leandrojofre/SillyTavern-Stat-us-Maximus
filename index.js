@@ -1110,7 +1110,7 @@ function initButtons() {
     charStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-table", "interactable", "m-0");
     charStatusOpenPopupBtn.addEventListener("click", async () => {
         // @ts-ignore
-        if (this_chid !== undefined) toastr.warning(t`An active character to edit could not be found`);
+        if (this_chid === undefined) return toastr.warning(t`An active character to edit could not be found`);
 
         const char = characters[this_chid];
 
