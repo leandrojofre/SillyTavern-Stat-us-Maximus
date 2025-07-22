@@ -141,6 +141,7 @@ div[name="templatesAndPopupsWrapper"] {
     --stat-us-border-color: var(--SmartThemeBorderColor);
     --stat-us-avatar-height: var(--avatar-base-height);
     --stat-us-avatar-border-radius: 50%;
+    --stat-us-range-margin-top: 5px;
 
     select {
         color: color-mix(in srgb, var(--SmartThemeBodyColor) 50%, transparent);
@@ -510,7 +511,7 @@ div[name="templatesAndPopupsWrapper"] {
         max-width: unset;
 
         input[type="range"] {
-            margin-top: 5px !important;
+            margin-top: var(--stat-us-range-margin-top) !important;
         }
 
         input[type="number"] {

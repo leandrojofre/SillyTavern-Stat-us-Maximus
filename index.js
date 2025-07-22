@@ -19,7 +19,7 @@ import { lodash, Popper } from "../../../../lib.js";
     - [X] Highlight row on hover
     - [X] Hide description on disable
     - [X] Reduce font-size
-    - [ ] Button on right nav panel to open user metadata - one for active and another for all
+    - [X] Button on right nav panel to open user metadata - one for active and another for all
     - [X] Use alt title if description is empty
     - [ ] Global Stat not attached to character
     - [X] Fix chat UI select button using a similar approach to character export button - thanks Ross
@@ -1073,29 +1073,56 @@ function initButtons() {
 
     /** Single Character menu */
     const charStatusSpan = document.createElement("span");
-    charStatusSpan.textContent = "Character's Status";
-    charStatusSpan.dataset.i18n = "Character's Status";
+    charStatusSpan.textContent = "Stat-us Maximus";
+    charStatusSpan.dataset.i18n = "Stat-us Maximus";
     charStatusSpan.classList.add("flex-grow-1");
+
+    const personasStatusOpenPopupBtn = document.createElement("div");
+    personasStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-users-cog", "interactable", "m-0");
+    personasStatusOpenPopupBtn.addEventListener("click", async () => {
+        const metadata = chat_metadata.stat_us_maximus.filter(s => s.is_user);
+        const users = [];
+
+        for (const status of metadata) {
+            const user = getParticipant(status.avatar, status.is_user);
+
+            if (user) users.push(user);
+        }
+
+        // @ts-ignore
+        if (!users.length) return toastr.warning(t`Personas could not be found in the metadata`);
+
+        return await popupStatusMultiChar(users);
+    });
+
+    const personaStatusOpenPopupBtn = document.createElement("div");
+    personaStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-user-cog", "interactable", "m-0");
+    personaStatusOpenPopupBtn.addEventListener("click", async () => {
+        const user = getUser();
+
+        // @ts-ignore
+        if (!user) return toastr.warning(t`The persona could not be found`);
+
+        return await popupStatusSingleChar(user);
+    });
 
     const charStatusOpenPopupBtn = document.createElement("div");
     charStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-table", "interactable", "m-0");
     charStatusOpenPopupBtn.addEventListener("click", async () => {
-        if (this_chid !== undefined) {
-            const char = characters[this_chid];
+        // @ts-ignore
+        if (this_chid !== undefined) toastr.warning(t`An active character to edit could not be found`);
 
-            // @ts-ignore
-            if (!char) return toastr.warning(t`The character could not be found`);
-
-            return await popupStatusSingleChar(char);
-        }
+        const char = characters[this_chid];
 
         // @ts-ignore
-        toastr.warning(t`An active character to edit could not be found`);
+        if (!char) return toastr.warning(t`The character could not be found`);
+
+        return await popupStatusSingleChar(char);
     });
 
     const charStatusMenu = document.createElement("div");
     charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px");
-    charStatusMenu.append(charStatusSpan, charStatusOpenPopupBtn);
+    charStatusMenu.append(charStatusSpan, personasStatusOpenPopupBtn, personaStatusOpenPopupBtn, charStatusOpenPopupBtn);
 
     const charStatusContainer = document.createElement("div");
     charStatusContainer.classList.add("stat-us-max-custom-css");
