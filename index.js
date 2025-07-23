@@ -453,8 +453,8 @@ function addTracker(status, mesID, character) {
                 <span class="text-quote">
                     <span class="value font-monospace">${value}</span>
                     <span class="d-inline-flex gap-0 text-body cursor-pointer fs-normal">
-                        <span class="fa-solid fa-caret-left m-0 chat-input-icon select-none"></span>
-                        <span class="fa-solid fa-caret-right m-0 chat-input-icon select-none opacity-60"></span>
+                        <span class="fa-solid fa-caret-left m-0 chat-input-icon select-none opacity-60"></span>
+                        <span class="fa-solid fa-caret-right m-0 chat-input-icon select-none"></span>
                     </span>
                 </span>
             `;
@@ -663,8 +663,8 @@ function addTracker(status, mesID, character) {
                                 setTimeout(() => input.dispatchEvent(direction), 10);
                             });
 
-                            /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-caret-right');
-                            /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-caret-left');
+                            /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-caret-left');
+                            /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-caret-right');
 
                             minusButton.addEventListener("pointerdown", (e) => {
                                 if (e.button === 2) return;
