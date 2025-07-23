@@ -541,6 +541,11 @@ div[name="templatesAndPopupsWrapper"] {
         opacity: 1;
     }
 
+    .text-line .value.show-spaces {
+        background-color: color-mix(in srgb, var(--SmartThemeBlurTintColor), var(--SmartThemeBodyColor) 5%);
+        white-space: break-spaces;
+    }
+
     span.chat-input-editor {
         display: inline-flex;
         vertical-align: middle;

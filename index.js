@@ -439,7 +439,7 @@ function addTracker(status, mesID, character) {
             const input = `
                 <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
                 <input type="text" value="${value}" class="type-text fake-input chat-input-editor" autocomplete="off" size="0">
-                <span class="text-quote"><span class="value">${value}</span></span>
+                <span class="text-quote"><span class="value show-spaces">${value}</span></span>
             `;
 
             return input;
@@ -616,7 +616,7 @@ function addTracker(status, mesID, character) {
                     const eventTargets = [input.nextElementSibling, input.previousElementSibling];
                     let lastValid = input.value;
 
-                    input.nextElementSibling.querySelector('.value').textContent = " " + (input.value ?? "");
+                    input.nextElementSibling.querySelector('.value').textContent = String(input.value ?? "");
 
                     eventTargets.forEach((/**@type {HTMLSpanElement}*/span) => {
                         let spanSelected = false;
