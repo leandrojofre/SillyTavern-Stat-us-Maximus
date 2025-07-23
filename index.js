@@ -69,7 +69,7 @@ export const log = (...msg) => {
     console.log("[" + extensionName + "]", ...msg);
 };
 
-// * Extension methods
+// * MARK:Extension methods
 
 /** Destroys an element and all data associated with it
     @param {string|HTMLElement|Node|JQuery<any>|HTMLElement[]|NodeList} element
@@ -132,22 +132,29 @@ function getUser(value = user_avatar, search_key = "avatar") {
     };
 }
 
+/** MARK:getStatusDepth()
+    @param {object[]} chat
+    @param {object} character
+    @returns {Number}
+*/
 export function getStatusDepth(chat, character) {
-    const lastIndex = chat.findLastIndex((mess) =>{
-        if (mess.is_user)
-            return mess.force_avatar.replace(/(user avatars\/)|(\/thumbnail\?type=persona&file=)/i, "") === character.avatar;
+    const chat_filtered = chat.filter(mes => !mes.is_system)
+    const lastIndex = chat_filtered
+    .findLastIndex(mes =>{
+        if (mes.is_user)
+            return mes.force_avatar.replace(/(user avatars\/)|(\/thumbnail\?type=persona&file=)/i, "") === character.avatar;
 
-        if (mess?.original_avatar !== undefined)
-            return mess.original_avatar === character.avatar;
+        if (mes?.original_avatar !== undefined)
+            return mes.original_avatar === character.avatar;
 
-        if (mess?.force_avatar !== undefined)
-            return mess.force_avatar.replace(/\/thumbnail\?type=avatar&file=/i, "") === character.avatar;
+        if (mes?.force_avatar !== undefined)
+            return mes.force_avatar.replace(/\/thumbnail\?type=avatar&file=/i, "") === character.avatar;
 
-        return mess.name === character.name;
+        return mes.name === character.name;
     });
 
     if (lastIndex < 0) return lastIndex;
-    return chat.length - lastIndex - 1;
+    return chat_filtered.length - lastIndex - 1;
 }
 
 export function getParticipant(avatar, is_user, {field = "avatar"} = {}) {
@@ -312,6 +319,9 @@ export function deleteCharTracker(character) {
     destroyElement(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`);
 }
 
+/**
+    MARK:addTracker()
+*/
 function addTracker(status, mesID, character) {
     const $chat = document.getElementById("chat");
     const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
@@ -890,16 +900,17 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
     return newText;
 }
 
+/**
+    MARK:fetchStatus()
+*/
 export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1)} = {}) {
     if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
 
-    const startID = $('.mes.lastInContext').first().attr('mesid') ?? 0;
-    const realChat = chat.slice(Number(startID));
+    const real_chat = !extension_settings["SillyTavern-Presence"] ? chat.slice(chat_metadata.lastInContextMessageId) : chat;
     const metadata = chat_metadata.stat_us_maximus;
-    const chars = metadata.map(status => getParticipant(status.avatar, status.is_user));
+    const chars = getActiveParticipants();
 
-    if (!metadata?.length) chars.push(...getAllParticipantsInChat(realChat));
-    else chars.push(...getActiveParticipants(chars));
+    if (!metadata?.length) chars.push(...getAllParticipantsInChat(real_chat));
 
     const raw_statuses = chars.map(character => getCharStatus(character));
 
@@ -911,7 +922,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
     if (statuses.length < 1) {
         destroyElement(`.stat-us-max-custom-css.table-container`);
         destroyElement(`.status-value-uid-options.list-group`);
-        return
+        return;
     }
 
     for (let i = 0; i < statuses.length; i++) {
@@ -919,7 +930,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
         if (!character) continue;
 
-        const char_depth = getStatusDepth(realChat, character);
+        const char_depth = getStatusDepth(real_chat, character);
 
         if (statuses[i])
             statuses[i].depth = char_depth;
@@ -992,7 +1003,7 @@ export function addGroupStatusButtons() {
     }
 }
 
-// * Methods in charge of controlling the extension settings
+// * MARK:Methods in charge of controlling the extension settings
 
 const settingsCallbacks = {
     rangeInputWidthTimeout: undefined,
@@ -1086,7 +1097,7 @@ function setSettings() {
     $("#stat-us-max-debug").prop("checked", extensionSettings.debug).trigger("input");
 }
 
-// * Initialize Extension
+// * MARK:Initialize Extension
 
 function initButtons() {
     /** Magic wand menu */
@@ -1226,7 +1237,7 @@ function initButtons() {
         return await popupStatusSingleChar(user);
     });
 
-    const groupMembersButton = groupStatusContainer.querySelector('.menu_button.fa-table');
+    /** @type {HTMLElement} */const groupMembersButton = groupStatusContainer.querySelector('.menu_button.fa-table');
     groupMembersButton.title = "Open status for all group members";
     groupMembersButton.dataset.i18n = "Open status for all group members";
     groupMembersButton.addEventListener("click", async () => {

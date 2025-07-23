@@ -60,7 +60,7 @@ export function startListeners() {
         fetchStatus({newMessID: args[0], depthModifier: 1});
     });
 
-    eventSource.on(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
+    eventSource.makeLast(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
         log("GENERATION_AFTER_COMMANDS", args);
         fetchStatus({depthModifier: 1});
     });

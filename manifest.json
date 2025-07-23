@@ -1,6 +1,6 @@
 {
     "display_name": "Stat-us Maximus",
-    "loading_order": 200,
+    "loading_order": 220,
     "requires": [],
     "optional": [],
     "js": "index.js",
