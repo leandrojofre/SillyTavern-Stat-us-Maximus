@@ -52,6 +52,7 @@ const defaultSettings = {
     autoDetectParticipants: true,
     hideInputLabels: false,
     rangeInputWidth: "auto",
+    showWhiteSpaces: false,
     debug: false
 };
 
@@ -439,7 +440,7 @@ function addTracker(status, mesID, character) {
             const input = `
                 <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
                 <input type="text" value="${value}" class="type-text fake-input chat-input-editor" autocomplete="off" size="0">
-                <span class="text-quote"><span class="value show-spaces">${value}</span></span>
+                <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? "show-spaces" : ""}">${value}</span></span>
             `;
 
             return input;
@@ -615,8 +616,6 @@ function addTracker(status, mesID, character) {
                 } else {
                     const eventTargets = [input.nextElementSibling, input.previousElementSibling];
                     let lastValid = input.value;
-
-                    input.nextElementSibling.querySelector('.value').textContent = String(input.value ?? "");
 
                     eventTargets.forEach((/**@type {HTMLSpanElement}*/span) => {
                         let spanSelected = false;
@@ -1029,6 +1028,15 @@ const settingsCallbacks = {
         settingsCallbacks.rangeInputWidthTimeout = setTimeout(() =>
             document.documentElement.style.setProperty('--stum-range-input-width', newWidth), 100
         );
+    },
+
+    /**	Triggers on showWhiteSpaces change. */
+    showWhiteSpaces: () => {
+        document
+        .querySelectorAll('#chat .stat-us-max-custom-css .text-quote .value')
+        .forEach((/**@type {HTMLSpanElement}*/span) =>
+            span.classList.toggle("show-spaces", extensionSettings.showWhiteSpaces)
+        );
     }
 }
 
@@ -1065,8 +1073,10 @@ function settingsTextButton(event) {
 /**	Logs setting's values. */
 function displaySettings() {
     console.debug("[" + extensionName + "]", `Auto detect participants is ${extensionSettings.autoDetectParticipants ? "active" : "not active"}`);
-    console.debug("[" + extensionName + "]", `Edit numbers from chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Show input macros in chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Hide input labels is ${extensionSettings.hideInputLabels ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Show whitespaces is ${extensionSettings.showWhiteSpaces ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Range input width is set to ${String(extensionSettings.rangeInputWidth)}`);
     console.debug("[" + extensionName + "]", `Debug mode is ${extensionSettings.debug ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", structuredClone(extensionSettings));
 }
@@ -1079,8 +1089,9 @@ async function loadHTMLSettings() {
 
     // Event Listeners for the extension HTML
     $("#stat-us-max-auto-detect-participants").on("input", settingsBooleanButton);
-    $("#stat-us-max-edit-numbers-from-chat").on("input", settingsBooleanButton);
+    $("#stat-us-max-show-input-macros").on("input", settingsBooleanButton);
     $("#stat-us-max-hide-input-labels").on("input", settingsBooleanButton);
+    $("#stat-us-max-show-white-spaces").on("input", settingsBooleanButton);
     $("#stat-us-max-range-input-width").on("input", settingsTextButton);
     $("#stat-us-max-debug").on("input", settingsBooleanButton);
     $("#stat-us-max-check-configuration").on("click", displaySettings);
@@ -1091,7 +1102,8 @@ async function loadHTMLSettings() {
 /** Init setting values on the menu */
 function setSettings() {
     $("#stat-us-max-auto-detect-participants").prop("checked", extensionSettings.autoDetectParticipants);
-    $("#stat-us-max-edit-numbers-from-chat").prop("checked", extensionSettings.editNumbersFromChat);
+    $("#stat-us-max-show-input-macros").prop("checked", extensionSettings.editNumbersFromChat);
+    $("#stat-us-max-show-white-spaces").prop("checked", extensionSettings.showWhiteSpaces);
     $("#stat-us-max-hide-input-labels").prop("checked", extensionSettings.hideInputLabels).trigger("input");
     $("#stat-us-max-range-input-width").val(extensionSettings.rangeInputWidth).trigger("input");
     $("#stat-us-max-debug").prop("checked", extensionSettings.debug).trigger("input");
