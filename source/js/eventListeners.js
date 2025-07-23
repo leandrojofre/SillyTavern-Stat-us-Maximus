@@ -62,7 +62,12 @@ export function startListeners() {
 
     eventSource.makeLast(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
         log("GENERATION_AFTER_COMMANDS", args);
-        fetchStatus({depthModifier: 1});
+
+        const options = {depthModifier: 1};
+
+        if (typeof args[0] === "string") options.generationType = args[0];
+
+        fetchStatus(options);
     });
 
     eventSource.on(event_types.MORE_MESSAGES_LOADED, async (...args) => {

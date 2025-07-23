@@ -136,9 +136,10 @@ function getUser(value = user_avatar, search_key = "avatar") {
 /** MARK:getStatusDepth()
     @param {object[]} chat
     @param {object} character
+    @param {String} generationType
     @returns {Number}
 */
-export function getStatusDepth(chat, character) {
+export function getStatusDepth(chat, character, generationType = "") {
     const chat_filtered = chat.filter(mes => !mes.is_system)
     const lastIndex = chat_filtered
     .findLastIndex(mes =>{
@@ -154,8 +155,13 @@ export function getStatusDepth(chat, character) {
         return mes.name === character.name;
     });
 
+    let correction = generationType === "swipe" ? -2 : -1;
+
     if (lastIndex < 0) return lastIndex;
-    return chat_filtered.length - lastIndex - 1;
+
+    const depth = chat_filtered.length - lastIndex + correction;
+
+    return depth < 0 ? 0 : depth;
 }
 
 export function getParticipant(avatar, is_user, {field = "avatar"} = {}) {
@@ -902,10 +908,10 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
 /**
     MARK:fetchStatus()
 */
-export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1)} = {}) {
+export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1), generationType = ""} = {}) {
     if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
 
-    const real_chat = !extension_settings["SillyTavern-Presence"] ? chat.slice(chat_metadata.lastInContextMessageId) : chat;
+    const real_chat = !extension_settings["Presence"] ? chat.slice(chat_metadata.lastInContextMessageId) : chat;
     const metadata = chat_metadata.stat_us_maximus;
     const chars = getActiveParticipants();
 
@@ -929,7 +935,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
         if (!character) continue;
 
-        const char_depth = getStatusDepth(real_chat, character);
+        const char_depth = getStatusDepth(real_chat, character, generationType);
 
         if (statuses[i])
             statuses[i].depth = char_depth;
