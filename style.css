@@ -534,7 +534,7 @@ div[name="templatesAndPopupsWrapper"] {
 
     .fake-caret {
         display: inline-block;
-        width: 3px;
+        width: 1px;
         height: 1em;
         background-color: var(--SmartThemeBodyColor);
         animation: stumcaretblink 1s steps(1) infinite;
@@ -542,7 +542,7 @@ div[name="templatesAndPopupsWrapper"] {
     }
 
     .text-line .value.show-spaces {
-        background-color: color-mix(in srgb, var(--SmartThemeBlurTintColor), var(--SmartThemeBodyColor) 5%);
+        background-color: color-mix(in srgb, var(--SmartThemeBlurTintColor), var(--SmartThemeBodyColor) 8%);
         white-space: break-spaces;
     }
 
