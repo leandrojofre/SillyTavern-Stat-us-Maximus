@@ -204,24 +204,28 @@ export function formStatusSingleChar(char) {
     }
 
     const textareaStatusSeparator = document.createElement("input");
+    textareaStatusSeparator.autocomplete = "off";
     textareaStatusSeparator.type = "text";
     textareaStatusSeparator.placeholder = t`Entries separator`;
     textareaStatusSeparator.value = escapeNewlines(metadata.separator);
     textareaStatusSeparator.classList.add("text_pole", "m-0");
 
     const textareaDefEntrySeparator = document.createElement("input");
+    textareaDefEntrySeparator.autocomplete = "off";
     textareaDefEntrySeparator.type = "text";
     textareaDefEntrySeparator.placeholder = t`Def. title/description separator`;
     textareaDefEntrySeparator.value = escapeNewlines(metadata.def_entry_separator);
     textareaDefEntrySeparator.classList.add("text_pole", "m-0");
 
     const textareaStatusPrefix = document.createElement("input");
+    textareaStatusPrefix.autocomplete = "off";
     textareaStatusPrefix.type = "text";
     textareaStatusPrefix.placeholder = t`Status prefix`;
     textareaStatusPrefix.value = escapeNewlines(metadata.prefix);
     textareaStatusPrefix.classList.add("text_pole", "m-0");
 
     const textareaStatusSuffix = document.createElement("input");
+    textareaStatusSuffix.autocomplete = "off";
     textareaStatusSuffix.type = "text";
     textareaStatusSuffix.placeholder = t`Status suffix`;
     textareaStatusSuffix.value = escapeNewlines(metadata.suffix);
@@ -291,12 +295,14 @@ export function formStatusSingleChar(char) {
     enableRowBtn.dataset.i18n = "Toggle entry's active state.";
 
     const textareaKey = document.createElement("input");
+    textareaKey.autocomplete = "off";
     textareaKey.type = "text";
     textareaKey.name = "key";
     textareaKey.placeholder = t`Entry title`;
     textareaKey.classList.add("text_pole", "m-0");
 
     const textareaSeparator = document.createElement("input");
+    textareaSeparator.autocomplete = "off";
     textareaSeparator.type = "text";
     textareaSeparator.name = "separator";
     textareaSeparator.placeholder = t`Title/description separator`;
@@ -326,6 +332,7 @@ export function formStatusSingleChar(char) {
     selectAltValues.classList.add("flex-grow-1", "px-5px", "m-0");
 
     const textareaAltKey = document.createElement("input");
+    textareaAltKey.autocomplete = "off";
     textareaAltKey.type = "text";
     textareaAltKey.name = "alt_key";
     textareaAltKey.placeholder = t`Alt description title`;

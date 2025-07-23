@@ -1,12 +1,12 @@
 {
     "display_name": "Stat-us Maximus",
-    "loading_order": 200,
+    "loading_order": 220,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "Leandro Jofre",
-    "version": "0.4.5",
+    "version": "0.4.6",
     "homePage": "https://github.com/leandrojofre/SillyTavern-Stat-us-Maximus.git",
     "auto_update": true
 }

@@ -19,7 +19,7 @@ import { lodash, Popper } from "../../../../lib.js";
     - [X] Highlight row on hover
     - [X] Hide description on disable
     - [X] Reduce font-size
-    - [ ] Button on right nav panel to open user metadata - one for active and another for all
+    - [X] Button on right nav panel to open user metadata - one for active and another for all
     - [X] Use alt title if description is empty
     - [ ] Global Stat not attached to character
     - [X] Fix chat UI select button using a similar approach to character export button - thanks Ross
@@ -51,11 +51,13 @@ const defaultSettings = {
     editNumbersFromChat: false,
     autoDetectParticipants: true,
     hideInputLabels: false,
+    rangeInputWidth: "auto",
+    showWhiteSpaces: false,
     debug: false
 };
 
 const regexTextInput = /({{text)(::[^}\n]*)?(}})/g;
-const regexNumberInput = /({{number)(::[\d]+(\.[\d]+)?)?(}})/g;
+const regexNumberInput = /({{number)(::-?\d+\.?\d*)?(}})/g;
 const regexBooleanInput = /({{boolean)(::((false)|(true))::[^}\n]+::[^}\n]+)?(}})/g;
 const regexRangeInput = /({{range::)([\d]+(\.[\d]+)?)(::[\d]+(\.[\d]+)?){3}(}})/g;
 
@@ -68,7 +70,7 @@ export const log = (...msg) => {
     console.log("[" + extensionName + "]", ...msg);
 };
 
-// * Extension methods
+// * MARK:Extension methods
 
 /** Destroys an element and all data associated with it
     @param {string|HTMLElement|Node|JQuery<any>|HTMLElement[]|NodeList} element
@@ -79,7 +81,7 @@ export function destroyElement(element) {
     elem.find('*').each(function() {
         const child = $(this);
 
-        // Destroy even listeners
+        // Destroy event listeners
         child.off();
 
         // Clean jQuery custom library elements
@@ -131,22 +133,35 @@ function getUser(value = user_avatar, search_key = "avatar") {
     };
 }
 
-export function getStatusDepth(chat, character) {
-    const lastIndex = chat.findLastIndex((mess) =>{
-        if (mess.is_user)
-            return mess.force_avatar.replace(/(user avatars\/)|(\/thumbnail\?type=persona&file=)/i, "") === character.avatar;
+/** MARK:getStatusDepth()
+    @param {object[]} chat
+    @param {object} character
+    @param {String} generationType
+    @returns {Number}
+*/
+export function getStatusDepth(chat, character, generationType = "") {
+    const chat_filtered = chat.filter(mes => !mes.is_system)
+    const lastIndex = chat_filtered
+    .findLastIndex(mes =>{
+        if (mes.is_user)
+            return mes.force_avatar.replace(/(user avatars\/)|(\/thumbnail\?type=persona&file=)/i, "") === character.avatar;
 
-        if (mess?.original_avatar !== undefined)
-            return mess.original_avatar === character.avatar;
+        if (mes?.original_avatar !== undefined)
+            return mes.original_avatar === character.avatar;
 
-        if (mess?.force_avatar !== undefined)
-            return mess.force_avatar.replace(/\/thumbnail\?type=avatar&file=/i, "") === character.avatar;
+        if (mes?.force_avatar !== undefined)
+            return mes.force_avatar.replace(/\/thumbnail\?type=avatar&file=/i, "") === character.avatar;
 
-        return mess.name === character.name;
+        return mes.name === character.name;
     });
 
+    let correction = generationType === "swipe" ? -2 : -1;
+
     if (lastIndex < 0) return lastIndex;
-    return chat.length - lastIndex - 1;
+
+    const depth = chat_filtered.length - lastIndex + correction;
+
+    return depth < 0 ? 0 : depth;
 }
 
 export function getParticipant(avatar, is_user, {field = "avatar"} = {}) {
@@ -214,7 +229,7 @@ function replaceSkip(str, search, replaceWith, targetIndex) {
 
     return str.replaceAll(search, match => {
         count++;
-        log (search, match, count, targetIndex, count === targetIndex);
+
         return count === targetIndex ? replaceWith : match;
     });
 }
@@ -256,10 +271,49 @@ function hidePopper(popperInstance, tooltip) {
     }));
 }
 
-function addTracker(status, mesID, character) {
-    const $chat = document.getElementById("chat");
-    const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
+function renderCaret(span, text, caretPos, selectEnd = caretPos) {
+    const esc = s => lodash.escape(s);
 
+    if (caretPos < 0) return span.textContent = text;
+
+    const before = esc(text.slice(0, caretPos));
+    const selected = caretPos !== selectEnd ? esc(text.slice(caretPos, selectEnd)) : false;
+    const after = esc(text.slice(selectEnd));
+
+    if (!selected) span.innerHTML = `${before}<span class="fake-caret"></span>${after}`;
+    else span.innerHTML = `${before}<span class="fake-selection">${selected}</span>${after}`;
+}
+
+function updateCaretDisplay(input, lastInputValue) {
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    renderCaret(input.nextElementSibling.querySelector('.value'), lastInputValue, start, end);
+}
+
+/**
+    @param {HTMLElement} elem
+    @returns {object}
+*/
+function getSelectedTextInElem(elem) {
+    const selection = window.getSelection();
+
+    if (!selection?.rangeCount) return {start: -1, end: -1};
+
+    const range = selection.getRangeAt(0);
+
+    if (elem.contains(range.startContainer) && elem.contains(range.endContainer))
+        return {start: range.startOffset, end: range.endOffset};
+
+    else if (elem.contains(range.startContainer))
+        return {start: range.startOffset, end: elem.textContent.length};
+
+    else if (elem.contains(range.endContainer))
+        return {start: 0, end: range.endOffset};
+
+    else return {start: -1, end: -1};
+}
+
+export function deleteCharTracker(character) {
     callbacksClickValueUID = callbacksClickValueUID.filter(obj => {
         const result = obj.target !== character.avatar;
 
@@ -270,6 +324,16 @@ function addTracker(status, mesID, character) {
 
     destroyElement(`.mes .stat-us-max-custom-css[avatar-target="${character.avatar}"]`);
     destroyElement(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`);
+}
+
+/**
+    MARK:addTracker()
+*/
+function addTracker(status, mesID, character) {
+    const $chat = document.getElementById("chat");
+    const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
+
+    deleteCharTracker(character);
 
     if (!entriesText || status.depth < 0) return;
 
@@ -293,7 +357,7 @@ function addTracker(status, mesID, character) {
                     <span class="status-separator"></span>
                     <span class="status-description d-contents"></span>
                 </p>
-                <button class="status-value-uid menu_button menu_button_icon fa-solid fa-list-1-2 m-0" aria-describedby="tooltip"></button>
+                <div class="status-value-uid fa-solid fa-bars-progress m-0" aria-describedby="tooltip"></div>
             </div>
         </td>
     `;
@@ -329,6 +393,10 @@ function addTracker(status, mesID, character) {
     let formDebounceTimer;
 
     const el = (target, class_name) => target.querySelector(class_name);
+
+    const dispatchInput = (/**@type {HTMLElement}*/target) => {
+        setTimeout(() => target.dispatchEvent(inputEvent), 10);
+    }
 
     /** @param {HTMLElement} el */
     const toggleSwitch = (el, callback = (param) => {}) => {
@@ -375,14 +443,28 @@ function addTracker(status, mesID, character) {
 
         newText = newText.replaceAll(regexTextInput, (match) => {
             const value = match.replaceAll(/(({{text(::)?)|(}}))/g, "");
-            const input = `<input type="text" value="${value}" class="text_pole m-0 chat-input-editor">`;
+            const input = `
+                <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
+                <input type="text" value="${value}" class="type-text fake-input chat-input-editor" autocomplete="off" size="0">
+                <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? "show-spaces" : ""}">${value}</span></span>
+            `;
 
             return input;
         });
 
         newText = newText.replaceAll(regexNumberInput, (match) => {
             const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
-            const input = `<input type="number" value="${value === "" ? "0" : value}" class="text_pole m-0 chat-input-editor">`;
+            const input = `
+                <span class="fa-solid fa-n m-0 chat-input-icon select-none cursor-pointer"></span>
+                <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0">
+                <span class="text-quote">
+                    <span class="value font-monospace">${value}</span>
+                    <span class="d-inline-flex gap-0 text-body cursor-pointer fs-normal">
+                        <span class="fa-solid fa-caret-left m-0 chat-input-icon select-none opacity-60"></span>
+                        <span class="fa-solid fa-caret-right m-0 chat-input-icon select-none"></span>
+                    </span>
+                </span>
+            `;
 
             return input;
         });
@@ -393,8 +475,8 @@ function addTracker(status, mesID, character) {
             const trueValue = props[1] ?? "true";
             const falseValue = props[2] ?? "false";
             const input = `
-                <input type="checkbox" ${checked === "true" ? "checked" : ""} data-true="${trueValue}" data-false="${falseValue}" class="m-0 chat-input-editor">
-                <span class="ignore"> ${checked === "true" ? trueValue : falseValue}</span>
+                <input type="checkbox" ${checked === "true" ? "checked" : ""} data-true="${trueValue}" data-false="${falseValue}" class="type-checkbox m-0 chat-input-editor">
+                <span class="text-quote"> ${checked === "true" ? trueValue : falseValue}</span>
             `;
 
             return input;
@@ -407,7 +489,7 @@ function addTracker(status, mesID, character) {
             const step = props[2];
             const value = props[3];
             const input = `
-                <span class="d-flex flex-col flex-center gap-0 chat-input-editor ignore">
+                <span class="d-flex flex-col flex-center gap-0 type-range chat-input-editor">
                     <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider">
                     <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input">
                 </span>
@@ -446,14 +528,14 @@ function addTracker(status, mesID, character) {
             }
 
             if (chunk instanceof HTMLInputElement) {
-                if (chunk.type === "text") {
+                if (chunk.classList.contains("type-text")) {
                     const value = chunk.value;
                     index = ++countText;
                     match = regexTextInput;
                     newMacro = `{{text${value.length > 0 ? "::" : ""}${value}}}`;
                 }
 
-                if (chunk.type === "number") {
+                if (chunk.classList.contains("type-number")) {
                     const value = chunk.value;
                     index = ++countNumber;
                     match = regexNumberInput;
@@ -516,8 +598,9 @@ function addTracker(status, mesID, character) {
             if (!extensionSettings.editNumbersFromChat) return;
 
             el(newRow, el_target)
-            .querySelectorAll('input[type="text"]')
+            .querySelectorAll('input.type-text[type="text"]')
             .forEach((/**@type {HTMLInputElement}*/input) => {
+
                 input.onkeydown = (event) => {
                     if (/[{}\n]/.test(event.key)) event.preventDefault();
                 }
@@ -526,18 +609,118 @@ function addTracker(status, mesID, character) {
             el(newRow, el_target)
             .querySelectorAll('input.chat-input-editor')
             .forEach((/**@type {HTMLInputElement}*/input) => {
+
                 if (input.type === "checkbox") {
                     input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
-                };
 
-                input.addEventListener("input", () => {
-                    if (input.type === "checkbox") {
+                    input.addEventListener("input", () => {
                         input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
-                    };
 
-                    el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
-                    form.dispatchEvent(inputEvent);
-                });
+                        el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
+                        dispatchInput(form);
+                    });
+                } else {
+                    const eventTargets = [input.nextElementSibling, input.previousElementSibling];
+                    let lastValid = input.value;
+
+                    eventTargets.forEach((/**@type {HTMLSpanElement}*/span) => {
+                        let spanSelected = false;
+                        let incrementsPressed;
+                        let incrementsCooldown;
+
+                        span.addEventListener("pointerdown", (e) => {
+                            if (spanSelected) return;
+
+                            spanSelected = true;
+                        });
+
+                        document.addEventListener("click", (e) => {
+                            clearInterval(incrementsPressed);
+                            clearInterval(incrementsCooldown);
+
+                            if (!spanSelected) return;
+
+                            spanSelected = false;
+                            let selection;
+
+                            if (span.classList.contains("chat-input-icon")) selection = {start: input.value.length, end: input.value.length};
+                            else selection = getSelectedTextInElem(span.querySelector('.value'));
+
+                            input.setSelectionRange(selection.start, selection.end);
+                            input.focus();
+                        });
+
+                        if (input.classList.contains("type-number") && span.classList.contains("text-quote")) {
+                            const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: false, cancelable: true});
+                            const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: false, cancelable: true});
+
+                            span.addEventListener("wheel", async (e) => {
+                                if (!input.matches(':focus')) return;
+
+                                e.preventDefault();
+
+                                let direction;
+
+                                if (e.deltaY === 0) return;
+                                if (e.deltaY < 0) direction = arrowUp;
+                                if (e.deltaY > 0) direction = arrowDown;
+
+                                setTimeout(() => input.dispatchEvent(direction), 10);
+                            });
+
+                            /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-caret-left');
+                            /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-caret-right');
+
+                            minusButton.addEventListener("pointerdown", (e) => {
+                                if (e.button === 2) return;
+
+                                input.dispatchEvent(arrowDown);
+                                incrementsCooldown = setTimeout(() => {
+                                    incrementsPressed = setInterval(() => input.dispatchEvent(arrowDown), 75);
+                                }, 300);
+                            });
+
+                            plusButton.addEventListener("pointerdown", (e) => {
+                                if (e.button === 2) return;
+
+                                input.dispatchEvent(arrowUp);
+                                incrementsCooldown = setTimeout(() => {
+                                    incrementsPressed = setInterval(() => input.dispatchEvent(arrowUp), 75);
+                                }, 300);
+                            });
+                        }
+                    });
+
+                    input.addEventListener("input", () => {
+                        if (input.hasAttribute("pattern")) {
+                            const regex = new RegExp(input.getAttribute("pattern"));
+
+                            if (regex.test(input.value)) lastValid = input.value;
+                            else input.value = lastValid;
+                        } else lastValid = input.value;
+
+                        el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
+                        dispatchInput(form);
+                    });
+
+                    if (input.classList.contains("type-number")) {
+                        input.addEventListener("keydown", (e) => {
+                            if (!["ArrowUp", "ArrowDown"].includes(e.key)) return setTimeout(() => updateCaretDisplay(input, lastValid), 10);
+
+                            e.preventDefault();
+
+                            input.value = String(Number(input.value) + ((e.key === "ArrowUp") ? 1 : -1));
+
+                            dispatchInput(input);
+                            setTimeout(() => updateCaretDisplay(input, lastValid), 10);
+                        });
+                    } else {
+                        input.addEventListener("keydown", () => setTimeout(() => updateCaretDisplay(input, lastValid), 10));
+                    }
+
+                    input.addEventListener("focus", () => updateCaretDisplay(input, lastValid));
+                    input.addEventListener("blur", () => renderCaret(input.nextElementSibling.querySelector('.value'), lastValid, -1));
+                }
             });
 
             el(newRow, el_target)
@@ -554,7 +737,7 @@ function addTracker(status, mesID, character) {
                     inputRange.value = original.value;
 
                     el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
-                    form.dispatchEvent(inputEvent);
+                    dispatchInput(form);
                 });
             });
         }
@@ -574,7 +757,7 @@ function addTracker(status, mesID, character) {
         form.addEventListener("input", () => {
             clearTimeout(formDebounceTimer);
 
-            formDebounceTimer = window.setTimeout(() => form.requestSubmit(), DEBOUNCE_MS);
+            formDebounceTimer = setTimeout(() => form.requestSubmit(), DEBOUNCE_MS);
         });
 
         killSwitch.addEventListener("click", (e) => {
@@ -585,7 +768,7 @@ function addTracker(status, mesID, character) {
                 el(newRow, '.hover-highlight').classList.toggle('disabled', !state);
             });
 
-            form.dispatchEvent(inputEvent);
+            dispatchInput(form);
         });
 
         // Set up UI
@@ -622,7 +805,7 @@ function addTracker(status, mesID, character) {
             for (const alt_val of entry.alt_values) {
                 const option = document.createElement("div");
                 option.setAttribute("value", String(alt_val.uid));
-                option.innerText = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
+                option.textContent = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
                 option.classList.add("list-group-item");
 
                 option.addEventListener("click", async () => {
@@ -633,6 +816,7 @@ function addTracker(status, mesID, character) {
                     el(form, 'input[name="value_uid"]').value = alt.uid;
 
                     hidePopper(selectValueUIDPopper, optionsValueUID);
+                    callbacksClickValueUID = callbacksClickValueUID.filter(obj => obj.target !== character.avatar);
 
                     let formText = alt.value;
                     let formTarget = "value";
@@ -643,7 +827,7 @@ function addTracker(status, mesID, character) {
                     }
 
                     updateDescription(formText, '.status-description', formTarget);
-                    form.dispatchEvent(inputEvent);
+                    dispatchInput(form);
                 });
 
                 optionsValueUID.append(option);
@@ -656,10 +840,7 @@ function addTracker(status, mesID, character) {
                     target: character.avatar,
                     popper: selectValueUIDPopper,
                     callback: (clickTarget) => {
-                        if (
-                            !clickTarget.closest(`div[avatar-target="${character.avatar}"] select.status-value-uid`) &&
-                            !clickTarget.closest(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`)
-                        ) {
+                        if (!clickTarget.closest(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`)) {
                             hidePopper(selectValueUIDPopper, optionsValueUID);
                             callbacksClickValueUID = callbacksClickValueUID.filter(obj => obj.target !== character.avatar);
                         }
@@ -724,16 +905,17 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
     return newText;
 }
 
-export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1)} = {}) {
+/**
+    MARK:fetchStatus()
+*/
+export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1), generationType = ""} = {}) {
     if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
 
-    const startID = $('.mes.lastInContext').first().attr('mesid') ?? 0;
-    const realChat = chat.slice(Number(startID));
+    const real_chat = !extension_settings["Presence"] ? chat.slice(chat_metadata.lastInContextMessageId) : chat;
     const metadata = chat_metadata.stat_us_maximus;
-    const chars = metadata.map(status => getParticipant(status.avatar, status.is_user));
+    const chars = getActiveParticipants();
 
-    if (!metadata?.length) chars.push(...getAllParticipantsInChat(realChat));
-    else chars.push(...getActiveParticipants(chars));
+    if (!metadata?.length) chars.push(...getAllParticipantsInChat(real_chat));
 
     const raw_statuses = chars.map(character => getCharStatus(character));
 
@@ -745,7 +927,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
     if (statuses.length < 1) {
         destroyElement(`.stat-us-max-custom-css.table-container`);
         destroyElement(`.status-value-uid-options.list-group`);
-        return
+        return;
     }
 
     for (let i = 0; i < statuses.length; i++) {
@@ -753,7 +935,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
         if (!character) continue;
 
-        const char_depth = getStatusDepth(realChat, character);
+        const char_depth = getStatusDepth(real_chat, character, generationType);
 
         if (statuses[i])
             statuses[i].depth = char_depth;
@@ -826,9 +1008,11 @@ export function addGroupStatusButtons() {
     }
 }
 
-// * Methods in charge of controlling the extension settings
+// * MARK:Methods in charge of controlling the extension settings
 
 const settingsCallbacks = {
+    rangeInputWidthTimeout: undefined,
+
     /**	Triggers on editNumbersFromChat change. */
     editNumbersFromChat: () => {
         fetchStatus({forceUIUpdate: true});
@@ -839,10 +1023,30 @@ const settingsCallbacks = {
         const newDisplay = extensionSettings.hideInputLabels ? 'none' : 'block';
 
         document.documentElement.style.setProperty('--stum-input-label-display', newDisplay);
+    },
+
+    /**	Triggers on rangeInputWidth change. */
+    rangeInputWidth: () => {
+        clearTimeout(settingsCallbacks.rangeInputWidthTimeout);
+
+        const newWidth = String($("#stat-us-max-range-input-width").val());
+
+        settingsCallbacks.rangeInputWidthTimeout = setTimeout(() =>
+            document.documentElement.style.setProperty('--stum-range-input-width', newWidth), 100
+        );
+    },
+
+    /**	Triggers on showWhiteSpaces change. */
+    showWhiteSpaces: () => {
+        document
+        .querySelectorAll('#chat .stat-us-max-custom-css .text-quote .value')
+        .forEach((/**@type {HTMLSpanElement}*/span) =>
+            span.classList.toggle("show-spaces", extensionSettings.showWhiteSpaces)
+        );
     }
 }
 
-/** Changes a setting value and triggers a callback if there's any on settingsCallbacks. */
+/** Changes a boolean setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsBooleanButton(event) {
     const target = event.target;
     const value = Boolean($(target).prop("checked"));
@@ -857,11 +1061,28 @@ function settingsBooleanButton(event) {
     saveSettingsDebounced();
 }
 
+/** Changes a string setting value and triggers a callback if there's any on settingsCallbacks. */
+function settingsTextButton(event) {
+    const target = event.target;
+    const value = String($(target).val());
+    const setting = target.getAttribute("stat-us-max-setting");
+    const callback = settingsCallbacks[setting];
+
+    extensionSettings[setting] = value;
+
+    if (callback) callback();
+
+    log("toggleSetting " + setting, value);
+    saveSettingsDebounced();
+}
+
 /**	Logs setting's values. */
 function displaySettings() {
     console.debug("[" + extensionName + "]", `Auto detect participants is ${extensionSettings.autoDetectParticipants ? "active" : "not active"}`);
-    console.debug("[" + extensionName + "]", `Edit numbers from chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Show input macros in chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Hide input labels is ${extensionSettings.hideInputLabels ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Show whitespaces is ${extensionSettings.showWhiteSpaces ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Range input width is set to ${String(extensionSettings.rangeInputWidth)}`);
     console.debug("[" + extensionName + "]", `Debug mode is ${extensionSettings.debug ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", structuredClone(extensionSettings));
 }
@@ -874,8 +1095,10 @@ async function loadHTMLSettings() {
 
     // Event Listeners for the extension HTML
     $("#stat-us-max-auto-detect-participants").on("input", settingsBooleanButton);
-    $("#stat-us-max-edit-numbers-from-chat").on("input", settingsBooleanButton);
+    $("#stat-us-max-show-input-macros").on("input", settingsBooleanButton);
     $("#stat-us-max-hide-input-labels").on("input", settingsBooleanButton);
+    $("#stat-us-max-show-white-spaces").on("input", settingsBooleanButton);
+    $("#stat-us-max-range-input-width").on("input", settingsTextButton);
     $("#stat-us-max-debug").on("input", settingsBooleanButton);
     $("#stat-us-max-check-configuration").on("click", displaySettings);
 
@@ -885,12 +1108,14 @@ async function loadHTMLSettings() {
 /** Init setting values on the menu */
 function setSettings() {
     $("#stat-us-max-auto-detect-participants").prop("checked", extensionSettings.autoDetectParticipants);
-    $("#stat-us-max-edit-numbers-from-chat").prop("checked", extensionSettings.editNumbersFromChat);
-    $("#stat-us-max-hide-input-labels").prop("checked", extensionSettings.hideInputLabels);
+    $("#stat-us-max-show-input-macros").prop("checked", extensionSettings.editNumbersFromChat);
+    $("#stat-us-max-show-white-spaces").prop("checked", extensionSettings.showWhiteSpaces);
+    $("#stat-us-max-hide-input-labels").prop("checked", extensionSettings.hideInputLabels).trigger("input");
+    $("#stat-us-max-range-input-width").val(extensionSettings.rangeInputWidth).trigger("input");
     $("#stat-us-max-debug").prop("checked", extensionSettings.debug).trigger("input");
 }
 
-// * Initialize Extension
+// * MARK:Initialize Extension
 
 function initButtons() {
     /** Magic wand menu */
@@ -932,37 +1157,118 @@ function initButtons() {
 
     /** Single Character menu */
     const charStatusSpan = document.createElement("span");
-    charStatusSpan.textContent = "Character's Status";
-    charStatusSpan.dataset.i18n = "Character's Status";
+    charStatusSpan.textContent = "Stat-us Maximus";
+    charStatusSpan.dataset.i18n = "Stat-us Maximus";
     charStatusSpan.classList.add("flex-grow-1");
 
-    const charStatusOpenPopupBtn = document.createElement("div");
-    charStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-table", "interactable", "m-0");
-    charStatusOpenPopupBtn.addEventListener("click", async () => {
-        if (this_chid !== undefined) {
-            const char = characters[this_chid];
+    const personasStatusOpenPopupBtn = document.createElement("div");
+    personasStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-users-cog", "interactable", "m-0");
+    personasStatusOpenPopupBtn.title = "Open status for all the personas with status";
+    personasStatusOpenPopupBtn.dataset.i18n = "Open status for all the personas with status";
+    personasStatusOpenPopupBtn.addEventListener("click", async () => {
+        const metadata = chat_metadata.stat_us_maximus.filter(s => s.is_user);
+        const users = [];
 
-            // @ts-ignore
-            if (!char) return toastr.warning(t`The character could not be found`);
+        for (const status of metadata) {
+            const user = getUser(status.avatar);
 
-            return await popupStatusSingleChar(char);
+            if (user) users.push(user);
         }
 
         // @ts-ignore
-        toastr.warning(t`An active character to edit could not be found`);
+        if (!users.length) return toastr.warning(t`Personas could not be found in the metadata`);
+
+        return await popupStatusMultiChar(users);
+    });
+
+    const personaStatusOpenPopupBtn = document.createElement("div");
+    personaStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-user-cog", "interactable", "m-0");
+    personaStatusOpenPopupBtn.title = "Open status for the active persona";
+    personaStatusOpenPopupBtn.dataset.i18n = "Open status for the active persona";
+    personaStatusOpenPopupBtn.addEventListener("click", async () => {
+        const user = getUser();
+
+        // @ts-ignore
+        if (!user) return toastr.warning(t`The persona could not be found`);
+
+        return await popupStatusSingleChar(user);
+    });
+
+    const charStatusOpenPopupBtn = document.createElement("div");
+    charStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-table", "interactable", "m-0");
+    charStatusOpenPopupBtn.title = "Open status for the active character";
+    charStatusOpenPopupBtn.dataset.i18n = "Open status for the active character";
+    charStatusOpenPopupBtn.addEventListener("click", async () => {
+        // @ts-ignore
+        if (this_chid === undefined) return toastr.warning(t`An active character to edit could not be found`);
+
+        const char = characters[this_chid];
+
+        // @ts-ignore
+        if (!char) return toastr.warning(t`The character could not be found`);
+
+        return await popupStatusSingleChar(char);
     });
 
     const charStatusMenu = document.createElement("div");
-    charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px");
-    charStatusMenu.append(charStatusSpan, charStatusOpenPopupBtn);
+    charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px", "separator-bottom");
+    charStatusMenu.append(charStatusSpan, charStatusOpenPopupBtn, personaStatusOpenPopupBtn, personasStatusOpenPopupBtn);
 
     const charStatusContainer = document.createElement("div");
     charStatusContainer.classList.add("stat-us-max-custom-css");
     charStatusContainer.append(charStatusMenu);
 
-    const hr = document.createElement("hr");
     const creatorNotesBlock = document.getElementById("spoiler_free_desc");
-    creatorNotesBlock.before(charStatusContainer, hr);
+    creatorNotesBlock.before(charStatusContainer);
+
+    /** Group menu */
+    // @ts-ignore
+    /** @type {HTMLElement} */const groupStatusContainer = charStatusContainer.cloneNode(true);
+    groupStatusContainer.classList.add("wide100p");
+    groupStatusContainer.firstElementChild.classList.add("border", "border-faded");
+    groupStatusContainer.firstElementChild.classList.remove("separator-bottom");
+
+    const groupPersonasBtn = groupStatusContainer.querySelector('.menu_button.fa-users-cog');
+    groupPersonasBtn.addEventListener("click", async () => {
+        const metadata = chat_metadata.stat_us_maximus.filter(s => s.is_user);
+        const users = [];
+
+        for (const status of metadata) {
+            const user = getUser(status.avatar);
+
+            if (user) users.push(user);
+        }
+
+        // @ts-ignore
+        if (!users.length) return toastr.warning(t`Personas could not be found in the metadata`);
+
+        return await popupStatusMultiChar(users);
+    });
+
+    const groupPersonaBtn = groupStatusContainer.querySelector('.menu_button.fa-user-cog');
+    groupPersonaBtn.addEventListener("click", async () => {
+        const user = getUser();
+
+        // @ts-ignore
+        if (!user) return toastr.warning(t`The persona could not be found`);
+
+        return await popupStatusSingleChar(user);
+    });
+
+    /** @type {HTMLElement} */const groupMembersButton = groupStatusContainer.querySelector('.menu_button.fa-table');
+    groupMembersButton.title = "Open status for all group members";
+    groupMembersButton.dataset.i18n = "Open status for all group members";
+    groupMembersButton.addEventListener("click", async () => {
+        const chars = getActiveParticipants([{avatar: user_avatar}]);
+
+        // @ts-ignore
+        if (!chars.length) return toastr.warning(t`Group members could not be found in the metadata`);
+
+        return await popupStatusMultiChar(chars);
+    });
+
+    const groupChatsBlock = document.getElementById("rm_group_chats_block");
+    groupChatsBlock.querySelector('.inline-drawer').after(groupStatusContainer);
 }
 
 (async function initExtension() {
