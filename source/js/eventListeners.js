@@ -20,7 +20,7 @@ export function startListeners() {
 
         if (extensionSettings.autoDetectParticipants)
             for (const char of getActiveParticipants()) {
-                if (!getCharStatus(char)) createCharStatus(char, getStatusDepth(chat, char));
+                if (!getCharStatus(char)) createCharStatus(char, getStatusDepth(chat, char).depth);
             }
 
         addGroupStatusButtons();
