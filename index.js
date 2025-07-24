@@ -155,13 +155,14 @@ export function getStatusDepth(chat, character, generationType = "") {
         return mes.name === character.name;
     });
 
-    let correction = generationType === "swipe" ? -2 : -1;
+    let correction = (generationType === "swipe" && selected_group) ? -2 : -1;
 
-    if (lastIndex < 0) return lastIndex;
+    if (lastIndex < 0) return {depth: -1, last_mes_id: -1};
 
     const depth = chat_filtered.length - lastIndex + correction;
+    const last_mes_id = lastIndex;
 
-    return depth < 0 ? 0 : depth;
+    return depth < 0 ? {depth: -1, last_mes_id: -1} : {depth, last_mes_id};
 }
 
 export function getParticipant(avatar, is_user, {field = "avatar"} = {}) {
@@ -329,15 +330,17 @@ export function deleteCharTracker(character) {
 /**
     MARK:addTracker()
 */
-function addTracker(status, mesID, character) {
+function addTracker(status, character) {
     const $chat = document.getElementById("chat");
     const entriesText = status.entries.reduce((acu, entry) => acu + entry.key + entry.value, "");
 
     deleteCharTracker(character);
 
-    if (!entriesText || status.depth < 0) return;
+    if (!entriesText || status.depth < 0 || status.last_mes_id < 0) return;
 
-    status.last_mes_id = mesID - status.depth;
+    const mesText = $chat.querySelector(`.mes[mesid="${status.last_mes_id}"] .mes_text`);
+
+    if (!mesText) return;
 
     /** Create Status form template */
     const statusRow = document.createElement("tr");
@@ -853,11 +856,7 @@ function addTracker(status, mesID, character) {
     }
 
     /** Insert table in chat */
-    const messText = $chat.querySelector(`.mes[mesid="${status.last_mes_id}"] .mes_text`);
-
-    if (!messText) return;
-
-    messText.parentNode.insertBefore(statusTableContainer, messText);
+    mesText.parentNode.insertBefore(statusTableContainer, mesText);
     toggleVisibility(statusTableBody, status.is_collapsed ?? false);
 }
 
@@ -917,39 +916,50 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
     if (!metadata?.length) chars.push(...getAllParticipantsInChat(real_chat));
 
-    const raw_statuses = chars.map(character => getCharStatus(character));
+    const raw_data = chars.map(character => ({
+        char: character,
+        status: getCharStatus(character)
+    }));
 
     for (const key of Object.keys(extension_prompts))
         if (key.includes(extensionName.toLowerCase())) delete extension_prompts[key];
 
-    const statuses = raw_statuses.filter(stat => stat !== false);
+    const data = raw_data.filter(data => data.status !== false);
 
-    if (statuses.length < 1) {
+    if (data.length < 1) {
         destroyElement(`.stat-us-max-custom-css.table-container`);
         destroyElement(`.status-value-uid-options.list-group`);
         return;
     }
 
-    for (let i = 0; i < statuses.length; i++) {
-        const character = chars[i];
+    for (let i = 0; i < data.length; i++) {
+        const character = data[i].char;
 
         if (!character) continue;
 
         const char_depth = getStatusDepth(real_chat, character, generationType);
 
-        if (statuses[i])
-            statuses[i].depth = char_depth;
-        else if (extensionSettings.autoDetectParticipants)
-            statuses[i] = createCharStatus(character, char_depth);
-        else continue;
+        if (!data[i].status && extensionSettings.autoDetectParticipants)
+            data[i].status = createCharStatus(character);
+
+        if (!data[i].status) continue;
+
+        const detectedLastMesID = char_depth.last_mes_id + char_depth.depth;
+        const charLastMesID = data[i].status.last_mes_id + data[i].status.depth;
 
         // If chat/status is empty or character is not even in the context
-        if (char_depth < 0) continue;
-        if (forceUIUpdate || (statuses[i].last_mes_id + char_depth) !== newMessID) addTracker(statuses[i], newMessID, character);
-        if (!statuses[i].entries.length) continue;
+        if (char_depth.depth < 0) continue;
+        if (forceUIUpdate || detectedLastMesID !== charLastMesID) {
+            data[i].status.depth = char_depth.depth;
+            data[i].status.last_mes_id = char_depth.last_mes_id;
+            addTracker(data[i].status, character);
+        }
 
-        const status = statuses[i];
-        const promptKey = extensionName.toLowerCase() + "-" + char_depth;
+        const status = data[i].status;
+
+        if (!status.entries.length) continue;
+
+        const promptKey = extensionName.toLowerCase() + "-" + char_depth.depth;
         let promptValue = "";
 
         for (const entry of status.entries) {
@@ -974,7 +984,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
             promptKey,
             promptValue,
             extension_prompt_types.IN_CHAT,
-            char_depth + depthModifier,
+            char_depth.depth + depthModifier,
             true,
             status.role
         );
