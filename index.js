@@ -134,13 +134,19 @@ function getUser(value = user_avatar, search_key = "avatar") {
 }
 
 /** MARK:getStatusDepth()
-    @param {object[]} chat
+    @param {object[]} input_chat
     @param {object} character
     @param {String} generationType
     @returns {Number}
 */
-export function getStatusDepth(chat, character, generationType = "") {
-    const chat_filtered = chat.filter(mes => !mes.is_system)
+export function getStatusDepth(input_chat, character, generationType = "") {
+    const chat_filtered = input_chat.filter(mes => !mes.is_system);
+    let correction = -1;
+
+    if (generationType === "swipe") {
+        chat_filtered.splice(chat_filtered.length - 1);
+    }
+
     const lastIndex = chat_filtered
     .findLastIndex(mes =>{
         if (mes.is_user)
@@ -155,14 +161,12 @@ export function getStatusDepth(chat, character, generationType = "") {
         return mes.name === character.name;
     });
 
-    let correction = (generationType === "swipe" && selected_group) ? -2 : -1;
-
     if (lastIndex < 0) return {depth: -1, last_mes_id: -1};
 
+    const last_mes_id = chat.findLastIndex(mes => lodash.isEqual(mes, chat_filtered[lastIndex]));
     const depth = chat_filtered.length - lastIndex + correction;
-    const last_mes_id = lastIndex;
 
-    return depth < 0 ? {depth: -1, last_mes_id: -1} : {depth, last_mes_id};
+    return depth < 0 ? {depth: 0, last_mes_id} : {depth, last_mes_id};
 }
 
 export function getParticipant(avatar, is_user, {field = "avatar"} = {}) {
