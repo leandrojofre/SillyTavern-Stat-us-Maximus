@@ -137,7 +137,7 @@ function getUser(value = user_avatar, search_key = "avatar") {
     @param {object[]} input_chat
     @param {object} character
     @param {String} generationType
-    @returns {Number}
+    @returns {object}
 */
 export function getStatusDepth(input_chat, character, generationType = "") {
     const chat_filtered = input_chat.filter(mes => !mes.is_system);

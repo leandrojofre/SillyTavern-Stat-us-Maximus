@@ -137,6 +137,9 @@ const customEnumProviders = {
 async function commandCreateStatus(args, value) {
     try {
         const {char = "", isuser = "false"} = args;
+
+        if (getParticipantFromName(char)) return "false";
+
         const parsed_isuser = isuser === "true";
         const character = getParticipant(char, parsed_isuser, {field: "name"});
 
