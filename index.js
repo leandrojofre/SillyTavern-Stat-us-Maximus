@@ -56,7 +56,8 @@ const defaultSettings = {
     debug: false
 };
 
-const regexTextInput = /({{text)(::[^}\n]*)?(}})/g;
+// ({{text)(::((?!}{2,})[\s\S])*)?(}})
+const regexTextInput = /({{text)(::[^}]*)?(}})/g;
 const regexNumberInput = /({{number)(::-?\d+\.?\d*)?(}})/g;
 const regexBooleanInput = /({{boolean)(::((false)|(true))::[^}\n]+::[^}\n]+)?(}})/g;
 const regexRangeInput = /({{range::)([\d]+(\.[\d]+)?)(::[\d]+(\.[\d]+)?){3}(}})/g;
@@ -449,10 +450,10 @@ function addTracker(status, character) {
         let newText = `<span class="text-line">${parsedText}</span>`;
 
         newText = newText.replaceAll(regexTextInput, (match) => {
-            const value = match.replaceAll(/(({{text(::)?)|(}}))/g, "");
+            const value = match.replaceAll(/((^{{text(::)?)|(}}$))/g, "");
             const input = `
                 <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
-                <input type="text" value="${value}" class="type-text fake-input chat-input-editor" autocomplete="off" size="0">
+                <textarea type="text" class="type-text fake-input chat-input-editor" autocomplete="off" data-stee--handled="1">${value}</textarea>
                 <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? "show-spaces" : ""}">${value}</span></span>
             `;
 
@@ -463,7 +464,7 @@ function addTracker(status, character) {
             const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
             const input = `
                 <span class="fa-solid fa-n m-0 chat-input-icon select-none cursor-pointer"></span>
-                <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0">
+                <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0" />
                 <span class="text-quote">
                     <span class="value font-monospace">${value}</span>
                     <span class="d-inline-flex gap-0 text-body cursor-pointer fs-normal">
@@ -482,7 +483,7 @@ function addTracker(status, character) {
             const trueValue = props[1] ?? "true";
             const falseValue = props[2] ?? "false";
             const input = `
-                <input type="checkbox" ${checked === "true" ? "checked" : ""} data-true="${trueValue}" data-false="${falseValue}" class="type-checkbox m-0 chat-input-editor">
+                <input type="checkbox" ${checked === "true" ? "checked" : ""} data-true="${trueValue}" data-false="${falseValue}" class="type-checkbox m-0 chat-input-editor" />
                 <span class="text-quote"> ${checked === "true" ? trueValue : falseValue}</span>
             `;
 
@@ -497,8 +498,8 @@ function addTracker(status, character) {
             const value = props[3];
             const input = `
                 <span class="d-flex flex-col flex-center gap-0 type-range chat-input-editor">
-                    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider">
-                    <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input">
+                    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider" />
+                    <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input" />
                 </span>
             `;
 
@@ -534,14 +535,15 @@ function addTracker(status, character) {
                 newMacro = `{{range::${min}::${max}::${step}::${value}}}`;
             }
 
-            if (chunk instanceof HTMLInputElement) {
-                if (chunk.classList.contains("type-text")) {
-                    const value = chunk.value;
-                    index = ++countText;
-                    match = regexTextInput;
-                    newMacro = `{{text${value.length > 0 ? "::" : ""}${value}}}`;
-                }
+            if (chunk instanceof HTMLTextAreaElement) {
+                const value = chunk.value;
+                index = ++countText;
+                match = regexTextInput;
+                newMacro = `{{text${value.length > 0 ? "::" : ""}${value}}}`;
+            }
 
+
+            if (chunk instanceof HTMLInputElement) {
                 if (chunk.classList.contains("type-number")) {
                     const value = chunk.value;
                     index = ++countNumber;
@@ -614,13 +616,15 @@ function addTracker(status, character) {
             });
 
             el(newRow, el_target)
-            .querySelectorAll('input.chat-input-editor')
-            .forEach((/**@type {HTMLInputElement}*/input) => {
+            .querySelectorAll('.chat-input-editor:not(.type-range)')
+            .forEach((/**@type {HTMLInputElement|HTMLTextAreaElement}*/input) => {
 
                 if (input.type === "checkbox") {
+                    // @ts-ignore
                     input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
 
                     input.addEventListener("input", () => {
+                        // @ts-ignore
                         input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
 
                         el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
@@ -711,7 +715,7 @@ function addTracker(status, character) {
                     });
 
                     if (input.classList.contains("type-number")) {
-                        input.addEventListener("keydown", (e) => {
+                        input.addEventListener("keydown", (/**@type {KeyboardEvent}*/e) => {
                             if (!["ArrowUp", "ArrowDown"].includes(e.key)) return setTimeout(() => updateCaretDisplay(input, lastValid), 10);
 
                             e.preventDefault();
@@ -731,7 +735,7 @@ function addTracker(status, character) {
             });
 
             el(newRow, el_target)
-            .querySelectorAll('span.chat-input-editor')
+            .querySelectorAll('.chat-input-editor.type-range')
             .forEach((/**@type {HTMLSpanElement}*/span) => {
                 /**@type {HTMLInputElement}*/const inputNumber = span.querySelector('input[type="number"]');
                 /**@type {HTMLInputElement}*/const inputRange = span.querySelector('input[type="range"]');
