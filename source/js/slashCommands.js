@@ -10,7 +10,7 @@ import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
 import { fetchStatus, getParticipant, log } from "../../index.js";
-import { addCharAltValue, addCharEntry, createCharStatus, deleteCharStatus, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry } from "./statusControls.js";
+import { addCharAltValue, addCharEntry, createCharStatus, deleteCharStatus, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry, updateCharStatus } from "./statusControls.js";
 
 /*  # TODO
     - [X] Command to create Status data
@@ -43,19 +43,29 @@ function getParticipantFromName(name = "") {
 }
 
 /** Accepted key values and their descriptions */
+const acceptedStatusFields = {
+    // role: "Determines the role at which the status is sent to the prompt",
+    // is_collapsed: "Wether to collapse or expand the status block in the chat",
+    separator: "The separator used between entries",
+    def_entry_separator: "Default title/value separator set when creating an entry",
+    prefix: "Text added before the first entry",
+    suffix: "Text added after the last entry"
+};
+
+/** Accepted key values and their descriptions */
 const acceptedEntryFields = {
     enabled: "Determines if the entry gets added to the prompt",
     key: "Title of the entry",
     value: "Value of the entry",
     separator: "Separator between the key and value",
     // display_position: "Order at which the entry gets inserted (starts at 0)"
-}
+};
 
 /** Accepted alt key values and their descriptions */
 const acceptedAltEntryFields = {
     key: "Nickname of the alt entry - only used in the select button",
     value: "Value of the alt entry"
-}
+};
 
 /** Enum providers for slash commands autocomplete */
 const customEnumProviders = {
@@ -69,6 +79,13 @@ const customEnumProviders = {
 
         return chars_filtered.map(char => new SlashCommandEnumValue(char.name, char.avatar, enumTypes.name, enumIcons.character));
     },
+
+    /** All modifiable entry fields.
+        @returns {SlashCommandEnumValue[]}
+    */
+    statusFields: () => Object
+        .entries(acceptedStatusFields)
+        .map(([key, value]) => new SlashCommandEnumValue(key, value, enumTypes.enum, enumIcons.enum)),
 
     /** All modifiable entry fields.
         @returns {SlashCommandEnumValue[]}
@@ -126,7 +143,7 @@ const customEnumProviders = {
 
         return entry.alt_values.map(alt => new SlashCommandEnumValue(String(alt.uid), buildUIDsComment(alt), enumTypes.number, enumIcons.key));
     }
-}
+};
 
 /** Creates status data for a character
     @param {object} args
@@ -155,6 +172,35 @@ async function commandCreateStatus(args, value) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
 
         return "false";
+    }
+}
+
+/** Updates the value of an entry field
+    @param {object} args
+    @param {String} args.char - Character name
+    @param {String} args.field - Field to modify
+    @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
+    @returns {String} Empty string
+*/
+function commandSetStatusField(args, value = "") {
+    try {
+        const {char = "", field = ""} = args;
+
+        const character = getParticipantFromName(char);
+        const acceptedFields = Object.keys(acceptedStatusFields);
+
+        if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid field "${field}"`);
+        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
+
+        const formData = new FormData();
+        formData.set(field, String(value));
+
+        updateCharStatus(character, formData);
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+    } finally {
+        return "";
     }
 }
 
@@ -631,6 +677,49 @@ export function registerSlashCommands() {
                 <ul>
                     <li>
                         <pre><code>/stum-create-status char="Tom"</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: "stum-set-status-field",
+            callback: commandSetStatusField,
+            returns: 'Empty string',
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'char',
+                    description: 'Name of the character',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: customEnumProviders.participantNames
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'field',
+                    description: 'Field to update - default value',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: customEnumProviders.statusFields
+                })
+            ],
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'New value of the field - default to empty text',
+                    isRequired: true,
+                    typeList: [ARGUMENT_TYPE.STRING]
+                })
+            ],
+            helpString: `
+            <div>
+                Set the value of one of the core fields of you Character's status. If you use ST's macros as the field value, you'll need to escape them like this: {\\{char}}.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-set-status-field char="Tom" field="prefix" "{{name}}: "</code></pre>
                     </li>
                 </ul>
             </div>`,

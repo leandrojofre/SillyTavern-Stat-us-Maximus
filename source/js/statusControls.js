@@ -342,6 +342,36 @@ export function getCharStatus(character) {
 
 /**
     @param {object} character
+    @param {FormData} formData
+    @returns {object|Boolean}
+*/
+export function updateCharStatus(character, formData) {
+    try {
+        const status = getCharStatus(character);
+
+        if (!status) throw new Error(`Status data for the character ${character.name} could not be found`);
+        if (!formData) throw new Error("Data sent is not valid");
+
+        for (const [key, value] of formData.entries()) {
+            let parsedValue = un_escapeNewlines(parseValue(value));
+
+            status[key] = parsedValue;
+        }
+
+        saveMetadataDebounced();
+
+        return status;
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        console.error(error.message);
+
+        return false;
+    }
+}
+
+/**
+    @param {object} character
     @param {object} target
     @param {object} [options]
     @param {boolean} [options.deleteOriginal=false]
