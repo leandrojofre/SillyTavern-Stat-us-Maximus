@@ -86,7 +86,8 @@ export function updateCharAltValue(character, entry_uid, alt_uid, formData) {
 
         if (!alt) throw new Error(`Alt entry with uid=${alt_uid} not found`);
 
-        for (const [key, value] of formData.entries()) alt[key] = String(value);
+        for (const [key, value] of formData.entries())
+            alt[key] = key === "value" ? un_escapeNewlines(String(value)) : String(value);
 
         if (entry.value_uid === alt.uid) entry.value = alt.value;
 
@@ -217,7 +218,7 @@ export function getCharEntry(character, entry_uid) {
     }
 }
 
-function parseValue(val) {
+export function parseValue(val) {
     if (val === "true")  return true;
     if (val === "false") return false;
 
@@ -244,6 +245,7 @@ export function updateCharEntry(character, entry_uid, formData) {
             let parsedValue = parseValue(value);
 
             if (key === "alt_key") continue;
+            if (key === "value") parsedValue = un_escapeNewlines(parsedValue);
             if (key.includes("separator")) parsedValue = un_escapeNewlines(parsedValue);
 
             entry[key] = parsedValue;
@@ -304,6 +306,7 @@ export function createCharStatus(character, depth = -1) {
             prefix: "",
             suffix: "",
             depth: depth,
+            forceDepth: "",
             last_mes_id: (depth >= 0) ? (chat.length - depth - 1) : (-1),
             is_user: character.is_user ?? false,
             is_collapsed: false,
@@ -416,6 +419,7 @@ const statusTemplate = {
     prefix: "",
     suffix: "",
     depth: -1,
+    forceDepth: "",
     last_mes_id: -1,
     is_user: false,
     is_collapsed: false,

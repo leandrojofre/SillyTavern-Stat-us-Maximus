@@ -914,8 +914,17 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
 
 /**
     MARK:fetchStatus()
+    @typedef {object} FetchOptions
+    @property {boolean} [forceUIUpdate]
+    @property {number} [depthModifier]
+    @property {object} [forceDepth]
+    @property {String} [forceDepth.avatar]
+    @property {number} [forceDepth.depth]
+    @property {String} [generationType]
+
+    @param {FetchOptions} options
 */
-export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1), generationType = ""} = {}) {
+export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDepth = undefined, generationType = ""} = {}) {
     if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
 
     const real_chat = !extension_settings["Presence"] ? chat.slice(chat_metadata.lastInContextMessageId) : chat;
@@ -945,21 +954,29 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
         if (!character) continue;
 
-        const char_depth = getStatusDepth(real_chat, character, generationType);
+        const statusCustomDepth = Number(data[i].status.forceDepth === "" ? NaN : data[i].status.forceDepth);
+        const ignoreDepthFailSafe = forceDepth?.avatar === character.avatar || statusCustomDepth >= 0;
+
+        const dynamicDepth = getStatusDepth(real_chat, character, generationType);
+        const char_depth = ignoreDepthFailSafe ? {depth: (forceDepth?.depth ?? statusCustomDepth)} : dynamicDepth;
+
+        if (statusCustomDepth >= 0)
+            char_depth.depth = statusCustomDepth;
 
         if (!data[i].status && extensionSettings.autoDetectParticipants)
             data[i].status = createCharStatus(character);
 
         if (!data[i].status) continue;
 
-        const detectedLastMesID = char_depth.last_mes_id + char_depth.depth;
-        const charLastMesID = data[i].status.last_mes_id + data[i].status.depth;
-
         // If chat/status is empty or character is not even in the context
         if (char_depth.depth < 0) continue;
+
+        const detectedLastMesID = dynamicDepth.last_mes_id + dynamicDepth.depth;
+        const charLastMesID = data[i].status.last_mes_id + data[i].status.depth;
+
         if (forceUIUpdate || detectedLastMesID !== charLastMesID) {
-            data[i].status.depth = char_depth.depth;
-            data[i].status.last_mes_id = char_depth.last_mes_id;
+            data[i].status.depth = dynamicDepth.depth;
+            data[i].status.last_mes_id = dynamicDepth.last_mes_id;
             addTracker(data[i].status, character);
         }
 
@@ -967,7 +984,8 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
         if (!status.entries.length) continue;
 
-        const promptKey = extensionName.toLowerCase() + "-" + char_depth.depth;
+        const promptKey = extensionName.toLowerCase() + "-" + character.avatar;
+        const promptDepth = ignoreDepthFailSafe ? char_depth.depth : char_depth.depth + depthModifier;
         let promptValue = "";
 
         for (const entry of status.entries) {
@@ -992,7 +1010,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
             promptKey,
             promptValue,
             extension_prompt_types.IN_CHAT,
-            char_depth.depth + depthModifier,
+            promptDepth,
             true,
             status.role
         );

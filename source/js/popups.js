@@ -5,7 +5,7 @@ import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
 import { log, destroyElement, fetchStatus } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus } from "./statusControls.js";
+import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue } from "./statusControls.js";
 
 /*  # TODO
     - [X] Select for alt_values
@@ -148,11 +148,11 @@ export function formStatusSingleChar(char) {
     // @ts-ignore
     if (!metadata) return toastr.error(t`No metadata was found for the character -${char?.name}-`);
 
-    const createInputLabel = (/**@type {HTMLInputElement|HTMLSelectElement}*/input, mw = "auto") => {
+    const createInputLabel = (/**@type {HTMLInputElement|HTMLSelectElement}*/input, mw = "mw-unset") => {
         const labelTemplateSpan = document.createElement("small");
         labelTemplateSpan.dataset.i18n = (input instanceof HTMLInputElement) ? input.placeholder : input.ariaPlaceholder;
         labelTemplateSpan.innerText = (input instanceof HTMLInputElement) ? input.placeholder : input.ariaPlaceholder;
-        labelTemplateSpan.classList.add("text-center", "input-label");
+        labelTemplateSpan.classList.add("text-center", "input-label", "white-space-nowrap", "mb-3px");
 
         const labelTemplate = document.createElement("div");
         labelTemplate.classList.add("d-flex", "flex-col", "gap-0", "flex-grow-1", mw);
@@ -202,6 +202,14 @@ export function formStatusSingleChar(char) {
 
         selectEntryRole.append(option);
     }
+
+    const numberAreaForDepth = document.createElement("input");
+    numberAreaForDepth.autocomplete = "off";
+    numberAreaForDepth.type = "number";
+    numberAreaForDepth.placeholder = t`Custom Depth`;
+    numberAreaForDepth.title = t`Overrides the behavior of attaching the in-depth prompt dynamically before the last message, to using a constant depth`;
+    numberAreaForDepth.value = metadata.forceDepth ?? "";
+    numberAreaForDepth.classList.add("text_pole", "m-0");
 
     const textareaStatusSeparator = document.createElement("input");
     textareaStatusSeparator.autocomplete = "off";
@@ -256,6 +264,7 @@ export function formStatusSingleChar(char) {
     statInputsWrapper.classList.add("d-flex", "flex-end-start", "w-100", "gap-5px", "stat-wrapper");
     statInputsWrapper.append(
         createInputLabel(selectEntryRole),
+        createInputLabel(numberAreaForDepth),
         createInputLabel(textareaStatusSeparator),
         createInputLabel(textareaDefEntrySeparator),
         createInputLabel(textareaStatusPrefix),
@@ -397,6 +406,7 @@ export function formStatusSingleChar(char) {
     const DEBOUNCE_MS = 400;
     let formDebounceTimer;
     let altKeyDebounceTimer;
+    let forceDepthDebounceTimer;
     let separatorDebounceTimer;
     let defEntrySeparatorDebounceTimer;
     let prefixDebounceTimer;
@@ -553,6 +563,14 @@ export function formStatusSingleChar(char) {
 
         saveMetadataDebounced();
     });
+
+    numberAreaForDepth.addEventListener("input", () => {
+        metadata.forceDepth = parseValue(numberAreaForDepth.value);
+
+        clearTimeout(forceDepthDebounceTimer);
+
+        forceDepthDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
+    })
 
     textareaStatusSeparator.addEventListener("input", () => {
         metadata.separator = un_escapeNewlines(textareaStatusSeparator.value);

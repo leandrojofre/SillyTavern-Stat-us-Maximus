@@ -55,6 +55,16 @@ div[name="templatesAndPopupsWrapper"] {
     }
 }
 
+@media screen and (max-width: 1250px) {
+    #stat-us-max-popup-multi-char,
+    .popup:has(.stat-us-max-popup),
+    .stat-us-max-custom-css {
+        .white-space-nowrap {
+            white-space: normal !important;
+        }
+    }
+}
+
 @media screen and (max-width: 1900px) {
     .popup.wide_dialogue_popup:has(.stat-us-max-popup) {
         width: 90vw;
@@ -215,6 +225,10 @@ div[name="templatesAndPopupsWrapper"] {
         color: color-mix(in srgb, currentColor 85%, black);
     }
 
+    .white-space-nowrap {
+        white-space: nowrap;
+    }
+
     .font-monospace {
         font-family: monospace;
     }
@@ -356,6 +370,10 @@ div[name="templatesAndPopupsWrapper"] {
         width: 100%;
     }
 
+    .mw-unset {
+        max-width: unset;
+    }
+
     .mw-7 {
         max-width: 7%;
     }
@@ -414,6 +432,10 @@ div[name="templatesAndPopupsWrapper"] {
 
     .mt-0 {
         margin-top: 0;
+    }
+
+    .mb-3px {
+        margin-bottom: 3px;
     }
 
     .mb-5px {
