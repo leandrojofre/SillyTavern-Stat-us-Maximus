@@ -546,9 +546,7 @@ div[name="templatesAndPopupsWrapper"] {
 
     .fake-input {
         position: absolute;
-        inset: 0;
-        width: 0;
-        height: 0;
+        pointer-events: none;
         opacity: 0;
         margin: 0;
         padding: 0;
@@ -572,6 +570,9 @@ div[name="templatesAndPopupsWrapper"] {
 
     .text-line .value.show-spaces {
         background-color: var(--stat-us-show-spaces-color);
+    }
+
+    .text-line .value {
         white-space: break-spaces;
     }
 

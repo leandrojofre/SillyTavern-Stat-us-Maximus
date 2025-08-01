@@ -56,8 +56,7 @@ const defaultSettings = {
     debug: false
 };
 
-// ({{text)(::((?!}{2,})[\s\S])*)?(}})
-const regexTextInput = /({{text)(::[^}]*)?(}})/g;
+const regexTextInput = /({{text)(::[^{}]*)?(}})/g;
 const regexNumberInput = /({{number)(::-?\d+\.?\d*)?(}})/g;
 const regexBooleanInput = /({{boolean)(::((false)|(true))::[^}\n]+::[^}\n]+)?(}})/g;
 const regexRangeInput = /({{range::)([\d]+(\.[\d]+)?)(::[\d]+(\.[\d]+)?){3}(}})/g;
@@ -438,22 +437,18 @@ function addTracker(status, character) {
     });
 
     const createInputs = (/**@type {String}*/text) => {
-        const escapedText = lodash.escape(text);
         const parsedText = lodash.escape(substituteParams(processMacros(text, {char: character, processInputs: false}))).replaceAll(/\n/g, "<br>");
 
         if (!extensionSettings.editNumbersFromChat)
-            return `
-                <span class="d-none original-text">${escapedText}</span>
-                <span class="text-line">${parsedText}</span>
-            `;
+            return `<span class="text-line">${parsedText}</span>`;
 
         let newText = `<span class="text-line">${parsedText}</span>`;
 
         newText = newText.replaceAll(regexTextInput, (match) => {
-            const value = match.replaceAll(/((^{{text(::)?)|(}}$))/g, "");
+            const value = match.replaceAll(/((^{{text(::)?)|(}}$))/g, "").replaceAll("<br>", "\n");
             const input = `
                 <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
-                <textarea type="text" class="type-text fake-input chat-input-editor" autocomplete="off" data-stee--handled="1">${value}</textarea>
+                <textarea type="text" class="type-text fake-input chat-input-editor" data-pattern="^[^{}]*$" autocomplete="off" data-stee--handled="1">${value}</textarea>
                 <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? "show-spaces" : ""}">${value}</span></span>
             `;
 
@@ -464,7 +459,7 @@ function addTracker(status, character) {
             const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
             const input = `
                 <span class="fa-solid fa-n m-0 chat-input-icon select-none cursor-pointer"></span>
-                <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0" />
+                <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" data-pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0" />
                 <span class="text-quote">
                     <span class="value font-monospace">${value}</span>
                     <span class="d-inline-flex gap-0 text-body cursor-pointer fs-normal">
@@ -506,13 +501,13 @@ function addTracker(status, character) {
             return input;
         });
 
-        return `<span class="d-none original-text">${escapedText}</span>${newText}`;
+        return newText;
     }
 
     const createInputStrings = (parent, target) => {
         /**@type {HTMLElement}*/const targetEl = el(parent, target);
         /**@type {NodeListOf<HTMLElement>}*/const chunks = targetEl.querySelectorAll('.chat-input-editor');
-        let newValue = targetEl.querySelector('.d-none.original-text').textContent;
+        let newValue = targetEl.querySelector('.text-line').dataset.originalText;
 
         let countRange = -1;
         let countText = -1;
@@ -603,6 +598,7 @@ function addTracker(status, character) {
             destroyElement(el(newRow, el_target).children);
 
             el(newRow, el_target).innerHTML = createInputs(text);
+            el(newRow, el_target).querySelector('.text-line').dataset.originalText = text;
 
             if (!extensionSettings.editNumbersFromChat) return;
 
@@ -703,8 +699,8 @@ function addTracker(status, character) {
                     });
 
                     input.addEventListener("input", () => {
-                        if (input.hasAttribute("pattern")) {
-                            const regex = new RegExp(input.getAttribute("pattern"));
+                        if (input.dataset.pattern) {
+                            const regex = new RegExp(input.dataset.pattern);
 
                             if (regex.test(input.value)) lastValid = input.value;
                             else input.value = lastValid;

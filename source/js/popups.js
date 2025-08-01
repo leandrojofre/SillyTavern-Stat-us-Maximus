@@ -22,7 +22,7 @@ import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCh
     - [X] Status clone button
     - [X] Status delete button
     - [X] Entries block prefix/suffix
-    - [ ] Custom depth buttons - dynamic depth if undefined
+    - [X] Custom depth buttons - dynamic depth if undefined
     - [X] Fucking labels
 */
 
