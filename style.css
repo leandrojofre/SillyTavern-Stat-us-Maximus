@@ -561,6 +561,8 @@ div[name="templatesAndPopupsWrapper"] {
 
     .fake-caret {
         display: inline-block;
+        position: absolute;
+        transform: translateY(0.1em);
         width: 1px;
         height: 1em;
         background-color: var(--SmartThemeBodyColor);
