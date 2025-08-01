@@ -770,7 +770,24 @@ function addTracker(status, character) {
             formDebounceTimer = setTimeout(() => form.requestSubmit(), DEBOUNCE_MS);
         });
 
-        killSwitch.addEventListener("click", (e) => {
+        killSwitch.addEventListener('pointerdown', e =>
+            document.addEventListener('contextmenu', e => e.preventDefault(), {once: true})
+        );
+
+        killSwitch.addEventListener("pointerup", (/**@type {PointerEvent}*/e) => {
+            e.preventDefault();
+
+            if (e.button === 2) {
+                popupStatusSingleChar(character);
+
+                return setTimeout(() => {
+                    const popupContainer = `.stat-us-max-popup[data-char="${character.avatar}"][data-is-user="${status.is_user}"]`;
+                    const popupRowToggle = `.stat-us-max-popup-row[data-uid="${entry.uid}"] .inline-drawer-toggle`;
+                    const drawerToggle = document.querySelector(`${popupContainer} ${popupRowToggle}`);
+                    drawerToggle.click();
+                }, 50);
+            }
+
             toggleSwitch(killSwitch, (state) => {
                 el(form, 'input[name="enabled"]').value = state;
                 toggleVisibility(el(newRow, '.status-separator'), !state);
