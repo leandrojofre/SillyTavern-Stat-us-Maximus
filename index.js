@@ -376,7 +376,10 @@ function addTracker(status, character) {
         <tr>
             <th scope="col">
                 <div class="d-flex w-100 flex-center-between p-10px">
-                    <span>Status - ${character.name}</span>
+                    <span>
+                        <span class="stat-us-max-chat-title-prefix">Status - </span>
+                        <span class="stat-us-max-chat-title">${character.name}</span>
+                    </span>
                     <div class="d-flex flex-center">
                         <div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0"></div>
                         <div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0"></div>
