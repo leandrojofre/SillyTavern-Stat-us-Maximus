@@ -1041,7 +1041,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
 /**
     @param {FetchOptions?} options
 */
-export function fetchStatusDebounced(options = null) {
+export function fetchStatusDebounced(options = {}) {
     clearTimeout(fetchStatusTimeout);
     fetchStatusTimeout = setTimeout(() => fetchStatus(options), FETCH_STATUS_TIMEOUT_MS);
 }
