@@ -1,8 +1,8 @@
-import { extension_settings, saveMetadataDebounced } from "../../../extensions.js";
+import { extension_settings } from "../../../extensions.js";
 import { saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar, substituteParams } from "../../../../script.js";
 import { getGroupMembers, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
-import { createCharStatus, getCharAltValue, getCharStatus, updateCharEntry } from "./source/js/statusControls.js";
+import { createCharStatus, getCharAltValue, getCharStatus, saveMetadataSTUM, updateCharEntry } from "./source/js/statusControls.js";
 import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
 import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups.js";
@@ -60,6 +60,9 @@ const regexTextInput = /({{text)(::[^{}]*)?(}})/g;
 const regexNumberInput = /({{number)(::-?\d+\.?\d*)?(}})/g;
 const regexBooleanInput = /({{boolean)(::((false)|(true))::[^}\n]+::[^}\n]+)?(}})/g;
 const regexRangeInput = /({{range::)([\d]+(\.[\d]+)?)(::[\d]+(\.[\d]+)?){3}(}})/g;
+const FETCH_STATUS_TIMEOUT_MS = 300;
+
+let fetchStatusTimeout;
 
 export const extensionSettings = extension_settings[extensionName];
 
@@ -436,7 +439,7 @@ function addTracker(status, character) {
         status.is_collapsed = collapse;
 
         toggleVisibility(statusTableBody, collapse);
-        saveMetadataDebounced();
+        saveMetadataSTUM();
     });
 
     const createInputs = (/**@type {String}*/text) => {
@@ -510,7 +513,7 @@ function addTracker(status, character) {
     const createInputStrings = (parent, target) => {
         /**@type {HTMLElement}*/const targetEl = el(parent, target);
         /**@type {NodeListOf<HTMLElement>}*/const chunks = targetEl.querySelectorAll('.chat-input-editor');
-        let newValue = targetEl.querySelector('.text-line').dataset.originalText;
+        let newValue = /**@type {HTMLElement}*/(targetEl.querySelector('.text-line')).dataset.originalText;
 
         let countRange = -1;
         let countText = -1;
@@ -783,7 +786,7 @@ function addTracker(status, character) {
                 return setTimeout(() => {
                     const popupContainer = `.stat-us-max-popup[data-char="${character.avatar}"][data-is-user="${status.is_user}"]`;
                     const popupRowToggle = `.stat-us-max-popup-row[data-uid="${entry.uid}"] .inline-drawer-toggle`;
-                    const drawerToggle = document.querySelector(`${popupContainer} ${popupRowToggle}`);
+                    /**@type {HTMLElement}*/const drawerToggle = document.querySelector(`${popupContainer} ${popupRowToggle}`);
                     drawerToggle.click();
                 }, 50);
             }
@@ -938,7 +941,7 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
     @property {number} [forceDepth.depth]
     @property {String} [generationType]
 
-    @param {FetchOptions} options
+    @param {FetchOptions?} options
 */
 export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDepth = undefined, generationType = ""} = {}) {
     if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
@@ -1032,7 +1035,15 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
         );
     }
 
-    saveMetadataDebounced();
+    saveMetadataSTUM();
+}
+
+/**
+    @param {FetchOptions?} options
+*/
+export function fetchStatusDebounced(options = null) {
+    clearTimeout(fetchStatusTimeout);
+    fetchStatusTimeout = setTimeout(() => fetchStatus(options), FETCH_STATUS_TIMEOUT_MS);
 }
 
 export function groupListAvatarsClick(e) {

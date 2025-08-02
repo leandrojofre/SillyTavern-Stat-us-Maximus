@@ -1,6 +1,6 @@
 import { characters, chat, chat_metadata, event_types, eventSource, scrollChatToBottom, this_chid, user_avatar } from "../../../../../../script.js";
 import { selected_group } from "../../../../../group-chats.js";
-import { addGroupStatusButtons, callbacksClickValueUID, extensionSettings, fetchStatus, getActiveParticipants, getStatusDepth, log } from "../../index.js";
+import { addGroupStatusButtons, callbacksClickValueUID, extensionSettings, fetchStatusDebounced, getActiveParticipants, getStatusDepth, log } from "../../index.js";
 import { createCharStatus, fillMissingMetadata, getCharStatus } from "./statusControls.js";
 
 /*
@@ -45,18 +45,18 @@ export function startListeners() {
         callbacksClickValueUID.map(c => c.popper?.destroy()).splice(0);
 
         fillMissingMetadata();
-        fetchStatus({forceUIUpdate: true});
+        fetchStatusDebounced({forceUIUpdate: true});
         scrollChatToBottom();
     });
 
     eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, async (...args) => {
         log("CHARACTER_MESSAGE_RENDERED", args);
-        fetchStatus();
+        fetchStatusDebounced();
     });
 
     eventSource.on(event_types.USER_MESSAGE_RENDERED, async (...args) => {
         log("USER_MESSAGE_RENDERED", args);
-        fetchStatus({depthModifier: 1});
+        fetchStatusDebounced({depthModifier: 1});
     });
 
     /**
@@ -90,22 +90,22 @@ export function startListeners() {
             setActiveCharacterStat(options, genType);
         }
 
-        fetchStatus(options);
+        fetchStatusDebounced(options);
     });
 
     eventSource.on(event_types.MORE_MESSAGES_LOADED, async (...args) => {
         log("MORE_MESSAGES_LOADED", args);
-        fetchStatus({forceUIUpdate: true});
+        fetchStatusDebounced({forceUIUpdate: true});
     });
 
     eventSource.on(event_types.MESSAGE_EDITED, async (...args) => {
         log("MESSAGE_EDITED", args);
-        fetchStatus();
+        fetchStatusDebounced();
     });
 
     eventSource.on(event_types.MESSAGE_DELETED, async (...args) => {
         log("MESSAGE_DELETED", args);
 
-        fetchStatus();
+        fetchStatusDebounced();
     });
 }

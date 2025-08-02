@@ -1,11 +1,10 @@
 import { characters, extension_prompt_roles } from "../../../../../../script.js";
-import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
-import { log, destroyElement, fetchStatus } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue } from "./statusControls.js";
+import { log, destroyElement, fetchStatusDebounced } from "../../index.js";
+import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, saveMetadataSTUM } from "./statusControls.js";
 
 /*  # TODO
     - [X] Select for alt_values
@@ -561,7 +560,7 @@ export function formStatusSingleChar(char) {
     selectEntryRole.addEventListener("input", () => {
         metadata.role = Number(selectEntryRole.value);
 
-        saveMetadataDebounced();
+        saveMetadataSTUM();
     });
 
     numberAreaForDepth.addEventListener("input", () => {
@@ -569,7 +568,7 @@ export function formStatusSingleChar(char) {
 
         clearTimeout(forceDepthDebounceTimer);
 
-        forceDepthDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
+        forceDepthDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     })
 
     textareaStatusSeparator.addEventListener("input", () => {
@@ -577,7 +576,7 @@ export function formStatusSingleChar(char) {
 
         clearTimeout(separatorDebounceTimer);
 
-        separatorDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
+        separatorDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     });
 
     textareaDefEntrySeparator.addEventListener("input", () => {
@@ -585,7 +584,7 @@ export function formStatusSingleChar(char) {
 
         clearTimeout(defEntrySeparatorDebounceTimer);
 
-        defEntrySeparatorDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
+        defEntrySeparatorDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     });
 
     textareaStatusPrefix.addEventListener("input", () => {
@@ -593,7 +592,7 @@ export function formStatusSingleChar(char) {
 
         clearTimeout(prefixDebounceTimer);
 
-        prefixDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
+        prefixDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     });
 
     textareaStatusSuffix.addEventListener("input", () => {
@@ -601,7 +600,7 @@ export function formStatusSingleChar(char) {
 
         clearTimeout(suffixDebounceTimer);
 
-        suffixDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
+        suffixDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     });
 
     cloneStatsBtn.addEventListener("click", async () => {
@@ -676,7 +675,7 @@ export async function popupStatusSingleChar(char) {
         onClose: async () => destroyElement(container)
     });
 
-    fetchStatus({forceUIUpdate: true});
+    fetchStatusDebounced({forceUIUpdate: true});
 }
 
 export async function popupStatusMultiChar(chars) {
@@ -696,5 +695,5 @@ export async function popupStatusMultiChar(chars) {
         onClose: async () => destroyElement(content)
     });
 
-    fetchStatus({forceUIUpdate: true});
+    fetchStatusDebounced({forceUIUpdate: true});
 }

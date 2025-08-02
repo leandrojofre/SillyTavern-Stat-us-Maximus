@@ -1,6 +1,5 @@
 import { Fuse } from "../../../../../../lib.js";
 import { chat_metadata } from "../../../../../../script.js";
-import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { t } from "../../../../../i18n.js";
 import { SlashCommand } from "../../../../../slash-commands/SlashCommand.js";
 import { ARGUMENT_TYPE, SlashCommandArgument, SlashCommandNamedArgument } from "../../../../../slash-commands/SlashCommandArgument.js";
@@ -9,8 +8,8 @@ import { commonEnumProviders, enumIcons } from "../../../../../slash-commands/Sl
 import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/SlashCommandEnumValue.js";
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
-import { fetchStatus, getParticipant, log } from "../../index.js";
-import { addCharAltValue, addCharEntry, createCharStatus, deleteCharStatus, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry, updateCharStatus } from "./statusControls.js";
+import { fetchStatusDebounced, getParticipant, log } from "../../index.js";
+import { addCharAltValue, addCharEntry, createCharStatus, deleteCharStatus, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, saveMetadataSTUM, updateCharAltValue, updateCharEntry, updateCharStatus } from "./statusControls.js";
 
 /*  # TODO
     - [X] Command to create Status data
@@ -222,7 +221,7 @@ async function commandDeleteStatus(args, value) {
 
         if (!success) return "false";
 
-        fetchStatus({forceUIUpdate: true});
+        fetchStatusDebounced({forceUIUpdate: true});
 
         return "true";
     } catch (error) {
@@ -328,7 +327,7 @@ function commandSetEntryField(args, value = "") {
         formData.set(field, String(value));
 
         updateCharEntry(character, parsed_uid, formData);
-        fetchStatus({forceUIUpdate: true});
+        fetchStatusDebounced({forceUIUpdate: true});
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
@@ -387,7 +386,7 @@ function commandDeleteEntry(args, value) {
 
         const deletionSucceed = removeCharEntry(character, parsed_uid);
 
-        if (deletionSucceed) fetchStatus({forceUIUpdate: true});
+        if (deletionSucceed) fetchStatusDebounced({forceUIUpdate: true});
 
         return String(deletionSucceed ?? false);
     } catch (error) {
@@ -426,7 +425,7 @@ function commandSwitchEntryValue(args, value) {
         formData.set("value_uid", alt.uid);
 
         updateCharEntry(character, parsed_uid, formData);
-        fetchStatus({forceUIUpdate: true});
+        fetchStatusDebounced({forceUIUpdate: true});
 
         return "";
     } catch (error) {
@@ -465,7 +464,7 @@ function commandCreateEntryAltValue(args, value = "") {
             updateCharAltValue(character, parsed_uid, alt.uid, formData);
         }
 
-        fetchStatus({forceUIUpdate: true});
+        fetchStatusDebounced({forceUIUpdate: true});
 
         return String(alt.uid ?? "");
     } catch (error) {
@@ -555,7 +554,7 @@ function commandSetAltEntryField(args, value = "") {
         formData.set(field, String(value));
 
         updateCharAltValue(character, parsed_uid, parsed_altuid, formData);
-        fetchStatus({forceUIUpdate: true});
+        fetchStatusDebounced({forceUIUpdate: true});
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
@@ -620,7 +619,7 @@ function commandDeleteAltEntry(args, value) {
 
         const deletionSucceed = removeCharAltValue(character, parsed_uid, parsed_altuid);
 
-        if (deletionSucceed) fetchStatus({forceUIUpdate: true});
+        if (deletionSucceed) fetchStatusDebounced({forceUIUpdate: true});
 
         return String(deletionSucceed ?? false);
     } catch (error) {
@@ -637,7 +636,7 @@ function commandDeleteAltEntry(args, value) {
 async function commandDeleteChatStatus() {
     try {
         delete SillyTavern.getContext().chatMetadata.stat_us_maximus;
-        saveMetadataDebounced();
+        saveMetadataSTUM();
     } catch (error) {
         return "false";
     }
