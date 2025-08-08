@@ -55,6 +55,16 @@ div[name="templatesAndPopupsWrapper"] {
     }
 }
 
+@media screen and (max-width: 1250px) {
+    #stat-us-max-popup-multi-char,
+    .popup:has(.stat-us-max-popup),
+    .stat-us-max-custom-css {
+        .white-space-nowrap {
+            white-space: normal !important;
+        }
+    }
+}
+
 @media screen and (max-width: 1900px) {
     .popup.wide_dialogue_popup:has(.stat-us-max-popup) {
         width: 90vw;
@@ -86,6 +96,10 @@ div[name="templatesAndPopupsWrapper"] {
 
 .mes[is_user="true"] .table-container.stat-us-max-custom-css {
     background-color: var(--SmartThemeUserMesBlurTintColor);
+
+    .text-line .value.show-spaces {
+        --stat-us-show-spaces-color: color-mix(in srgb, var(--SmartThemeUserMesBlurTintColor), var(--SmartThemeQuoteColor) 12%);
+    }
 }
 
 .mes .table-container.stat-us-max-custom-css {
@@ -136,6 +150,7 @@ div[name="templatesAndPopupsWrapper"] {
     --stat-us-avatar-border-radius: 50%;
     --stat-us-range-margin-top: 5px;
     --stat-us-separator-bottom: linear-gradient(90deg, var(--transparent), color-mix(in srgb, var(--SmartThemeBodyColor), transparent 80%), var(--transparent)) 1;
+    --stat-us-show-spaces-color: color-mix(in srgb, var(--SmartThemeBotMesBlurTintColor), var(--SmartThemeQuoteColor) 12%);
 
     select {
         color: color-mix(in srgb, var(--SmartThemeBodyColor) 50%, transparent);
@@ -208,6 +223,10 @@ div[name="templatesAndPopupsWrapper"] {
 
     .text-muted {
         color: color-mix(in srgb, currentColor 85%, black);
+    }
+
+    .white-space-nowrap {
+        white-space: nowrap;
     }
 
     .font-monospace {
@@ -351,6 +370,10 @@ div[name="templatesAndPopupsWrapper"] {
         width: 100%;
     }
 
+    .mw-unset {
+        max-width: unset;
+    }
+
     .mw-7 {
         max-width: 7%;
     }
@@ -409,6 +432,10 @@ div[name="templatesAndPopupsWrapper"] {
 
     .mt-0 {
         margin-top: 0;
+    }
+
+    .mb-3px {
+        margin-bottom: 3px;
     }
 
     .mb-5px {
@@ -519,10 +546,10 @@ div[name="templatesAndPopupsWrapper"] {
 
     .fake-input {
         position: absolute;
-        inset: 0;
-        width: 0;
-        height: 0;
+        pointer-events: none;
         opacity: 0;
+        margin: 0;
+        padding: 0;
         border: none;
         background: transparent;
     }
@@ -534,6 +561,8 @@ div[name="templatesAndPopupsWrapper"] {
 
     .fake-caret {
         display: inline-block;
+        position: absolute;
+        transform: translateY(0.1em);
         width: 1px;
         height: 1em;
         background-color: var(--SmartThemeBodyColor);
@@ -542,7 +571,10 @@ div[name="templatesAndPopupsWrapper"] {
     }
 
     .text-line .value.show-spaces {
-        background-color: color-mix(in srgb, var(--SmartThemeBlurTintColor), var(--SmartThemeBodyColor) 8%);
+        background-color: var(--stat-us-show-spaces-color);
+    }
+
+    .text-line .value {
         white-space: break-spaces;
     }
 

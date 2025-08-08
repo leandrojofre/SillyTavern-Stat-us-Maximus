@@ -1,11 +1,11 @@
-import { characters, extension_prompt_roles } from "../../../../../../script.js";
-import { saveMetadataDebounced } from "../../../../../extensions.js";
+import { lodash } from "../../../../../../lib.js";
+import { characters, extension_prompt_roles, getThumbnailUrl } from "../../../../../../script.js";
 import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
-import { log, destroyElement, fetchStatus } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus } from "./statusControls.js";
+import { log, destroyElement, fetchStatusDebounced } from "../../index.js";
+import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, saveMetadataSTUM } from "./statusControls.js";
 
 /*  # TODO
     - [X] Select for alt_values
@@ -22,7 +22,7 @@ import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCh
     - [X] Status clone button
     - [X] Status delete button
     - [X] Entries block prefix/suffix
-    - [ ] Custom depth buttons - dynamic depth if undefined
+    - [X] Custom depth buttons - dynamic depth if undefined
     - [X] Fucking labels
 */
 
@@ -136,8 +136,8 @@ async function clonePopup(char) {
 
 function getFullCharAvatar(status) {
     // TODO getThumbnailUrl - on next release
-    if (status.is_user) return "User Avatars/" + status.avatar;
-    else return "/thumbnail?type=avatar&file=" + status.avatar;
+    if (status.is_user) return getThumbnailUrl("persona", status.avatar); //"/thumbnail?type=persona&file=" + status.avatar;
+    else return getThumbnailUrl("avatar", status.avatar); //"/thumbnail?type=avatar&file=" + status.avatar;
 }
 
 export function formStatusSingleChar(char) {
@@ -148,11 +148,11 @@ export function formStatusSingleChar(char) {
     // @ts-ignore
     if (!metadata) return toastr.error(t`No metadata was found for the character -${char?.name}-`);
 
-    const createInputLabel = (/**@type {HTMLInputElement|HTMLSelectElement}*/input, mw = "auto") => {
+    const createInputLabel = (/**@type {HTMLInputElement|HTMLSelectElement}*/input, mw = "mw-unset") => {
         const labelTemplateSpan = document.createElement("small");
         labelTemplateSpan.dataset.i18n = (input instanceof HTMLInputElement) ? input.placeholder : input.ariaPlaceholder;
         labelTemplateSpan.innerText = (input instanceof HTMLInputElement) ? input.placeholder : input.ariaPlaceholder;
-        labelTemplateSpan.classList.add("text-center", "input-label");
+        labelTemplateSpan.classList.add("text-center", "input-label", "white-space-nowrap", "mb-3px");
 
         const labelTemplate = document.createElement("div");
         labelTemplate.classList.add("d-flex", "flex-col", "gap-0", "flex-grow-1", mw);
@@ -177,7 +177,7 @@ export function formStatusSingleChar(char) {
     /** Create Menu header. */
     const avatar = document.createElement("img");
     avatar.alt = "Avatar";
-    avatar.title = metadata.avatar;
+    avatar.title = lodash.escape(metadata.avatar);
     avatar.src = getFullCharAvatar(metadata);
 
     const avatarContainer = document.createElement("div");
@@ -202,6 +202,14 @@ export function formStatusSingleChar(char) {
 
         selectEntryRole.append(option);
     }
+
+    const numberAreaForDepth = document.createElement("input");
+    numberAreaForDepth.autocomplete = "off";
+    numberAreaForDepth.type = "number";
+    numberAreaForDepth.placeholder = t`Custom Depth`;
+    numberAreaForDepth.title = t`Overrides the behavior of attaching the in-depth prompt dynamically before the last message, to using a constant depth`;
+    numberAreaForDepth.value = metadata.forceDepth ?? "";
+    numberAreaForDepth.classList.add("text_pole", "m-0");
 
     const textareaStatusSeparator = document.createElement("input");
     textareaStatusSeparator.autocomplete = "off";
@@ -256,6 +264,7 @@ export function formStatusSingleChar(char) {
     statInputsWrapper.classList.add("d-flex", "flex-end-start", "w-100", "gap-5px", "stat-wrapper");
     statInputsWrapper.append(
         createInputLabel(selectEntryRole),
+        createInputLabel(numberAreaForDepth),
         createInputLabel(textareaStatusSeparator),
         createInputLabel(textareaDefEntrySeparator),
         createInputLabel(textareaStatusPrefix),
@@ -397,6 +406,7 @@ export function formStatusSingleChar(char) {
     const DEBOUNCE_MS = 400;
     let formDebounceTimer;
     let altKeyDebounceTimer;
+    let forceDepthDebounceTimer;
     let separatorDebounceTimer;
     let defEntrySeparatorDebounceTimer;
     let prefixDebounceTimer;
@@ -551,15 +561,23 @@ export function formStatusSingleChar(char) {
     selectEntryRole.addEventListener("input", () => {
         metadata.role = Number(selectEntryRole.value);
 
-        saveMetadataDebounced();
+        saveMetadataSTUM();
     });
+
+    numberAreaForDepth.addEventListener("input", () => {
+        metadata.forceDepth = parseValue(numberAreaForDepth.value);
+
+        clearTimeout(forceDepthDebounceTimer);
+
+        forceDepthDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
+    })
 
     textareaStatusSeparator.addEventListener("input", () => {
         metadata.separator = un_escapeNewlines(textareaStatusSeparator.value);
 
         clearTimeout(separatorDebounceTimer);
 
-        separatorDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
+        separatorDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     });
 
     textareaDefEntrySeparator.addEventListener("input", () => {
@@ -567,7 +585,7 @@ export function formStatusSingleChar(char) {
 
         clearTimeout(defEntrySeparatorDebounceTimer);
 
-        defEntrySeparatorDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
+        defEntrySeparatorDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     });
 
     textareaStatusPrefix.addEventListener("input", () => {
@@ -575,7 +593,7 @@ export function formStatusSingleChar(char) {
 
         clearTimeout(prefixDebounceTimer);
 
-        prefixDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
+        prefixDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     });
 
     textareaStatusSuffix.addEventListener("input", () => {
@@ -583,7 +601,7 @@ export function formStatusSingleChar(char) {
 
         clearTimeout(suffixDebounceTimer);
 
-        suffixDebounceTimer = window.setTimeout(() => saveMetadataDebounced(), DEBOUNCE_MS);
+        suffixDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     });
 
     cloneStatsBtn.addEventListener("click", async () => {
@@ -658,7 +676,7 @@ export async function popupStatusSingleChar(char) {
         onClose: async () => destroyElement(container)
     });
 
-    fetchStatus({forceUIUpdate: true});
+    fetchStatusDebounced({forceUIUpdate: true});
 }
 
 export async function popupStatusMultiChar(chars) {
@@ -678,5 +696,5 @@ export async function popupStatusMultiChar(chars) {
         onClose: async () => destroyElement(content)
     });
 
-    fetchStatus({forceUIUpdate: true});
+    fetchStatusDebounced({forceUIUpdate: true});
 }

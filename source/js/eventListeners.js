@@ -1,7 +1,7 @@
-import { chat, chat_metadata, event_types, eventSource, scrollChatToBottom } from "../../../../../../script.js";
-import { saveMetadataDebounced } from "../../../../../extensions.js";
+import { characters, chat, chat_metadata, event_types, eventSource, scrollChatToBottom, this_chid, user_avatar } from "../../../../../../script.js";
 import { selected_group } from "../../../../../group-chats.js";
-import { addGroupStatusButtons, callbacksClickValueUID, extensionSettings, fetchStatus, getActiveParticipants, getStatusDepth, log } from "../../index.js";
+import { power_user } from "../../../../../power-user.js";
+import { addGroupStatusButtons, callbacksClickValueUID, extensionSettings, fetchStatus, fetchStatusDebounced, getActiveParticipants, getStatusDepth, log } from "../../index.js";
 import { createCharStatus, fillMissingMetadata, getCharStatus } from "./statusControls.js";
 
 /*
@@ -52,39 +52,65 @@ export function startListeners() {
 
     eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, async (...args) => {
         log("CHARACTER_MESSAGE_RENDERED", args);
-        fetchStatus({newMessID: args[0]});
+        fetchStatus();
+
+        if (power_user.auto_scroll_chat_to_bottom) scrollChatToBottom();
     });
 
     eventSource.on(event_types.USER_MESSAGE_RENDERED, async (...args) => {
         log("USER_MESSAGE_RENDERED", args);
-        fetchStatus({newMessID: args[0], depthModifier: 1});
+        fetchStatus({depthModifier: 1});
+
+        if (power_user.auto_scroll_chat_to_bottom) scrollChatToBottom();
     });
+
+    /**
+        @param {import("../../index.js").FetchOptions} options
+        @param {string} genType
+    */
+    function setActiveCharacterStat(options, genType) {
+        let avatar;
+
+        if (genType === "impersonate")
+            avatar = user_avatar;
+        else if (genType === "continue" && chat.at(-1)?.is_user)
+            avatar = chat.at(-1).force_avatar.replace(/(user avatars\/)|(\/thumbnail\?type=persona&file=)/i, "");
+        else if (this_chid !== undefined)
+            avatar = characters[this_chid].avatar;
+        else return;
+
+        options.forceDepth = {avatar: avatar, depth: 0};
+    }
 
     eventSource.makeLast(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
         log("GENERATION_AFTER_COMMANDS", args);
 
+        /**@type {import("../../index.js").FetchOptions}*/
         const options = {depthModifier: 1};
 
-        if (typeof args[0] === "string") options.generationType = args[0];
+        if (typeof args[0] === "string") {
+            options.generationType = args[0];
+
+            const genType = args[0];
+            setActiveCharacterStat(options, genType);
+        }
 
         fetchStatus(options);
     });
 
     eventSource.on(event_types.MORE_MESSAGES_LOADED, async (...args) => {
         log("MORE_MESSAGES_LOADED", args);
-        fetchStatus({forceUIUpdate: true});
+        fetchStatusDebounced({forceUIUpdate: true});
     });
 
     eventSource.on(event_types.MESSAGE_EDITED, async (...args) => {
         log("MESSAGE_EDITED", args);
-        fetchStatus();
+        fetchStatusDebounced();
     });
 
     eventSource.on(event_types.MESSAGE_DELETED, async (...args) => {
         log("MESSAGE_DELETED", args);
 
-        const id = (args[0] ?? chat.length) - 1;
-
-        fetchStatus({newMessID: id});
+        fetchStatusDebounced();
     });
 }

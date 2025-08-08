@@ -1,8 +1,8 @@
-import { extension_settings, saveMetadataDebounced } from "../../../extensions.js";
+import { extension_settings } from "../../../extensions.js";
 import { saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar, substituteParams } from "../../../../script.js";
 import { getGroupMembers, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
-import { createCharStatus, getCharAltValue, getCharStatus, updateCharEntry } from "./source/js/statusControls.js";
+import { createCharStatus, getCharAltValue, getCharStatus, saveMetadataSTUM, updateCharEntry } from "./source/js/statusControls.js";
 import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
 import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups.js";
@@ -56,10 +56,13 @@ const defaultSettings = {
     debug: false
 };
 
-const regexTextInput = /({{text)(::[^}\n]*)?(}})/g;
+const regexTextInput = /({{text)(::[^{}]*)?(}})/g;
 const regexNumberInput = /({{number)(::-?\d+\.?\d*)?(}})/g;
 const regexBooleanInput = /({{boolean)(::((false)|(true))::[^}\n]+::[^}\n]+)?(}})/g;
 const regexRangeInput = /({{range::)([\d]+(\.[\d]+)?)(::[\d]+(\.[\d]+)?){3}(}})/g;
+const FETCH_STATUS_TIMEOUT_MS = 300;
+
+let fetchStatusTimeout;
 
 export const extensionSettings = extension_settings[extensionName];
 
@@ -376,7 +379,10 @@ function addTracker(status, character) {
         <tr>
             <th scope="col">
                 <div class="d-flex w-100 flex-center-between p-10px">
-                    <span>Status - ${character.name}</span>
+                    <span>
+                        <span class="stat-us-max-chat-title-prefix">Status - </span>
+                        <span class="stat-us-max-chat-title">${character.name}</span>
+                    </span>
                     <div class="d-flex flex-center">
                         <div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0"></div>
                         <div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0"></div>
@@ -433,26 +439,22 @@ function addTracker(status, character) {
         status.is_collapsed = collapse;
 
         toggleVisibility(statusTableBody, collapse);
-        saveMetadataDebounced();
+        saveMetadataSTUM();
     });
 
     const createInputs = (/**@type {String}*/text) => {
-        const escapedText = lodash.escape(text);
         const parsedText = lodash.escape(substituteParams(processMacros(text, {char: character, processInputs: false}))).replaceAll(/\n/g, "<br>");
 
         if (!extensionSettings.editNumbersFromChat)
-            return `
-                <span class="d-none original-text">${escapedText}</span>
-                <span class="text-line">${parsedText}</span>
-            `;
+            return `<span class="text-line">${parsedText}</span>`;
 
         let newText = `<span class="text-line">${parsedText}</span>`;
 
         newText = newText.replaceAll(regexTextInput, (match) => {
-            const value = match.replaceAll(/(({{text(::)?)|(}}))/g, "");
+            const value = match.replaceAll(/((^{{text(::)?)|(}}$))/g, "").replaceAll("<br>", "\n");
             const input = `
                 <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
-                <input type="text" value="${value}" class="type-text fake-input chat-input-editor" autocomplete="off" size="0">
+                <textarea type="text" class="type-text fake-input chat-input-editor" data-pattern="^[^{}]*$" autocomplete="off" data-stee--handled="1">${value}</textarea>
                 <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? "show-spaces" : ""}">${value}</span></span>
             `;
 
@@ -463,7 +465,7 @@ function addTracker(status, character) {
             const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
             const input = `
                 <span class="fa-solid fa-n m-0 chat-input-icon select-none cursor-pointer"></span>
-                <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0">
+                <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" data-pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0" />
                 <span class="text-quote">
                     <span class="value font-monospace">${value}</span>
                     <span class="d-inline-flex gap-0 text-body cursor-pointer fs-normal">
@@ -482,7 +484,7 @@ function addTracker(status, character) {
             const trueValue = props[1] ?? "true";
             const falseValue = props[2] ?? "false";
             const input = `
-                <input type="checkbox" ${checked === "true" ? "checked" : ""} data-true="${trueValue}" data-false="${falseValue}" class="type-checkbox m-0 chat-input-editor">
+                <input type="checkbox" ${checked === "true" ? "checked" : ""} data-true="${trueValue}" data-false="${falseValue}" class="type-checkbox m-0 chat-input-editor" />
                 <span class="text-quote"> ${checked === "true" ? trueValue : falseValue}</span>
             `;
 
@@ -497,21 +499,21 @@ function addTracker(status, character) {
             const value = props[3];
             const input = `
                 <span class="d-flex flex-col flex-center gap-0 type-range chat-input-editor">
-                    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider">
-                    <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input">
+                    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider" />
+                    <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input" />
                 </span>
             `;
 
             return input;
         });
 
-        return `<span class="d-none original-text">${escapedText}</span>${newText}`;
+        return newText;
     }
 
     const createInputStrings = (parent, target) => {
         /**@type {HTMLElement}*/const targetEl = el(parent, target);
         /**@type {NodeListOf<HTMLElement>}*/const chunks = targetEl.querySelectorAll('.chat-input-editor');
-        let newValue = targetEl.querySelector('.d-none.original-text').textContent;
+        let newValue = /**@type {HTMLElement}*/(targetEl.querySelector('.text-line')).dataset.originalText;
 
         let countRange = -1;
         let countText = -1;
@@ -534,14 +536,15 @@ function addTracker(status, character) {
                 newMacro = `{{range::${min}::${max}::${step}::${value}}}`;
             }
 
-            if (chunk instanceof HTMLInputElement) {
-                if (chunk.classList.contains("type-text")) {
-                    const value = chunk.value;
-                    index = ++countText;
-                    match = regexTextInput;
-                    newMacro = `{{text${value.length > 0 ? "::" : ""}${value}}}`;
-                }
+            if (chunk instanceof HTMLTextAreaElement) {
+                const value = chunk.value;
+                index = ++countText;
+                match = regexTextInput;
+                newMacro = `{{text${value.length > 0 ? "::" : ""}${value}}}`;
+            }
 
+
+            if (chunk instanceof HTMLInputElement) {
                 if (chunk.classList.contains("type-number")) {
                     const value = chunk.value;
                     index = ++countNumber;
@@ -601,6 +604,7 @@ function addTracker(status, character) {
             destroyElement(el(newRow, el_target).children);
 
             el(newRow, el_target).innerHTML = createInputs(text);
+            el(newRow, el_target).querySelector('.text-line').dataset.originalText = text;
 
             if (!extensionSettings.editNumbersFromChat) return;
 
@@ -614,13 +618,15 @@ function addTracker(status, character) {
             });
 
             el(newRow, el_target)
-            .querySelectorAll('input.chat-input-editor')
-            .forEach((/**@type {HTMLInputElement}*/input) => {
+            .querySelectorAll('.chat-input-editor:not(.type-range)')
+            .forEach((/**@type {HTMLInputElement|HTMLTextAreaElement}*/input) => {
 
                 if (input.type === "checkbox") {
+                    // @ts-ignore
                     input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
 
                     input.addEventListener("input", () => {
+                        // @ts-ignore
                         input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
 
                         el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
@@ -699,8 +705,8 @@ function addTracker(status, character) {
                     });
 
                     input.addEventListener("input", () => {
-                        if (input.hasAttribute("pattern")) {
-                            const regex = new RegExp(input.getAttribute("pattern"));
+                        if (input.dataset.pattern) {
+                            const regex = new RegExp(input.dataset.pattern);
 
                             if (regex.test(input.value)) lastValid = input.value;
                             else input.value = lastValid;
@@ -711,7 +717,7 @@ function addTracker(status, character) {
                     });
 
                     if (input.classList.contains("type-number")) {
-                        input.addEventListener("keydown", (e) => {
+                        input.addEventListener("keydown", (/**@type {KeyboardEvent}*/e) => {
                             if (!["ArrowUp", "ArrowDown"].includes(e.key)) return setTimeout(() => updateCaretDisplay(input, lastValid), 10);
 
                             e.preventDefault();
@@ -731,7 +737,7 @@ function addTracker(status, character) {
             });
 
             el(newRow, el_target)
-            .querySelectorAll('span.chat-input-editor')
+            .querySelectorAll('.chat-input-editor.type-range')
             .forEach((/**@type {HTMLSpanElement}*/span) => {
                 /**@type {HTMLInputElement}*/const inputNumber = span.querySelector('input[type="number"]');
                 /**@type {HTMLInputElement}*/const inputRange = span.querySelector('input[type="range"]');
@@ -767,7 +773,24 @@ function addTracker(status, character) {
             formDebounceTimer = setTimeout(() => form.requestSubmit(), DEBOUNCE_MS);
         });
 
-        killSwitch.addEventListener("click", (e) => {
+        killSwitch.addEventListener('pointerdown', e =>
+            document.addEventListener('contextmenu', e => e.preventDefault(), {once: true})
+        );
+
+        killSwitch.addEventListener("pointerup", (/**@type {PointerEvent}*/e) => {
+            e.preventDefault();
+
+            if (e.button === 2) {
+                popupStatusSingleChar(character);
+
+                return setTimeout(() => {
+                    const popupContainer = `.stat-us-max-popup[data-char="${character.avatar}"][data-is-user="${status.is_user}"]`;
+                    const popupRowToggle = `.stat-us-max-popup-row[data-uid="${entry.uid}"] .inline-drawer-toggle`;
+                    /**@type {HTMLElement}*/const drawerToggle = document.querySelector(`${popupContainer} ${popupRowToggle}`);
+                    drawerToggle.click();
+                }, 50);
+            }
+
             toggleSwitch(killSwitch, (state) => {
                 el(form, 'input[name="enabled"]').value = state;
                 toggleVisibility(el(newRow, '.status-separator'), !state);
@@ -910,8 +933,17 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
 
 /**
     MARK:fetchStatus()
+    @typedef {object} FetchOptions
+    @property {boolean} [forceUIUpdate]
+    @property {number} [depthModifier]
+    @property {object} [forceDepth]
+    @property {String} [forceDepth.avatar]
+    @property {number} [forceDepth.depth]
+    @property {String} [generationType]
+
+    @param {FetchOptions?} options
 */
-export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID = (chat.length - 1), generationType = ""} = {}) {
+export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDepth = undefined, generationType = ""} = {}) {
     if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
 
     const real_chat = !extension_settings["Presence"] ? chat.slice(chat_metadata.lastInContextMessageId) : chat;
@@ -941,21 +973,29 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
         if (!character) continue;
 
-        const char_depth = getStatusDepth(real_chat, character, generationType);
+        const statusCustomDepth = Number(data[i].status.forceDepth === "" ? NaN : data[i].status.forceDepth);
+        const ignoreDepthFailSafe = forceDepth?.avatar === character.avatar || statusCustomDepth >= 0;
+
+        const dynamicDepth = getStatusDepth(real_chat, character, generationType);
+        const char_depth = ignoreDepthFailSafe ? {depth: (forceDepth?.depth ?? statusCustomDepth)} : dynamicDepth;
+
+        if (statusCustomDepth >= 0)
+            char_depth.depth = statusCustomDepth;
 
         if (!data[i].status && extensionSettings.autoDetectParticipants)
             data[i].status = createCharStatus(character);
 
         if (!data[i].status) continue;
 
-        const detectedLastMesID = char_depth.last_mes_id + char_depth.depth;
-        const charLastMesID = data[i].status.last_mes_id + data[i].status.depth;
-
         // If chat/status is empty or character is not even in the context
         if (char_depth.depth < 0) continue;
+
+        const detectedLastMesID = dynamicDepth.last_mes_id + dynamicDepth.depth;
+        const charLastMesID = data[i].status.last_mes_id + data[i].status.depth;
+
         if (forceUIUpdate || detectedLastMesID !== charLastMesID) {
-            data[i].status.depth = char_depth.depth;
-            data[i].status.last_mes_id = char_depth.last_mes_id;
+            data[i].status.depth = dynamicDepth.depth;
+            data[i].status.last_mes_id = dynamicDepth.last_mes_id;
             addTracker(data[i].status, character);
         }
 
@@ -963,7 +1003,8 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
 
         if (!status.entries.length) continue;
 
-        const promptKey = extensionName.toLowerCase() + "-" + char_depth.depth;
+        const promptKey = extensionName.toLowerCase() + "-" + character.avatar;
+        const promptDepth = ignoreDepthFailSafe ? char_depth.depth : char_depth.depth + depthModifier;
         let promptValue = "";
 
         for (const entry of status.entries) {
@@ -988,13 +1029,21 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, newMessID
             promptKey,
             promptValue,
             extension_prompt_types.IN_CHAT,
-            char_depth.depth + depthModifier,
+            promptDepth,
             true,
             status.role
         );
     }
 
-    saveMetadataDebounced();
+    saveMetadataSTUM();
+}
+
+/**
+    @param {FetchOptions?} options
+*/
+export function fetchStatusDebounced(options = {}) {
+    clearTimeout(fetchStatusTimeout);
+    fetchStatusTimeout = setTimeout(() => fetchStatus(options), FETCH_STATUS_TIMEOUT_MS);
 }
 
 export function groupListAvatarsClick(e) {

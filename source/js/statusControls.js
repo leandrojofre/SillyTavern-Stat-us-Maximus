@@ -4,6 +4,14 @@ import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { t } from "../../../../../i18n.js";
 import { un_escapeNewlines } from "./popups.js";
 
+let saveDataTimeout;
+const SAVE_DATA_TIMEOUT_MS = 300;
+
+export function saveMetadataSTUM() {
+    clearTimeout(saveDataTimeout)
+    saveDataTimeout = setTimeout(saveMetadataDebounced, SAVE_DATA_TIMEOUT_MS);
+}
+
 export function getFreeDataUid(data) {
     if (!data?.length) return 0;
 
@@ -40,7 +48,8 @@ export function addCharAltValue(character, entry_uid, alt_value = "") {
         };
 
         entry.alt_values.push(newAlt);
-        saveMetadataDebounced();
+
+        saveMetadataSTUM();
 
         return newAlt;
     } catch (error) {
@@ -86,11 +95,12 @@ export function updateCharAltValue(character, entry_uid, alt_uid, formData) {
 
         if (!alt) throw new Error(`Alt entry with uid=${alt_uid} not found`);
 
-        for (const [key, value] of formData.entries()) alt[key] = String(value);
+        for (const [key, value] of formData.entries())
+            alt[key] = key === "value" ? un_escapeNewlines(String(value)) : String(value);
 
         if (entry.value_uid === alt.uid) entry.value = alt.value;
 
-        saveMetadataDebounced();
+        saveMetadataSTUM();
 
         return alt;
     } catch (error) {
@@ -118,7 +128,7 @@ export function removeCharAltValue(character, entry_uid, alt_uid) {
             entry.value_uid = entry.alt_values[0].uid;
         }
 
-        saveMetadataDebounced();
+        saveMetadataSTUM();
 
         return true;
     } catch (error) {
@@ -155,7 +165,7 @@ export function addCharEntry(character, entry_key = "", entry_value = "") {
 
         char_status.entries.push(newEntry);
 
-        saveMetadataDebounced();
+        saveMetadataSTUM();
 
         return newEntry;
     } catch (error) {
@@ -187,7 +197,7 @@ export function refreshCharEntryDisplay(character, display_order) {
 
         char_status.entries = ordered_data;
 
-        saveMetadataDebounced();
+        saveMetadataSTUM();
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
@@ -217,7 +227,7 @@ export function getCharEntry(character, entry_uid) {
     }
 }
 
-function parseValue(val) {
+export function parseValue(val) {
     if (val === "true")  return true;
     if (val === "false") return false;
 
@@ -244,6 +254,7 @@ export function updateCharEntry(character, entry_uid, formData) {
             let parsedValue = parseValue(value);
 
             if (key === "alt_key") continue;
+            if (key === "value") parsedValue = un_escapeNewlines(parsedValue);
             if (key.includes("separator")) parsedValue = un_escapeNewlines(parsedValue);
 
             entry[key] = parsedValue;
@@ -256,7 +267,7 @@ export function updateCharEntry(character, entry_uid, formData) {
         altValue.value = entry.value;
         altValue.key = formData.get("alt_key") ?? altValue.key;
 
-        saveMetadataDebounced();
+        saveMetadataSTUM();
 
         return entry;
     } catch (error) {
@@ -282,7 +293,7 @@ export function removeCharEntry(character, entry_uid = -1) {
             .filter(s => s.uid !== Number(entry_uid));
 
         getLastDisplayPosition(char_status.entries);
-        saveMetadataDebounced();
+        saveMetadataSTUM();
 
         return true;
     } catch (error) {
@@ -304,6 +315,7 @@ export function createCharStatus(character, depth = -1) {
             prefix: "",
             suffix: "",
             depth: depth,
+            forceDepth: "",
             last_mes_id: (depth >= 0) ? (chat.length - depth - 1) : (-1),
             is_user: character.is_user ?? false,
             is_collapsed: false,
@@ -312,7 +324,7 @@ export function createCharStatus(character, depth = -1) {
 
         chat_metadata.stat_us_maximus.push(status);
 
-        saveMetadataDebounced();
+        saveMetadataSTUM();
 
         return status;
     } catch (error) {
@@ -335,6 +347,36 @@ export function getCharStatus(character) {
         return chat_metadata.stat_us_maximus.find((status) => status.avatar === character.avatar) ?? false;
     else
         return false;
+}
+
+/**
+    @param {object} character
+    @param {FormData} formData
+    @returns {object|Boolean}
+*/
+export function updateCharStatus(character, formData) {
+    try {
+        const status = getCharStatus(character);
+
+        if (!status) throw new Error(`Status data for the character ${character.name} could not be found`);
+        if (!formData) throw new Error("Data sent is not valid");
+
+        for (const [key, value] of formData.entries()) {
+            let parsedValue = un_escapeNewlines(parseValue(value));
+
+            status[key] = parsedValue;
+        }
+
+        saveMetadataSTUM();
+
+        return status;
+    } catch (error) {
+        // @ts-ignore
+        toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        console.error(error.message);
+
+        return false;
+    }
 }
 
 /**
@@ -376,7 +418,7 @@ export function transferCharStatus(character, target, {deleteOriginal = false, o
 
         if (deleteOriginal) deleteCharStatus(character);
 
-        saveMetadataDebounced();
+        saveMetadataSTUM();
 
         return true;
     } catch (error) {
@@ -395,7 +437,7 @@ export function deleteCharStatus(character) {
         chat_metadata.stat_us_maximus = chat_metadata.stat_us_maximus
             .filter(stat => stat.avatar !== character.avatar);
 
-        saveMetadataDebounced();
+        saveMetadataSTUM();
         deleteCharTracker(character);
 
         return true;
@@ -416,6 +458,7 @@ const statusTemplate = {
     prefix: "",
     suffix: "",
     depth: -1,
+    forceDepth: "",
     last_mes_id: -1,
     is_user: false,
     is_collapsed: false,
@@ -462,7 +505,7 @@ export async function fillMissingMetadata() {
             }
         }
 
-        saveMetadataDebounced();
+        saveMetadataSTUM();
 
         return true;
     } catch (error) {
