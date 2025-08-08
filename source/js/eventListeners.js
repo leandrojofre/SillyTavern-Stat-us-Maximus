@@ -14,6 +14,10 @@ import { createCharStatus, fillMissingMetadata, getCharStatus } from "./statusCo
     - [X] Display a table with statuses in the last message of each participant
 */
 
+/**
+    @typedef {import('../../index.js').FetchOptions} FetchOptions
+*/
+
 export function startListeners() {
     eventSource.on(event_types.GROUP_UPDATED, async (...args) => {
         log("GROUP_UPDATED", args);
@@ -65,7 +69,7 @@ export function startListeners() {
     });
 
     /**
-        @param {import('../../index.js').FetchOptions} options
+        @param {FetchOptions} options
         @param {string} genType
     */
     function setActiveCharacterStat(options, genType) {
@@ -85,7 +89,7 @@ export function startListeners() {
     eventSource.makeLast(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
         log("GENERATION_AFTER_COMMANDS", args);
 
-        /**@type {import('../../index.js').FetchOptions}*/
+        /**@type {FetchOptions} */
         const options = {depthModifier: 1};
 
         if (typeof args[0] === "string") {
