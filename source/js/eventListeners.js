@@ -1,5 +1,6 @@
 import { characters, chat, chat_metadata, event_types, eventSource, scrollChatToBottom, this_chid, user_avatar } from "../../../../../../script.js";
 import { selected_group } from "../../../../../group-chats.js";
+import { power_user } from "../../../../../power-user.js";
 import { addGroupStatusButtons, callbacksClickValueUID, extensionSettings, fetchStatus, fetchStatusDebounced, getActiveParticipants, getStatusDepth, log } from "../../index.js";
 import { createCharStatus, fillMissingMetadata, getCharStatus } from "./statusControls.js";
 
@@ -51,12 +52,16 @@ export function startListeners() {
 
     eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, async (...args) => {
         log("CHARACTER_MESSAGE_RENDERED", args);
-        fetchStatusDebounced();
+        fetchStatus();
+
+        if (power_user.auto_scroll_chat_to_bottom) scrollChatToBottom();
     });
 
     eventSource.on(event_types.USER_MESSAGE_RENDERED, async (...args) => {
         log("USER_MESSAGE_RENDERED", args);
-        fetchStatusDebounced({depthModifier: 1});
+        fetchStatus({depthModifier: 1});
+
+        if (power_user.auto_scroll_chat_to_bottom) scrollChatToBottom();
     });
 
     /**
