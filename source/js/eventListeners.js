@@ -15,7 +15,7 @@ import { createCharStatus, fillMissingMetadata, getCharStatus } from "./statusCo
 */
 
 /**
-    @typedef {import('../../index.js').FetchOptions} FetchOptions
+    @typedef {import('../../index.js').FetchOptions?} FetchOptions
 */
 
 export function startListeners() {
