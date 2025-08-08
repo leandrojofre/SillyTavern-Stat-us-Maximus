@@ -1,4 +1,5 @@
-import { characters, extension_prompt_roles } from "../../../../../../script.js";
+import { lodash } from "../../../../../../lib.js";
+import { characters, extension_prompt_roles, getThumbnailUrl } from "../../../../../../script.js";
 import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
@@ -135,8 +136,8 @@ async function clonePopup(char) {
 
 function getFullCharAvatar(status) {
     // TODO getThumbnailUrl - on next release
-    if (status.is_user) return "User Avatars/" + status.avatar;
-    else return "/thumbnail?type=avatar&file=" + status.avatar;
+    if (status.is_user) return getThumbnailUrl("persona", status.avatar); //"/thumbnail?type=persona&file=" + status.avatar;
+    else return getThumbnailUrl("avatar", status.avatar); //"/thumbnail?type=avatar&file=" + status.avatar;
 }
 
 export function formStatusSingleChar(char) {
@@ -176,7 +177,7 @@ export function formStatusSingleChar(char) {
     /** Create Menu header. */
     const avatar = document.createElement("img");
     avatar.alt = "Avatar";
-    avatar.title = metadata.avatar;
+    avatar.title = lodash.escape(metadata.avatar);
     avatar.src = getFullCharAvatar(metadata);
 
     const avatarContainer = document.createElement("div");
