@@ -65,7 +65,7 @@ export function startListeners() {
     });
 
     /**
-        @param {import("../../index.js").FetchOptions} options
+        @param {import('../../index.js').FetchOptions} options
         @param {string} genType
     */
     function setActiveCharacterStat(options, genType) {
@@ -85,7 +85,7 @@ export function startListeners() {
     eventSource.makeLast(event_types.GENERATION_AFTER_COMMANDS, async (...args) => {
         log("GENERATION_AFTER_COMMANDS", args);
 
-        /**@type {import("../../index.js").FetchOptions}*/
+        /**@type {import('../../index.js').FetchOptions}*/
         const options = {depthModifier: 1};
 
         if (typeof args[0] === "string") {
