@@ -14,10 +14,14 @@ import { createCharStatus, fillMissingMetadata, getCharStatus } from "./statusCo
     - [X] Display a table with statuses in the last message of each participant
 */
 
-const IndexModule = require('../../index.js');
-
 /**
-    @typedef {IndexModule.FetchOptions} FetchOptions
+    @typedef {object} FetchOptions
+    @property {boolean} [forceUIUpdate]
+    @property {number} [depthModifier]
+    @property {object} [forceDepth]
+    @property {String} [forceDepth.avatar]
+    @property {number} [forceDepth.depth]
+    @property {String} [generationType]
 */
 
 export function startListeners() {
