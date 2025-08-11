@@ -59,7 +59,7 @@ const defaultSettings = {
 const regexTextInput = /({{text)(::[^{}]*)?(}})/g;
 const regexNumberInput = /({{number)(::-?\d+\.?\d*)?(}})/g;
 const regexBooleanInput = /({{boolean)(::((false)|(true))::[^}\n]+::[^}\n]+)?(}})/g;
-const regexRangeInput = /({{range::)([\d]+(\.[\d]+)?)(::[\d]+(\.[\d]+)?){3}(}})/g;
+const regexRangeInput = /({{range::)(-?[\d]+(\.[\d]+)?)(::-?[\d]+(\.[\d]+)?){3}(}})/g;
 const FETCH_STATUS_TIMEOUT_MS = 300;
 
 let fetchStatusTimeout;
@@ -494,8 +494,8 @@ function addTracker(status, character) {
         newText = newText.replaceAll(regexRangeInput, (match) => {
             const props = match.replaceAll(/(({{range::)|(}}))/g, "").split("::");
             const min = props[0];
-            const max = props[1];
-            const step = props[2];
+            const max = Number(props[1]) < Number(min) ? min : props[1];
+            const step = Number(props[2]) <= 0 ? 1 : props[2];
             const value = props[3];
             const input = `
                 <span class="d-flex flex-col flex-center gap-0 type-range chat-input-editor">
