@@ -50,8 +50,8 @@ This extension adds a menu per character to have your notes, it is basically a s
 ### Macros
 - `{{name}}` Will be replaced with the name of the Status owner.
 - `{{text}} | {{text::Your text here}}` In the chat UI, it will be replaced with a text input. This does not support newlines or curly braces `{}`.
-- `{{number}} | {{number::1024}}` In the chat UI, it will be replaced with a number input. You need to use dots `.` for decimals, commas are not supported.
-- `{{boolean}} | {{boolean::true::Custom true::Custom false}}` In the chat UI, it will be replaced with a checkbox. The first parameter is the state of the checkbox. By default, the macro will be replaced with `true` or `false`, but you can set a custom text to be displayed when the checkbox is on or off.
+- `{{number}} | {{number::2048}}` In the chat UI, it will be replaced with a number input. You need to use dots `.` for decimals, commas are not supported.
+- `{{boolean}} | {{boolean::DefaultValueTrueOrFalse::Custom True Label::Custom False Label}}` In the chat UI, it will be replaced with a checkbox. The first parameter is the state of the checkbox, and must either be `true` or `false`. By default, the checkbox labels and value sent to prompt will simply be "true" or "false", but you can set custom texts to be displayed/sent instead with the custom label parameters.
 - `{{range::min::max::step::value}}` In the chat UI, it will be replaced with a range input, the same used in the samplers panel. `min` is the minimum value of the range, `max` is the maximum, `step` is the amount of numbers the input will increase/decrease when the buttons of the input are used, and `value` is the value the input will have. All parameters are `numbers`, and decimals only accept dots.
 
 ### Coming Soon
