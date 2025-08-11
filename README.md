@@ -31,6 +31,7 @@ This extension adds a menu per character to have your notes, it is basically a s
 
 ### Slash Commands
 - `/stum-create-status` Creates Status data for the selected character, allows you to add data for non-present chat participants.
+- `/stum-set-status-field` Sets the value of one of the core fields of you Character's status. If you use ST's macros as the field value, you'll need to escape them like this: `{\{char}}`.
 - `/stum-delete-status` Deletes Status data for the selected character.
 - `/stum-create-entry` Creates an entry in the status of a character and returns its UID. If the character is not found in the metadata, it returns false.
 - `/stum-get-entry-uid` Get an entry uid by pairing a Character status field against a value, returning the uid of the first match. If no match is found, an empty string is returned.
