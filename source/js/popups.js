@@ -174,7 +174,13 @@ export function formStatusSingleChar(char) {
         return buttonsWrapper;
     }
 
+    const escapedCharName = lodash.escape(char.name);
+
     /** Create Menu header. */
+    const charName = document.createElement("span");
+    charName.innerText = escapedCharName;
+    charName.classList.add("popup-char-name", "text-quote");
+
     const avatar = document.createElement("img");
     avatar.alt = "Avatar";
     avatar.title = lodash.escape(metadata.avatar);
@@ -256,8 +262,8 @@ export function formStatusSingleChar(char) {
     compressEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-compress", "interactable", "m-0");
 
     const newStatBtn = document.createElement("div");
-    newStatBtn.title = `Add an status to ${char.name}`;
-    newStatBtn.dataset.i18n = `Add an status to ${char.name}`;
+    newStatBtn.title = `Add an status to ${escapedCharName}`;
+    newStatBtn.dataset.i18n = `Add an status to ${escapedCharName}`;
     newStatBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable", "m-0");
 
     const statInputsWrapper = document.createElement("div");
@@ -278,11 +284,18 @@ export function formStatusSingleChar(char) {
         ], true)
     );
 
-    const wrapper = document.createElement("div");
-    wrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px");
-    wrapper.append(
+    const contentHeaderWrapper = document.createElement("div");
+    contentHeaderWrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px");
+    contentHeaderWrapper.append(
         avatarContainer,
         statInputsWrapper
+    );
+
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("d-flex", "flex-col", "flex-start-center", "gap-5px");
+    wrapper.append(
+        charName,
+        contentHeaderWrapper
     );
 
     /** Create input template */
@@ -622,8 +635,8 @@ export function formStatusSingleChar(char) {
             refreshButton.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-arrows-rotate", "interactable");
 
             const refreshSpan = document.createElement("span");
-            refreshSpan.dataset.i18n = `Re-create ${char.name}'s Status data`;
-            refreshSpan.innerText = `Re-create ${char.name}'s Status data`;
+            refreshSpan.dataset.i18n = `Re-create ${escapedCharName}'s Status data`;
+            refreshSpan.innerText = `Re-create ${escapedCharName}'s Status data`;
 
             const refreshContainer = document.createElement("div");
             refreshContainer.classList.add("d-flex", "flex-wrap", "flex-center");
