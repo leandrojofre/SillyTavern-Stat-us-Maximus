@@ -362,13 +362,13 @@ function addTracker(status, character) {
                 <input type="hidden" name="value_uid">
             </form>
             <div class="d-flex flex-center-between gap-15px fs-90p text-muted hover-highlight">
-                <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state." data-i18n="Toggle entry's active state."></div>
+                <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state" data-i18n="Toggle entry's active state"></div>
                 <p class="text-left flex-grow-1 m-0 d-table">
                     <span class="status-title fw-bolder d-contents"></span>
                     <span class="status-separator"></span>
                     <span class="status-description d-contents"></span>
                 </p>
-                <div class="status-value-uid fa-solid fa-bars-progress m-0" aria-describedby="tooltip"></div>
+                <div class="status-value-uid fa-solid fa-bars-progress m-0" aria-describedby="tooltip" title="Swap entry description" data-i18n="Swap entry description"></div>
             </div>
         </td>
     `;
@@ -650,7 +650,7 @@ function addTracker(status, character) {
 
                         document.addEventListener("click", (e) => {
                             clearInterval(incrementsPressed);
-                            clearInterval(incrementsCooldown);
+                            clearTimeout(incrementsCooldown);
 
                             if (!spanSelected) return;
 
@@ -716,22 +716,23 @@ function addTracker(status, character) {
                         el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
 
                         clearTimeout(inputTimeout);
-                        inputTimeout = dispatchInput(form, 200);
+                        inputTimeout = dispatchInput(form, 300);
                     });
 
                     if (input.classList.contains("type-number")) {
                         input.addEventListener("keydown", (/**@type {KeyboardEvent}*/e) => {
-                            if (!["ArrowUp", "ArrowDown"].includes(e.key)) return setTimeout(() => updateCaretDisplay(input, lastValid), 10);
+                            if (!["ArrowUp", "ArrowDown"].includes(e.key))
+                                return setTimeout(() => updateCaretDisplay(input, lastValid), 75);
 
                             e.preventDefault();
 
                             input.value = String(Number(input.value) + ((e.key === "ArrowUp") ? 1 : -1));
 
                             dispatchInput(input);
-                            setTimeout(() => updateCaretDisplay(input, lastValid), 10);
+                            setTimeout(() => updateCaretDisplay(input, lastValid), 75);
                         });
                     } else {
-                        input.addEventListener("keydown", () => setTimeout(() => updateCaretDisplay(input, lastValid), 10));
+                        input.addEventListener("keydown", () => setTimeout(() => updateCaretDisplay(input, lastValid), 75));
                     }
 
                     input.addEventListener("focus", () => updateCaretDisplay(input, lastValid));
