@@ -407,8 +407,8 @@ function addTracker(status, character) {
 
     const el = (target, class_name) => target.querySelector(class_name);
 
-    const dispatchInput = (/**@type {HTMLElement}*/target) => {
-        setTimeout(() => target.dispatchEvent(inputEvent), 10);
+    const dispatchInput = (/**@type {HTMLElement}*/target, time = 10) => {
+        return setTimeout(() => target.dispatchEvent(inputEvent), time);
     }
 
     /** @param {HTMLElement} el */
@@ -620,7 +620,6 @@ function addTracker(status, character) {
             el(newRow, el_target)
             .querySelectorAll('.chat-input-editor:not(.type-range)')
             .forEach((/**@type {HTMLInputElement|HTMLTextAreaElement}*/input) => {
-
                 if (input.type === "checkbox") {
                     // @ts-ignore
                     input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
@@ -635,6 +634,7 @@ function addTracker(status, character) {
                 } else {
                     const eventTargets = [input.nextElementSibling, input.previousElementSibling];
                     let lastValid = input.value;
+                    let inputTimeout;
 
                     eventTargets.forEach((/**@type {HTMLSpanElement}*/span) => {
                         let spanSelected = false;
@@ -713,7 +713,9 @@ function addTracker(status, character) {
                         } else lastValid = input.value;
 
                         el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
-                        dispatchInput(form);
+
+                        clearTimeout(inputTimeout);
+                        inputTimeout = dispatchInput(form, 200);
                     });
 
                     if (input.classList.contains("type-number")) {
