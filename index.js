@@ -53,6 +53,7 @@ const defaultSettings = {
     hideInputLabels: false,
     rangeInputWidth: "auto",
     showWhiteSpaces: false,
+    minPromptDepth: 0,
     debug: false
 };
 
@@ -1006,7 +1007,8 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
         if (!status.entries.length) continue;
 
         const promptKey = extensionName.toLowerCase() + "-" + character.avatar;
-        const promptDepth = ignoreDepthFailSafe ? char_depth.depth : char_depth.depth + depthModifier;
+        const promptDepth = ignoreDepthFailSafe ? char_depth.depth : (char_depth.depth + depthModifier);
+        const finalPromptDepth = (promptDepth < extensionSettings.minPromptDepth) ? extensionSettings.minPromptDepth : promptDepth;
         let promptValue = "";
 
         for (const entry of status.entries) {
@@ -1031,7 +1033,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
             promptKey,
             promptValue,
             extension_prompt_types.IN_CHAT,
-            promptDepth,
+            finalPromptDepth,
             true,
             status.role
         );
@@ -1114,7 +1116,8 @@ const settingsCallbacks = {
 /** Changes a boolean setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsBooleanButton(event) {
     const target = event.target;
-    const value = Boolean($(target).prop("checked"));
+    const value = Boolean($(target).prop("checked")) === true;
+
     const setting = target.getAttribute("stat-us-max-setting");
     const callback = settingsCallbacks[setting];
 
@@ -1130,6 +1133,24 @@ function settingsBooleanButton(event) {
 function settingsTextButton(event) {
     const target = event.target;
     const value = String($(target).val());
+
+    const setting = target.getAttribute("stat-us-max-setting");
+    const callback = settingsCallbacks[setting];
+
+    extensionSettings[setting] = value;
+
+    if (callback) callback();
+
+    log("toggleSetting " + setting, value);
+    saveSettingsDebounced();
+}
+
+/** Changes a number setting value and triggers a callback if there's any on settingsCallbacks. */
+function settingsNumberButton(event) {
+    const target = event.target;
+    const raw_value = Number($(target).val());
+    const value = isNaN(raw_value) ? 0 : raw_value;
+
     const setting = target.getAttribute("stat-us-max-setting");
     const callback = settingsCallbacks[setting];
 
@@ -1148,6 +1169,7 @@ function displaySettings() {
     console.debug("[" + extensionName + "]", `Hide input labels is ${extensionSettings.hideInputLabels ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Show whitespaces is ${extensionSettings.showWhiteSpaces ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Range input width is set to ${String(extensionSettings.rangeInputWidth)}`);
+    console.debug("[" + extensionName + "]", `Min prompt depth is set to ${String(extensionSettings.minPromptDepth)}`);
     console.debug("[" + extensionName + "]", `Debug mode is ${extensionSettings.debug ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", structuredClone(extensionSettings));
 }
@@ -1164,6 +1186,7 @@ async function loadHTMLSettings() {
     $("#stat-us-max-hide-input-labels").on("input", settingsBooleanButton);
     $("#stat-us-max-show-white-spaces").on("input", settingsBooleanButton);
     $("#stat-us-max-range-input-width").on("input", settingsTextButton);
+    $("#stat-us-max-min-prompt-depth").on("input", settingsNumberButton);
     $("#stat-us-max-debug").on("input", settingsBooleanButton);
     $("#stat-us-max-check-configuration").on("click", displaySettings);
 
@@ -1177,6 +1200,7 @@ function setSettings() {
     $("#stat-us-max-show-white-spaces").prop("checked", extensionSettings.showWhiteSpaces);
     $("#stat-us-max-hide-input-labels").prop("checked", extensionSettings.hideInputLabels).trigger("input");
     $("#stat-us-max-range-input-width").val(extensionSettings.rangeInputWidth).trigger("input");
+    $("#stat-us-max-min-prompt-depth").val(extensionSettings.minPromptDepth);
     $("#stat-us-max-debug").prop("checked", extensionSettings.debug).trigger("input");
 }
 

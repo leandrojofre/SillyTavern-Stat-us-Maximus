@@ -17,6 +17,11 @@ You might want to add additional HTML elements to ST. It's good practice to sepa
 					Automatically add Status data to active participants in the chat
 				</label>
 
+				<label class="d-flex flex-col flex-start-center gap-5px">
+                    <small class="text-quote">Set the minimum prompt injection depth</small>
+					<input id="stat-us-max-min-prompt-depth" stat-us-max-setting="minPromptDepth" type="number" min="0" max="10000" step="1" class="text_pole textarea_compact mt-0" />
+				</label>
+
 				<div class="flex-container w-100">
 					<a id="stat-us-max-check-docs" title="Link to the repository" class="menu_button w-100" type="button" target="_blank" href="https://github.com/leandrojofre/SillyTavern-Stat-us-Maximus?tab=readme-ov-file#features">
                         Open the docs
@@ -52,7 +57,7 @@ You might want to add additional HTML elements to ST. It's good practice to sepa
 				</label>
 			</div>
 
-			<div class="flex-container flex-column">
+			<div class="flex-container flex-column separator-bottom pb-5px">
 				<b>Debug settings</b>
 
 				<div class="flex-container">
@@ -65,8 +70,6 @@ You might want to add additional HTML elements to ST. It's good practice to sepa
 					Enable/Disable the debug console logs
 				</label>
 			</div>
-
-			<hr class="sysHR" />
 		</div>
 	</div>
 </div>
