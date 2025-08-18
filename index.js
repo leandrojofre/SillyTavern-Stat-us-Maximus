@@ -280,8 +280,16 @@ function hidePopper(popperInstance, tooltip) {
     }));
 }
 
+/**
+    @param {HTMLElement} span
+    @param {*} text
+    @param {*} caretPos
+    @param {*} selectEnd
+ */
 function renderCaret(span, text, caretPos, selectEnd = caretPos) {
     const esc = s => lodash.escape(s);
+
+    destroyElement(span.children);
 
     if (caretPos < 0) return span.textContent = text;
 
@@ -408,8 +416,11 @@ function addTracker(status, character) {
 
     const el = (target, class_name) => target.querySelector(class_name);
 
-    const dispatchInput = (/**@type {HTMLElement}*/target, time = 10) => {
-        return setTimeout(() => target.dispatchEvent(inputEvent), time);
+    const dispatchInput = (/**@type {HTMLElement}*/target, {time = 10, callback = () => {}} = {}) => {
+        return setTimeout(() => {
+            callback();
+            target.dispatchEvent(inputEvent);
+        }, time);
     }
 
     /** @param {HTMLElement} el */
@@ -713,10 +724,11 @@ function addTracker(status, character) {
                             else input.value = lastValid;
                         } else lastValid = input.value;
 
-                        el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
 
                         clearTimeout(inputTimeout);
-                        inputTimeout = dispatchInput(form, 300);
+                        inputTimeout = dispatchInput(form, {time: 300, callback: () =>
+                            el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target)
+                        });
                     });
 
                     if (input.classList.contains("type-number")) {
