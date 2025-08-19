@@ -74,7 +74,7 @@ export const log = (...msg) => {
     console.log("[" + extensionName + "]", ...msg);
 };
 
-// * MARK:Extension methods
+// * MARK:# Extension Methods
 
 /** Destroys an element and all data associated with it
     @param {string|HTMLElement|Node|JQuery<any>|HTMLElement[]|NodeList} element
@@ -343,8 +343,7 @@ export function deleteCharTracker(character) {
     destroyElement(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`);
 }
 
-/**
-    MARK:addTracker()
+/** MARK:addTracker()
 */
 function addTracker(status, character) {
     const $chat = document.getElementById("chat");
@@ -947,8 +946,7 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
     return newText;
 }
 
-/**
-    MARK:fetchStatus()
+/** MARK:fetchStatus()
     @typedef {object} FetchOptions
     @property {boolean} [forceUIUpdate]
     @property {number} [depthModifier]
@@ -1088,7 +1086,7 @@ export function addGroupStatusButtons() {
     }
 }
 
-// * MARK:Methods in charge of controlling the extension settings
+// * MARK:# Settings Methods
 
 const settingsCallbacks = {
     rangeInputWidthTimeout: undefined,
@@ -1313,7 +1311,7 @@ function initButtons() {
     });
 
     const charStatusMenu = document.createElement("div");
-    charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px", "separator-bottom");
+    charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px", "standoutHeader", "p-5px");
     charStatusMenu.append(charStatusSpan, charStatusOpenPopupBtn, personaStatusOpenPopupBtn, personasStatusOpenPopupBtn);
 
     const charStatusContainer = document.createElement("div");
