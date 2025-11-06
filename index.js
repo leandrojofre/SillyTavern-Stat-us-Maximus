@@ -54,6 +54,7 @@ const defaultSettings = {
     rangeInputWidth: "auto",
     showWhiteSpaces: false,
     minPromptDepth: 0,
+    alwaysIncludeUnmutedMembers: false,
     debug: false
 };
 
@@ -963,6 +964,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
     const real_chat = !extension_settings["Presence"] ? chat.slice(chat_metadata.lastInContextMessageId) : chat;
     const metadata = chat_metadata.stat_us_maximus;
     const chars = getActiveParticipants();
+    const fallbackDepth = extensionSettings.minPromptDepth - depthModifier;
 
     if (!metadata?.length) chars.push(...getAllParticipantsInChat(real_chat));
 
@@ -991,10 +993,10 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
         const ignoreDepthFailSafe = forceDepth?.avatar === character.avatar || statusCustomDepth >= 0;
 
         const dynamicDepth = getStatusDepth(real_chat, character, generationType);
-        const char_depth = ignoreDepthFailSafe ? {depth: (forceDepth?.depth ?? statusCustomDepth)} : dynamicDepth;
+        const charDepth = ignoreDepthFailSafe ? {depth: (forceDepth?.depth ?? statusCustomDepth)} : dynamicDepth;
 
         if (statusCustomDepth >= 0)
-            char_depth.depth = statusCustomDepth;
+            charDepth.depth = statusCustomDepth;
 
         if (!data[i].status && extensionSettings.autoDetectParticipants)
             data[i].status = createCharStatus(character);
@@ -1002,7 +1004,10 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
         if (!data[i].status) continue;
 
         // If chat/status is empty or character is not even in the context
-        if (char_depth.depth < 0) continue;
+        if (charDepth.depth < 0) {
+            if (extensionSettings.alwaysIncludeUnmutedMembers) charDepth.depth = fallbackDepth;
+            else continue;
+        }
 
         const detectedLastMesID = dynamicDepth.last_mes_id + dynamicDepth.depth;
         const charLastMesID = data[i].status.last_mes_id + data[i].status.depth;
@@ -1018,7 +1023,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
         if (!status.entries.length) continue;
 
         const promptKey = extensionName.toLowerCase() + "-" + character.avatar;
-        const promptDepth = ignoreDepthFailSafe ? char_depth.depth : (char_depth.depth + depthModifier);
+        const promptDepth = ignoreDepthFailSafe ? charDepth.depth : (charDepth.depth + depthModifier);
         const finalPromptDepth = (promptDepth < extensionSettings.minPromptDepth) ? extensionSettings.minPromptDepth : promptDepth;
         let promptValue = "";
 
@@ -1158,9 +1163,15 @@ function settingsTextButton(event) {
 
 /** Changes a number setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsNumberButton(event) {
-    const target = event.target;
-    const raw_value = Number($(target).val());
-    const value = isNaN(raw_value) ? 0 : raw_value;
+    const target = /** @type {HTMLInputElement} */ (event.target);
+    const raw_value = isNaN(target.valueAsNumber) ? 0 : target.valueAsNumber;
+    const insideMinBoundary = (target.min !== "") ? (Number(target.min) <= raw_value) : true;
+    const insideMaxBoundary = (target.max !== "") ? (Number(target.max) >= raw_value) : true;
+
+    let value = raw_value;
+
+    if (!insideMinBoundary) value = Number(target.min);
+    if (!insideMaxBoundary) value = Number(target.max);
 
     const setting = target.getAttribute("stat-us-max-setting");
     const callback = settingsCallbacks[setting];
@@ -1176,6 +1187,7 @@ function settingsNumberButton(event) {
 /**	Logs setting's values. */
 function displaySettings() {
     console.debug("[" + extensionName + "]", `Auto detect participants is ${extensionSettings.autoDetectParticipants ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Always include unmuted group members is ${extensionSettings.alwaysIncludeUnmutedMembers ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Show input macros in chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Hide input labels is ${extensionSettings.hideInputLabels ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Show whitespaces is ${extensionSettings.showWhiteSpaces ? "active" : "not active"}`);
@@ -1193,6 +1205,7 @@ async function loadHTMLSettings() {
 
     // Event Listeners for the extension HTML
     $("#stat-us-max-auto-detect-participants").on("input", settingsBooleanButton);
+    $("#stat-us-max-always-include-unmuted-members").on("input", settingsBooleanButton);
     $("#stat-us-max-show-input-macros").on("input", settingsBooleanButton);
     $("#stat-us-max-hide-input-labels").on("input", settingsBooleanButton);
     $("#stat-us-max-show-white-spaces").on("input", settingsBooleanButton);
@@ -1207,6 +1220,7 @@ async function loadHTMLSettings() {
 /** Init setting values on the menu */
 function setSettings() {
     $("#stat-us-max-auto-detect-participants").prop("checked", extensionSettings.autoDetectParticipants);
+    $("#stat-us-max-always-include-unmuted-members").prop("checked", extensionSettings.alwaysIncludeUnmutedMembers);
     $("#stat-us-max-show-input-macros").prop("checked", extensionSettings.editNumbersFromChat);
     $("#stat-us-max-show-white-spaces").prop("checked", extensionSettings.showWhiteSpaces);
     $("#stat-us-max-hide-input-labels").prop("checked", extensionSettings.hideInputLabels).trigger("input");
