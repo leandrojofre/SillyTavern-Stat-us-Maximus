@@ -295,7 +295,7 @@ function hidePopper(popperInstance, tooltip) {
 function renderCaret(span, text, caretPos, selectEnd = caretPos) {
     const esc = s => lodash.escape(s);
 
-    destroyElement(span.children);
+    destroyElement(span.childNodes);
 
     if (caretPos < 0) return span.textContent = text;
 
@@ -966,12 +966,13 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
 export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDepth = undefined, generationType = ""} = {}) {
     if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
 
-    const real_chat = !extension_settings["Presence"] ? chat.slice(chat_metadata.lastInContextMessageId) : chat;
+    const real_chat = extension_settings["Presence"] ? chat : chat.slice(chat_metadata.lastInContextMessageId);
     const metadata = chat_metadata.stat_us_maximus;
     const chars = getActiveParticipants();
     const fallbackDepth = extensionSettings.minPromptDepth - depthModifier;
 
-    if (!metadata?.length) chars.push(...getAllParticipantsInChat(real_chat));
+    if (!metadata?.length && extensionSettings.autoDetectParticipants)
+        chars.push(...getAllParticipantsInChat(real_chat));
 
     const raw_data = chars.map(character => ({
         char: character,
@@ -994,7 +995,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
 
         if (!character) continue;
 
-        const statusCustomDepth = Number(data[i].status.forceDepth === "" ? NaN : data[i].status.forceDepth);
+        const statusCustomDepth = Number(data[i].status.forceDepth === "" ? -1 : data[i].status.forceDepth);
         const ignoreDepthFailSafe = forceDepth?.avatar === character.avatar || statusCustomDepth >= 0;
 
         const dynamicDepth = getStatusDepth(real_chat, character, generationType);
