@@ -1,6 +1,6 @@
 import { extension_settings } from "../../../extensions.js";
 import { saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar, substituteParams } from "../../../../script.js";
-import { getGroupMembers, selected_group } from "../../../group-chats.js";
+import { getGroupMembers, groups, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
 import { createCharStatus, getCharAltValue, getCharStatus, saveMetadataSTUM, updateCharEntry } from "./source/js/statusControls.js";
 import { power_user } from "../../../power-user.js";
@@ -185,12 +185,17 @@ export function getActiveParticipants(discard = []) {
 
     if (selected_group) {
         const members = getGroupMembers();
+        const muted_members = groups
+            ?.find(g => g.id == selected_group)
+            ?.disabled_members
+            ?.map(m => { return {avatar: m} }) ?? [];
+        const members_ignore = [...muted_members, ...discard];
 
-        for (const member of members) {
-            if (discard.some(c => c.avatar === member.avatar)) continue;
-            else chars.push(member);
-        }
+        for (const member of members)
+            if (member && !members_ignore.some(c => c.avatar === member.avatar))
+                chars.push(member);
     }
+
     else if (this_chid !== undefined) {
         const character = characters[this_chid];
 
