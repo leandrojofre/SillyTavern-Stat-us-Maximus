@@ -371,7 +371,7 @@ div[name="templatesAndPopupsWrapper"] {
     }
 
     .mw-unset {
-        max-width: unset;
+        max-width: unset !important;
     }
 
     .mw-7 {

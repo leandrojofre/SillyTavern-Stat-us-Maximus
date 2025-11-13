@@ -449,7 +449,7 @@ function addTracker(status, character) {
         if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit, open a chat or refresh the current one`);
 
         return await popupStatusSingleChar(character);
-    });
+    }, {passive: true});
 
     statusTable.querySelector(".menu_button.fa-eye").addEventListener("click", async () => {
         const collapse = !statusTableBody.classList.contains("d-none");
@@ -457,24 +457,27 @@ function addTracker(status, character) {
 
         toggleVisibility(statusTableBody, collapse);
         saveMetadataSTUM();
-    });
+    }, {passive: true});
 
-    const createInputs = (/**@type {String}*/text) => {
+    const createInputs = (/**@type {String}*/text, entry_uid) => {
         const parsedText = lodash.escape(substituteParams(processMacros(text, {char: character, processInputs: false}))).replaceAll(/\n/g, "<br>");
 
         if (!extensionSettings.editNumbersFromChat)
             return `<span class="text-line">${parsedText}</span>`;
 
+        const characterName = character.name.replaceAll(" ", "-").toLowerCase();
         let newText = `<span class="text-line">${parsedText}</span>`;
+        let inputID = 0;
 
         newText = newText.replaceAll(regexTextInput, (match) => {
             const value = match.replaceAll(/((^{{text(::)?)|(}}$))/g, "").replaceAll("<br>", "\n");
             const input = `
                 <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
-                <textarea type="text" class="type-text fake-input chat-input-editor" data-pattern="^[^{}]*$" autocomplete="off" data-stee--handled="1">${value}</textarea>
+                <textarea type="text" class="type-text fake-input chat-input-editor mw-unset" data-pattern="^[^{}]*$" autocomplete="off" data-stee--handled="1">${value}</textarea>
                 <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? "show-spaces" : ""}">${value}</span></span>
             `;
 
+            inputID++;
             return input;
         });
 
@@ -492,6 +495,7 @@ function addTracker(status, character) {
                 </span>
             `;
 
+            inputID++;
             return input;
         });
 
@@ -505,6 +509,7 @@ function addTracker(status, character) {
                 <span class="text-quote"> ${checked === "true" ? trueValue : falseValue}</span>
             `;
 
+            inputID++;
             return input;
         });
 
@@ -516,11 +521,12 @@ function addTracker(status, character) {
             const value = props[3];
             const input = `
                 <span class="d-flex flex-col flex-center gap-0 type-range chat-input-editor">
-                    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider" />
-                    <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input" />
+                    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider" id="${characterName}-${entry_uid}-${inputID}" />
+                    <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input" data-for="${characterName}-${entry_uid}-${inputID}" id="counter-${characterName}-${entry_uid}-${inputID}" />
                 </span>
             `;
 
+            inputID++;
             return input;
         });
 
@@ -617,10 +623,10 @@ function addTracker(status, character) {
 
         el(newRow, '.status-separator').innerHTML = lodash.escape(entry.separator).replaceAll(/\n/g, "<br>");
 
-        const updateDescription = (text, el_target, form_target) => {
+        const updateDescription = (text, el_target, form_target, entry_uid) => {
             destroyElement(el(newRow, el_target).children);
 
-            el(newRow, el_target).innerHTML = createInputs(text);
+            el(newRow, el_target).innerHTML = createInputs(text, entry_uid);
             el(newRow, el_target).querySelector('.text-line').dataset.originalText = text;
 
             if (!extensionSettings.editNumbersFromChat) return;
@@ -647,7 +653,7 @@ function addTracker(status, character) {
 
                         el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
                         dispatchInput(form);
-                    });
+                    }, {passive: true});
                 } else {
                     const eventTargets = [input.nextElementSibling, input.previousElementSibling];
                     let lastValid = input.value;
@@ -662,7 +668,7 @@ function addTracker(status, character) {
                             if (spanSelected) return;
 
                             spanSelected = true;
-                        });
+                        }, {passive: true});
 
                         document.addEventListener("click", (e) => {
                             clearInterval(incrementsPressed);
@@ -678,7 +684,7 @@ function addTracker(status, character) {
 
                             input.setSelectionRange(selection.start, selection.end);
                             input.focus();
-                        });
+                        }, {passive: true});
 
                         if (input.classList.contains("type-number") && span.classList.contains("text-quote")) {
                             const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: false, cancelable: true});
@@ -687,7 +693,7 @@ function addTracker(status, character) {
                             span.addEventListener("wheel", async (e) => {
                                 if (!input.matches(':focus')) return;
 
-                                e.preventDefault();
+                                if (e.cancelable) e.preventDefault();
 
                                 let direction;
 
@@ -696,7 +702,7 @@ function addTracker(status, character) {
                                 if (e.deltaY > 0) direction = arrowDown;
 
                                 setTimeout(() => input.dispatchEvent(direction), 10);
-                            });
+                            }, {passive: false});
 
                             /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-caret-left');
                             /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-caret-right');
@@ -708,7 +714,7 @@ function addTracker(status, character) {
                                 incrementsCooldown = setTimeout(() => {
                                     incrementsPressed = setInterval(() => input.dispatchEvent(arrowDown), 75);
                                 }, 300);
-                            });
+                            }, {passive: true});
 
                             plusButton.addEventListener("pointerdown", (e) => {
                                 if (e.button === 2) return;
@@ -717,7 +723,7 @@ function addTracker(status, character) {
                                 incrementsCooldown = setTimeout(() => {
                                     incrementsPressed = setInterval(() => input.dispatchEvent(arrowUp), 75);
                                 }, 300);
-                            });
+                            }, {passive: true});
                         }
                     });
 
@@ -734,7 +740,7 @@ function addTracker(status, character) {
                         inputTimeout = dispatchInput(form, {time: 300, callback: () =>
                             el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target)
                         });
-                    });
+                    }, {passive: true});
 
                     if (input.classList.contains("type-number")) {
                         input.addEventListener("keydown", (/**@type {KeyboardEvent}*/e) => {
@@ -747,13 +753,13 @@ function addTracker(status, character) {
 
                             dispatchInput(input);
                             setTimeout(() => updateCaretDisplay(input, lastValid), 75);
-                        });
+                        }, {passive: false});
                     } else {
-                        input.addEventListener("keydown", () => setTimeout(() => updateCaretDisplay(input, lastValid), 75));
+                        input.addEventListener("keydown", () => setTimeout(() => updateCaretDisplay(input, lastValid), 75), {passive: true});
                     }
 
-                    input.addEventListener("focus", () => updateCaretDisplay(input, lastValid));
-                    input.addEventListener("blur", () => renderCaret(input.nextElementSibling.querySelector('.value'), lastValid, -1));
+                    input.addEventListener("focus", () => updateCaretDisplay(input, lastValid), {passive: true});
+                    input.addEventListener("blur", () => renderCaret(input.nextElementSibling.querySelector('.value'), lastValid, -1), {passive: true});
                 }
             });
 
@@ -772,12 +778,12 @@ function addTracker(status, character) {
 
                     el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
                     dispatchInput(form);
-                });
+                }, {passive: true});
             });
         }
 
-        updateDescription(entry.key, '.status-title', 'key');
-        updateDescription(descriptionValue, '.status-description', descriptionTarget);
+        updateDescription(entry.key, '.status-title', 'key', entry.uid);
+        updateDescription(descriptionValue, '.status-description', descriptionTarget, entry.uid);
 
         // Add listeners
         form.addEventListener("submit", (e) => {
@@ -786,7 +792,7 @@ function addTracker(status, character) {
             const formData = new FormData(form);
 
             updateCharEntry(character, entry.uid, formData);
-        });
+        }, {passive: false});
 
         form.addEventListener("input", () => {
             clearTimeout(formDebounceTimer);
@@ -795,7 +801,7 @@ function addTracker(status, character) {
         });
 
         killSwitch.addEventListener('pointerdown', e =>
-            document.addEventListener('contextmenu', e => e.preventDefault(), {once: true})
+            document.addEventListener('contextmenu', e => e.preventDefault(), {once: true, passive: false})
         );
 
         killSwitch.addEventListener("pointerup", (/**@type {PointerEvent}*/e) => {
@@ -820,7 +826,7 @@ function addTracker(status, character) {
             });
 
             dispatchInput(form);
-        });
+        }, {passive: false});
 
         // Set up UI
         if (!entry.enabled) toggleSwitch(killSwitch, (state) => {
@@ -877,9 +883,9 @@ function addTracker(status, character) {
                         formTarget = "alt_key";
                     }
 
-                    updateDescription(formText, '.status-description', formTarget);
+                    updateDescription(formText, '.status-description', formTarget, entry.uid);
                     dispatchInput(form);
-                });
+                }, {passive: true});
 
                 optionsValueUID.append(option);
             }
@@ -960,7 +966,9 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
     @property {String} [forceDepth.avatar]
     @property {number} [forceDepth.depth]
     @property {String} [generationType]
-
+*/
+/**
+    Updates prompt injections with the status blocks of the present characters
     @param {FetchOptions?} options
 */
 export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDepth = undefined, generationType = ""} = {}) {
@@ -1065,6 +1073,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
 }
 
 /**
+    Updates prompt injections with the status blocks of the present characters, cancelling ongoing fetch calls to prevent bottle necks
     @param {FetchOptions?} options
 */
 export function fetchStatusDebounced(options = {}) {
@@ -1093,7 +1102,7 @@ export function addGroupStatusButtons() {
 
     for (const avatar of avatars) {
         avatar.removeEventListener("click", groupListAvatarsClick);
-        avatar.addEventListener("click", groupListAvatarsClick);
+        avatar.addEventListener("click", groupListAvatarsClick, {passive: true});
     }
 }
 
@@ -1270,7 +1279,7 @@ function initButtons() {
         if (!chars.length) return toastr.warning(t`Characters could not be found in the metadata`);
 
         return await popupStatusMultiChar(chars);
-    });
+    }, {passive: true});
 
     const extensionsMenu = document.getElementById("extensionsMenu");
     extensionsMenu.append(globalStatusMenu);
@@ -1299,7 +1308,7 @@ function initButtons() {
         if (!users.length) return toastr.warning(t`Personas could not be found in the metadata`);
 
         return await popupStatusMultiChar(users);
-    });
+    }, {passive: true});
 
     const personaStatusOpenPopupBtn = document.createElement("div");
     personaStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-user-cog", "interactable", "m-0");
@@ -1312,7 +1321,7 @@ function initButtons() {
         if (!user) return toastr.warning(t`The persona could not be found`);
 
         return await popupStatusSingleChar(user);
-    });
+    }, {passive: true});
 
     const charStatusOpenPopupBtn = document.createElement("div");
     charStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-table", "interactable", "m-0");
@@ -1328,7 +1337,7 @@ function initButtons() {
         if (!char) return toastr.warning(t`The character could not be found`);
 
         return await popupStatusSingleChar(char);
-    });
+    }, {passive: true});
 
     const charStatusMenu = document.createElement("div");
     charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px", "standoutHeader", "p-5px");
@@ -1363,7 +1372,7 @@ function initButtons() {
         if (!users.length) return toastr.warning(t`Personas could not be found in the metadata`);
 
         return await popupStatusMultiChar(users);
-    });
+    }, {passive: true});
 
     const groupPersonaBtn = groupStatusContainer.querySelector('.menu_button.fa-user-cog');
     groupPersonaBtn.addEventListener("click", async () => {
@@ -1373,7 +1382,7 @@ function initButtons() {
         if (!user) return toastr.warning(t`The persona could not be found`);
 
         return await popupStatusSingleChar(user);
-    });
+    }, {passive: true});
 
     /** @type {HTMLElement} */const groupMembersButton = groupStatusContainer.querySelector('.menu_button.fa-table');
     groupMembersButton.title = "Open status for all group members";
@@ -1385,7 +1394,7 @@ function initButtons() {
         if (!chars.length) return toastr.warning(t`Group members could not be found in the metadata`);
 
         return await popupStatusMultiChar(chars);
-    });
+    }, {passive: true});
 
     const groupChatsBlock = document.getElementById("rm_group_chats_block");
     groupChatsBlock.querySelector('.inline-drawer').after(groupStatusContainer);
