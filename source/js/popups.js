@@ -140,7 +140,7 @@ function getFullCharAvatar(status) {
     else return getThumbnailUrl("avatar", status.avatar); //"/thumbnail?type=avatar&file=" + status.avatar;
 }
 
-export function formStatusSingleChar(char) {
+export function getCharStatusForm(char) {
     let metadata = getCharStatus(char);
 
     if (!metadata) metadata = createCharStatus(char);
@@ -647,7 +647,7 @@ export function formStatusSingleChar(char) {
 
             refreshButton.addEventListener("click", () => {
                 /**@type {HTMLDivElement}*/
-                const newContainer = formStatusSingleChar(char);
+                const newContainer = getCharStatusForm(char);
                 const nodesArray = Array.from(newContainer.childNodes);
 
                 destroyElement(container.childNodes);
@@ -680,7 +680,7 @@ export function formStatusSingleChar(char) {
 }
 
 export async function popupStatusSingleChar(char) {
-    const container = await formStatusSingleChar(char);
+    const container = await getCharStatusForm(char);
 
     await callGenericPopup(container, POPUP_TYPE.TEXT, "", {
         okButton: t`Close Status`,
@@ -697,7 +697,7 @@ export async function popupStatusMultiChar(chars) {
     content.id = "stat-us-max-popup-multi-char";
 
     for (const char of chars) {
-        const charForm = await formStatusSingleChar(char);
+        const charForm = await getCharStatusForm(char);
         charForm.classList.add("multi-char-popup");
         content.append(charForm);
     }
