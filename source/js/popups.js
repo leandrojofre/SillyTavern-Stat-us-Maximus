@@ -484,13 +484,13 @@ export function getCharStatusForm(char) {
                 const formData = new FormData(newRow);
 
                 updateCharEntry(char, data[i].uid, formData);
-            });
+            }, { passive: false });
 
             newRow.addEventListener("input", () => {
                 clearTimeout(formDebounceTimer);
 
                 formDebounceTimer = window.setTimeout(() => newRow.requestSubmit(), DEBOUNCE_MS);
-            });
+            }, { passive: true });
 
             el(newRow, 'select[name="value_uid"]').addEventListener("change", () => {
                 const alt = getCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
@@ -499,19 +499,19 @@ export function getCharStatusForm(char) {
                 el(newRow, 'textarea[name="value"]').value = alt.value;
 
                 newRow.dispatchEvent(evInput);
-            });
+            }, { passive: true });
 
             el(newRow, ".delete-row").addEventListener("click", async () => {
                 if (await popupDeleteConfirm("the alt value") === 0) return;
 
                 removeCharEntry(char, data[i].uid);
                 destroyElement(newRow);
-            });
+            }, { passive: true });
 
-            el(newRow, ".kill-switch").addEventListener("click", (e) => {
+            el(newRow, ".kill-switch").addEventListener("click", () => {
                 toggleSwitch(el(newRow, ".kill-switch"), (state) => el(newRow, 'input[name="enabled"]').value = state);
                 newRow.requestSubmit();
-            });
+            }, { passive: true });
 
             el(newRow, 'input[name="alt_key"]').addEventListener("keyup", () => {
                 clearTimeout(altKeyDebounceTimer);
@@ -521,7 +521,7 @@ export function getCharStatusForm(char) {
                     getCharEntry(char, data[i].uid).alt_values,
                     el(newRow, 'select[name="value_uid"]').value
                 ), DEBOUNCE_MS);
-            });
+            }, { passive: true });
 
             el(newRow, ".add_alt_value").addEventListener("click", () => {
                 const newAlt = addCharAltValue(char, data[i].uid);
@@ -532,7 +532,7 @@ export function getCharStatusForm(char) {
 
                 el(newRow, 'select[name="value_uid"]').value = String(newAlt.uid);
                 el(newRow, 'select[name="value_uid"]').dispatchEvent(evChange);
-            });
+            }, { passive: true });
 
             el(newRow, ".del_alt_value").addEventListener("click", async () => {
                 if (await popupDeleteConfirm("the alt value") === 0) return;
@@ -581,22 +581,22 @@ export function getCharStatusForm(char) {
 
     expandEntriesBtn.addEventListener("click", () =>
         content.querySelectorAll(".inline-drawer-toggle.down").forEach((/**@type {HTMLElement}*/toggle) => toggle.click())
-    );
+    , { passive: true });
 
     compressEntriesBtn.addEventListener("click", () =>
         content.querySelectorAll(".inline-drawer-toggle.up").forEach((/**@type {HTMLElement}*/toggle) => toggle.click())
-    );
+    , { passive: true });
 
     newStatBtn.addEventListener("click", () => {
         const newEntry = addCharEntry(char, "", "");
         addRow({data: [newEntry]});
-    });
+    }, { passive: true });
 
     selectEntryRole.addEventListener("input", () => {
         metadata.role = Number(selectEntryRole.value);
 
         saveMetadataSTUM();
-    });
+    }, { passive: true });
 
     numberAreaForDepth.addEventListener("input", () => {
         metadata.forceDepth = parseValue(numberAreaForDepth.value);
@@ -604,7 +604,7 @@ export function getCharStatusForm(char) {
         clearTimeout(forceDepthDebounceTimer);
 
         forceDepthDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
-    })
+    }, { passive: true });
 
     textareaStatusSeparator.addEventListener("input", () => {
         metadata.separator = un_escapeNewlines(textareaStatusSeparator.value);
@@ -612,7 +612,7 @@ export function getCharStatusForm(char) {
         clearTimeout(separatorDebounceTimer);
 
         separatorDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
-    });
+    }, { passive: true });
 
     textareaDefEntrySeparator.addEventListener("input", () => {
         metadata.def_entry_separator = un_escapeNewlines(textareaDefEntrySeparator.value);
@@ -620,7 +620,7 @@ export function getCharStatusForm(char) {
         clearTimeout(defEntrySeparatorDebounceTimer);
 
         defEntrySeparatorDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
-    });
+    }, { passive: true });
 
     textareaStatusPrefix.addEventListener("input", () => {
         metadata.prefix = un_escapeNewlines(textareaStatusPrefix.value);
@@ -628,7 +628,7 @@ export function getCharStatusForm(char) {
         clearTimeout(prefixDebounceTimer);
 
         prefixDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
-    });
+    }, { passive: true });
 
     textareaStatusSuffix.addEventListener("input", () => {
         metadata.suffix = un_escapeNewlines(textareaStatusSuffix.value);
@@ -636,13 +636,13 @@ export function getCharStatusForm(char) {
         clearTimeout(suffixDebounceTimer);
 
         suffixDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
-    });
+    }, { passive: true });
 
     cloneStatsBtn.addEventListener("click", async () => {
         const cloneResult = await clonePopup(char);
 
         if (!cloneResult) return;
-    });
+    }, { passive: true });
 
     deleteStatsBtn.addEventListener("click", async () => {
         if (await popupDeleteConfirm(`${char.name}'s status data`) === 0) return;
@@ -674,13 +674,13 @@ export function getCharStatusForm(char) {
                 destroyElement(container.childNodes);
 
                 container.append(...nodesArray);
-            }, {once: true});
+            }, { once: true, passive: true });
 
             destroyElement(container.childNodes);
 
             container.append(refreshContainer);
         }
-    });
+    }, { passive: true });
 
     // @ts-ignore
     $(content).sortable({
