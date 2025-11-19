@@ -490,6 +490,10 @@ div[name="templatesAndPopupsWrapper"] {
     .stat-us-max-popup-row {
         justify-content: space-between;
         align-items: flex-start;
+
+        textarea[name="value"] {
+            min-height: 7vh;
+        }
     }
 
     .cursor-pointer {
@@ -553,13 +557,16 @@ div[name="templatesAndPopupsWrapper"] {
     }
 
     .fake-input {
-        position: absolute;
+        position: fixed;
+        top: 0;
+        left: 0;
         pointer-events: none;
         opacity: 0;
         margin: 0;
         padding: 0;
         border: none;
         background: transparent;
+        caret-color: transparent;
     }
 
     .fake-selection {

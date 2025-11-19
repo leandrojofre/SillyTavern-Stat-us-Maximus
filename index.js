@@ -473,7 +473,7 @@ function addTracker(status, character) {
             const value = match.replaceAll(/((^{{text(::)?)|(}}$))/g, "").replaceAll("<br>", "\n");
             const input = `
                 <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
-                <textarea type="text" class="type-text fake-input chat-input-editor mw-unset" data-pattern="^[^{}]*$" autocomplete="off" data-stee--handled="1">${value}</textarea>
+                <textarea type="text" class="type-text fake-input chat-input-editor mw-unset" data-pattern="^[^{}]*$" autocomplete="off" data-stee--handled="1" tabindex="-1">${value}</textarea>
                 <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? "show-spaces" : ""}">${value}</span></span>
             `;
 
