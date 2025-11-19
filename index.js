@@ -634,7 +634,6 @@ function addTracker(status, character) {
             el(newRow, el_target)
             .querySelectorAll('input.type-text[type="text"]')
             .forEach((/**@type {HTMLInputElement}*/input) => {
-
                 input.onkeydown = (event) => {
                     if (/[{}\n]/.test(event.key)) event.preventDefault();
                 }
@@ -655,11 +654,12 @@ function addTracker(status, character) {
                         dispatchInput(form);
                     }, {passive: true});
                 } else {
+                    /**@type {HTMLSpanElement[]} */
                     const eventTargets = [input.nextElementSibling, input.previousElementSibling];
                     let lastValid = input.value;
                     let inputTimeout;
 
-                    eventTargets.forEach((/**@type {HTMLSpanElement}*/span) => {
+                    eventTargets.forEach(span => {
                         let spanSelected = false;
                         let incrementsPressed;
                         let incrementsCooldown;
@@ -1051,7 +1051,8 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
 
             if (entry.key !== "" && value !== "") promptValue += entry.separator;
 
-            promptValue += value;
+            promptValue += value
+                .replaceAll(/\/\/.*(\n|$)/g, "$1");
         };
 
         if (!promptValue) continue;
