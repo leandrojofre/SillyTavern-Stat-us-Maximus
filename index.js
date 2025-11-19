@@ -55,6 +55,7 @@ const defaultSettings = {
     showWhiteSpaces: false,
     minPromptDepth: 0,
     alwaysIncludeUnmutedMembers: false,
+    altMacroTemplateBehavior: false,
     debug: false
 };
 
@@ -654,12 +655,11 @@ function addTracker(status, character) {
                         dispatchInput(form);
                     }, {passive: true});
                 } else {
-                    /**@type {HTMLSpanElement[]} */
                     const eventTargets = [input.nextElementSibling, input.previousElementSibling];
                     let lastValid = input.value;
                     let inputTimeout;
 
-                    eventTargets.forEach(span => {
+                    eventTargets.forEach((/**@type {HTMLSpanElement} */span) => {
                         let spanSelected = false;
                         let incrementsPressed;
                         let incrementsCooldown;
@@ -1204,6 +1204,7 @@ function settingsNumberButton(event) {
 function displaySettings() {
     console.debug("[" + extensionName + "]", `Auto detect participants is ${extensionSettings.autoDetectParticipants ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Always include unmuted group members is ${extensionSettings.alwaysIncludeUnmutedMembers ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Alternative behavior for macro template buttons is ${extensionSettings.altMacroTemplateBehavior ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Show input macros in chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Hide input labels is ${extensionSettings.hideInputLabels ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Show whitespaces is ${extensionSettings.showWhiteSpaces ? "active" : "not active"}`);
@@ -1222,6 +1223,7 @@ async function loadHTMLSettings() {
     // Event Listeners for the extension HTML
     $("#stat-us-max-auto-detect-participants").on("input", settingsBooleanButton);
     $("#stat-us-max-always-include-unmuted-members").on("input", settingsBooleanButton);
+    $("#stat-us-max-alt-macro-template-behavior").on("input", settingsBooleanButton);
     $("#stat-us-max-show-input-macros").on("input", settingsBooleanButton);
     $("#stat-us-max-hide-input-labels").on("input", settingsBooleanButton);
     $("#stat-us-max-show-white-spaces").on("input", settingsBooleanButton);
@@ -1237,6 +1239,7 @@ async function loadHTMLSettings() {
 function setSettings() {
     $("#stat-us-max-auto-detect-participants").prop("checked", extensionSettings.autoDetectParticipants);
     $("#stat-us-max-always-include-unmuted-members").prop("checked", extensionSettings.alwaysIncludeUnmutedMembers);
+    $("#stat-us-max-alt-macro-template-behavior").prop("checked", extensionSettings.altMacroTemplateBehavior);
     $("#stat-us-max-show-input-macros").prop("checked", extensionSettings.editNumbersFromChat);
     $("#stat-us-max-show-white-spaces").prop("checked", extensionSettings.showWhiteSpaces);
     $("#stat-us-max-hide-input-labels").prop("checked", extensionSettings.hideInputLabels).trigger("input");

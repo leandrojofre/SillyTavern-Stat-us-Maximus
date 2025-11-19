@@ -1,10 +1,11 @@
 import { lodash } from "../../../../../../lib.js";
+import { copyText } from "../../../../../utils.js";
 import { characters, extension_prompt_roles, getThumbnailUrl } from "../../../../../../script.js";
 import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
-import { log, destroyElement, fetchStatusDebounced } from "../../index.js";
+import { log, destroyElement, fetchStatusDebounced, extensionSettings } from "../../index.js";
 import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, saveMetadataSTUM } from "./statusControls.js";
 
 /*  # TODO
@@ -174,6 +175,25 @@ export function getCharStatusForm(char) {
         return buttonsWrapper;
     }
 
+    /**
+     * Creates a button element with specified classes and title.
+     * @param {string} title - The title and data-i18n attribute for the button
+     * @param {string[]} classes - Array of class names to add to the button
+     * @param {object} data - Additional data attributes to set on the button
+     * @returns {HTMLDivElement} The created button element
+     */
+    const createButton = function(title, classes, data) {
+        const button = document.createElement("div");
+        button.title = title;
+        button.dataset.i18n = title;
+        button.classList.add("menu_button", "menu_button_icon", "fa-fw", "fa-solid", "interactable", "m-0", ...classes);
+
+        for (const [key, value] of Object.entries(data || {}))
+            button.dataset[key] = value;
+
+        return button;
+    };
+
     const escapedCharName = lodash.escape(char.name);
 
     /** Create Menu header. */
@@ -245,26 +265,11 @@ export function getCharStatusForm(char) {
     textareaStatusSuffix.value = escapeNewlines(metadata.suffix);
     textareaStatusSuffix.classList.add("text_pole", "m-0");
 
-    const deleteStatsBtn = document.createElement("div");
-    deleteStatsBtn.title = "Delete character's Status";
-    deleteStatsBtn.dataset.i18n = "Delete character's Status";
-    deleteStatsBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "m-0");
-
-    const cloneStatsBtn = document.createElement("div");
-    cloneStatsBtn.title = "Clone Status entry into a chat participant";
-    cloneStatsBtn.dataset.i18n = "Clone Status entry into a chat participant";
-    cloneStatsBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-truck-arrow-right", "interactable", "m-0");
-
-    const expandEntriesBtn = document.createElement("div");
-    expandEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-expand", "interactable", "m-0");
-
-    const compressEntriesBtn = document.createElement("div");
-    compressEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-compress", "interactable", "m-0");
-
-    const newStatBtn = document.createElement("div");
-    newStatBtn.title = `Add an status to ${escapedCharName}`;
-    newStatBtn.dataset.i18n = `Add an status to ${escapedCharName}`;
-    newStatBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable", "m-0");
+    const deleteStatsBtn = createButton("Delete character's Status", ["fa-trash-can", "redWarningBG"]);
+    const cloneStatsBtn = createButton("Clone Status entry into a chat participant", ["fa-truck-arrow-right"]);
+    const expandEntriesBtn = createButton("Expand all entries", ["fa-expand"]);
+    const compressEntriesBtn = createButton("Compress all entries", ["fa-compress"]);
+    const newStatBtn = createButton(`Add an status to ${escapedCharName}`, ["fa-plus"]);
 
     const statInputsWrapper = document.createElement("div");
     statInputsWrapper.classList.add("d-flex", "flex-end-start", "w-100", "gap-5px", "stat-wrapper");
@@ -365,16 +370,6 @@ export function getCharStatusForm(char) {
     warningAltKey.title = "This is only used in the prompt if description is empty";
     warningAltKey.dataset.i18n = "This is only used in the prompt if description is empty";
 
-    const addAltValues = document.createElement("div");
-    addAltValues.title = "Add alt descriptions";
-    addAltValues.dataset.i18n = "Add alt descriptions";
-    addAltValues.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable", "add_alt_value", "big-button", "m-0");
-
-    const delAltValues = document.createElement("div");
-    delAltValues.title = "Delete current alt description";
-    delAltValues.dataset.i18n = "Delete current alt description";
-    delAltValues.classList.add("menu_button", "fa-fw", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "del_alt_value", "big-button", "m-0");
-
     const settingsInputs = document.createElement("div");
     settingsInputs.classList.add("d-flex", "flex-end-start");
     settingsInputs.append(
@@ -382,8 +377,12 @@ export function getCharStatusForm(char) {
         createInputLabel(textareaAltKey, "mw-25"),
         createButtonsWrapper([
             warningAltKey,
-            addAltValues,
-            delAltValues
+            createButton("Add alt descriptions", ["big-button", "fa-plus", "add_alt_value"]),
+            createButton("Delete current alt description", ["big-button", "fa-trash-can", "del_alt_value", "redWarningBG"]),
+            createButton("Add template for text macro", ["big-button", "fa-t", "macro_template", "px-5px"], {macroType: "text"}),
+            createButton("Add template for number macro", ["big-button", "fa-n", "macro_template", "px-5px"], {macroType: "number"}),
+            createButton("Add template for boolean macro", ["big-button", "fa-b", "macro_template", "px-5px"], {macroType: "boolean"}),
+            createButton("Add template for range macro", ["big-button", "fa-r", "macro_template", "px-5px"], {macroType: "range"}),
         ])
     );
 
@@ -552,6 +551,28 @@ export function getCharStatusForm(char) {
                 } catch (error) {
                     // ...
                 }
+            }, { passive: true });
+
+            newRow.querySelectorAll(".macro_template").forEach((/**@type {HTMLDivElement}*/btn) => {
+                btn.addEventListener("click", (e) => {
+                    const macroType = /**@type {HTMLDivElement}*/(e.currentTarget).dataset.macroType;
+                    let macroTemplate = "";
+
+                    if (macroType === "text") macroTemplate = "{{text}}";
+                    if (macroType === "number") macroTemplate = "{{number}}";
+                    if (macroType === "boolean") macroTemplate = "{{boolean::true::true::false}}";
+                    if (macroType === "range") macroTemplate = "{{range::0::100::1::0}}";
+
+                    if (extensionSettings.altMacroTemplateBehavior) {
+                        const valueTextarea = el(newRow, 'textarea[name="value"]')
+                        valueTextarea.value += macroTemplate;
+                        valueTextarea.dispatchEvent(evInput);
+
+                        return;
+                    } else {
+                        copyText(macroTemplate);
+                    }
+                }, { passive: true });
             });
 
             content.append(newRow);
