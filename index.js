@@ -792,7 +792,7 @@ function addTracker(status, character) {
             const formData = new FormData(form);
 
             updateCharEntry(character, entry.uid, formData);
-        }, {passive: false});
+        }, { passive: false });
 
         form.addEventListener("input", () => {
             clearTimeout(formDebounceTimer);
@@ -800,9 +800,9 @@ function addTracker(status, character) {
             formDebounceTimer = setTimeout(() => form.requestSubmit(), DEBOUNCE_MS);
         });
 
-        killSwitch.addEventListener('pointerdown', e =>
-            document.addEventListener('contextmenu', e => e.preventDefault(), {once: true, passive: false})
-        );
+        killSwitch.addEventListener('pointerdown', () =>
+            document.addEventListener('contextmenu', e => e.preventDefault(), { once: true, passive: false })
+        , {passive: true});
 
         killSwitch.addEventListener("pointerup", (/**@type {PointerEvent}*/e) => {
             e.preventDefault();
@@ -826,7 +826,7 @@ function addTracker(status, character) {
             });
 
             dispatchInput(form);
-        }, {passive: false});
+        }, { passive: false });
 
         // Set up UI
         if (!entry.enabled) toggleSwitch(killSwitch, (state) => {
