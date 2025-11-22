@@ -1,10 +1,11 @@
 import { lodash } from "../../../../../../lib.js";
+import { copyText } from "../../../../../utils.js";
 import { characters, extension_prompt_roles, getThumbnailUrl } from "../../../../../../script.js";
 import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
-import { log, destroyElement, fetchStatusDebounced } from "../../index.js";
+import { log, destroyElement, fetchStatusDebounced, extensionSettings } from "../../index.js";
 import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, saveMetadataSTUM } from "./statusControls.js";
 
 /*  # TODO
@@ -140,7 +141,7 @@ function getFullCharAvatar(status) {
     else return getThumbnailUrl("avatar", status.avatar); //"/thumbnail?type=avatar&file=" + status.avatar;
 }
 
-export function formStatusSingleChar(char) {
+export function getCharStatusForm(char) {
     let metadata = getCharStatus(char);
 
     if (!metadata) metadata = createCharStatus(char);
@@ -174,7 +175,32 @@ export function formStatusSingleChar(char) {
         return buttonsWrapper;
     }
 
+    /**
+     * Creates a button element with specified classes and title.
+     * @param {string} title - The title and data-i18n attribute for the button
+     * @param {string[]} classes - Array of class names to add to the button
+     * @param {object} data - Additional data attributes to set on the button
+     * @returns {HTMLDivElement} The created button element
+     */
+    const createButton = function(title, classes, data) {
+        const button = document.createElement("div");
+        button.title = title;
+        button.dataset.i18n = title;
+        button.classList.add("menu_button", "menu_button_icon", "fa-fw", "fa-solid", "interactable", "m-0", ...classes);
+
+        for (const [key, value] of Object.entries(data || {}))
+            button.dataset[key] = value;
+
+        return button;
+    };
+
+    const escapedCharName = lodash.escape(char.name);
+
     /** Create Menu header. */
+    const charName = document.createElement("span");
+    charName.innerText = escapedCharName;
+    charName.classList.add("popup-char-name", "text-quote");
+
     const avatar = document.createElement("img");
     avatar.alt = "Avatar";
     avatar.title = lodash.escape(metadata.avatar);
@@ -239,26 +265,11 @@ export function formStatusSingleChar(char) {
     textareaStatusSuffix.value = escapeNewlines(metadata.suffix);
     textareaStatusSuffix.classList.add("text_pole", "m-0");
 
-    const deleteStatsBtn = document.createElement("div");
-    deleteStatsBtn.title = "Delete character's Status";
-    deleteStatsBtn.dataset.i18n = "Delete character's Status";
-    deleteStatsBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "m-0");
-
-    const cloneStatsBtn = document.createElement("div");
-    cloneStatsBtn.title = "Clone Status entry into a chat participant";
-    cloneStatsBtn.dataset.i18n = "Clone Status entry into a chat participant";
-    cloneStatsBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-truck-arrow-right", "interactable", "m-0");
-
-    const expandEntriesBtn = document.createElement("div");
-    expandEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-expand", "interactable", "m-0");
-
-    const compressEntriesBtn = document.createElement("div");
-    compressEntriesBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-compress", "interactable", "m-0");
-
-    const newStatBtn = document.createElement("div");
-    newStatBtn.title = `Add an status to ${char.name}`;
-    newStatBtn.dataset.i18n = `Add an status to ${char.name}`;
-    newStatBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable", "m-0");
+    const deleteStatsBtn = createButton("Delete character's Status", ["fa-trash-can", "redWarningBG"]);
+    const cloneStatsBtn = createButton("Clone Status entry into a chat participant", ["fa-truck-arrow-right"]);
+    const expandEntriesBtn = createButton("Expand all entries", ["fa-expand"]);
+    const compressEntriesBtn = createButton("Compress all entries", ["fa-compress"]);
+    const newStatBtn = createButton(`Add an status to ${escapedCharName}`, ["fa-plus"]);
 
     const statInputsWrapper = document.createElement("div");
     statInputsWrapper.classList.add("d-flex", "flex-end-start", "w-100", "gap-5px", "stat-wrapper");
@@ -278,11 +289,18 @@ export function formStatusSingleChar(char) {
         ], true)
     );
 
-    const wrapper = document.createElement("div");
-    wrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px");
-    wrapper.append(
+    const contentHeaderWrapper = document.createElement("div");
+    contentHeaderWrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px");
+    contentHeaderWrapper.append(
         avatarContainer,
         statInputsWrapper
+    );
+
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("d-flex", "flex-col", "flex-start-center", "gap-5px");
+    wrapper.append(
+        charName,
+        contentHeaderWrapper
     );
 
     /** Create input template */
@@ -352,16 +370,6 @@ export function formStatusSingleChar(char) {
     warningAltKey.title = "This is only used in the prompt if description is empty";
     warningAltKey.dataset.i18n = "This is only used in the prompt if description is empty";
 
-    const addAltValues = document.createElement("div");
-    addAltValues.title = "Add alt descriptions";
-    addAltValues.dataset.i18n = "Add alt descriptions";
-    addAltValues.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-plus", "interactable", "add_alt_value", "big-button", "m-0");
-
-    const delAltValues = document.createElement("div");
-    delAltValues.title = "Delete current alt description";
-    delAltValues.dataset.i18n = "Delete current alt description";
-    delAltValues.classList.add("menu_button", "fa-fw", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "del_alt_value", "big-button", "m-0");
-
     const settingsInputs = document.createElement("div");
     settingsInputs.classList.add("d-flex", "flex-end-start");
     settingsInputs.append(
@@ -369,8 +377,12 @@ export function formStatusSingleChar(char) {
         createInputLabel(textareaAltKey, "mw-25"),
         createButtonsWrapper([
             warningAltKey,
-            addAltValues,
-            delAltValues
+            createButton("Add alt descriptions", ["big-button", "fa-plus", "add_alt_value"]),
+            createButton("Delete current alt description", ["big-button", "fa-trash-can", "del_alt_value", "redWarningBG"]),
+            createButton("Add template for text macro", ["big-button", "fa-t", "macro_template", "px-5px"], {macroType: "text"}),
+            createButton("Add template for number macro", ["big-button", "fa-n", "macro_template", "px-5px"], {macroType: "number"}),
+            createButton("Add template for boolean macro", ["big-button", "fa-b", "macro_template", "px-5px"], {macroType: "boolean"}),
+            createButton("Add template for range macro", ["big-button", "fa-r", "macro_template", "px-5px"], {macroType: "range"}),
         ])
     );
 
@@ -472,13 +484,13 @@ export function formStatusSingleChar(char) {
                 const formData = new FormData(newRow);
 
                 updateCharEntry(char, data[i].uid, formData);
-            });
+            }, { passive: false });
 
             newRow.addEventListener("input", () => {
                 clearTimeout(formDebounceTimer);
 
                 formDebounceTimer = window.setTimeout(() => newRow.requestSubmit(), DEBOUNCE_MS);
-            });
+            }, { passive: true });
 
             el(newRow, 'select[name="value_uid"]').addEventListener("change", () => {
                 const alt = getCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
@@ -487,19 +499,19 @@ export function formStatusSingleChar(char) {
                 el(newRow, 'textarea[name="value"]').value = alt.value;
 
                 newRow.dispatchEvent(evInput);
-            });
+            }, { passive: true });
 
             el(newRow, ".delete-row").addEventListener("click", async () => {
                 if (await popupDeleteConfirm("the alt value") === 0) return;
 
                 removeCharEntry(char, data[i].uid);
                 destroyElement(newRow);
-            });
+            }, { passive: true });
 
-            el(newRow, ".kill-switch").addEventListener("click", (e) => {
+            el(newRow, ".kill-switch").addEventListener("click", () => {
                 toggleSwitch(el(newRow, ".kill-switch"), (state) => el(newRow, 'input[name="enabled"]').value = state);
                 newRow.requestSubmit();
-            });
+            }, { passive: true });
 
             el(newRow, 'input[name="alt_key"]').addEventListener("keyup", () => {
                 clearTimeout(altKeyDebounceTimer);
@@ -509,7 +521,7 @@ export function formStatusSingleChar(char) {
                     getCharEntry(char, data[i].uid).alt_values,
                     el(newRow, 'select[name="value_uid"]').value
                 ), DEBOUNCE_MS);
-            });
+            }, { passive: true });
 
             el(newRow, ".add_alt_value").addEventListener("click", () => {
                 const newAlt = addCharAltValue(char, data[i].uid);
@@ -520,7 +532,7 @@ export function formStatusSingleChar(char) {
 
                 el(newRow, 'select[name="value_uid"]').value = String(newAlt.uid);
                 el(newRow, 'select[name="value_uid"]').dispatchEvent(evChange);
-            });
+            }, { passive: true });
 
             el(newRow, ".del_alt_value").addEventListener("click", async () => {
                 if (await popupDeleteConfirm("the alt value") === 0) return;
@@ -539,6 +551,28 @@ export function formStatusSingleChar(char) {
                 } catch (error) {
                     // ...
                 }
+            }, { passive: true });
+
+            newRow.querySelectorAll(".macro_template").forEach((/**@type {HTMLDivElement}*/btn) => {
+                btn.addEventListener("click", (e) => {
+                    const macroType = /**@type {HTMLDivElement}*/(e.currentTarget).dataset.macroType;
+                    let macroTemplate = "";
+
+                    if (macroType === "text") macroTemplate = "{{text}}";
+                    if (macroType === "number") macroTemplate = "{{number}}";
+                    if (macroType === "boolean") macroTemplate = "{{boolean::true::true::false}}";
+                    if (macroType === "range") macroTemplate = "{{range::0::100::1::0}}";
+
+                    if (extensionSettings.altMacroTemplateBehavior) {
+                        const valueTextarea = el(newRow, 'textarea[name="value"]')
+                        valueTextarea.value += macroTemplate;
+                        valueTextarea.dispatchEvent(evInput);
+
+                        return;
+                    } else {
+                        copyText(macroTemplate);
+                    }
+                }, { passive: true });
             });
 
             content.append(newRow);
@@ -547,22 +581,22 @@ export function formStatusSingleChar(char) {
 
     expandEntriesBtn.addEventListener("click", () =>
         content.querySelectorAll(".inline-drawer-toggle.down").forEach((/**@type {HTMLElement}*/toggle) => toggle.click())
-    );
+    , { passive: true });
 
     compressEntriesBtn.addEventListener("click", () =>
         content.querySelectorAll(".inline-drawer-toggle.up").forEach((/**@type {HTMLElement}*/toggle) => toggle.click())
-    );
+    , { passive: true });
 
     newStatBtn.addEventListener("click", () => {
         const newEntry = addCharEntry(char, "", "");
         addRow({data: [newEntry]});
-    });
+    }, { passive: true });
 
     selectEntryRole.addEventListener("input", () => {
         metadata.role = Number(selectEntryRole.value);
 
         saveMetadataSTUM();
-    });
+    }, { passive: true });
 
     numberAreaForDepth.addEventListener("input", () => {
         metadata.forceDepth = parseValue(numberAreaForDepth.value);
@@ -570,7 +604,7 @@ export function formStatusSingleChar(char) {
         clearTimeout(forceDepthDebounceTimer);
 
         forceDepthDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
-    })
+    }, { passive: true });
 
     textareaStatusSeparator.addEventListener("input", () => {
         metadata.separator = un_escapeNewlines(textareaStatusSeparator.value);
@@ -578,7 +612,7 @@ export function formStatusSingleChar(char) {
         clearTimeout(separatorDebounceTimer);
 
         separatorDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
-    });
+    }, { passive: true });
 
     textareaDefEntrySeparator.addEventListener("input", () => {
         metadata.def_entry_separator = un_escapeNewlines(textareaDefEntrySeparator.value);
@@ -586,7 +620,7 @@ export function formStatusSingleChar(char) {
         clearTimeout(defEntrySeparatorDebounceTimer);
 
         defEntrySeparatorDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
-    });
+    }, { passive: true });
 
     textareaStatusPrefix.addEventListener("input", () => {
         metadata.prefix = un_escapeNewlines(textareaStatusPrefix.value);
@@ -594,7 +628,7 @@ export function formStatusSingleChar(char) {
         clearTimeout(prefixDebounceTimer);
 
         prefixDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
-    });
+    }, { passive: true });
 
     textareaStatusSuffix.addEventListener("input", () => {
         metadata.suffix = un_escapeNewlines(textareaStatusSuffix.value);
@@ -602,13 +636,13 @@ export function formStatusSingleChar(char) {
         clearTimeout(suffixDebounceTimer);
 
         suffixDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
-    });
+    }, { passive: true });
 
     cloneStatsBtn.addEventListener("click", async () => {
         const cloneResult = await clonePopup(char);
 
         if (!cloneResult) return;
-    });
+    }, { passive: true });
 
     deleteStatsBtn.addEventListener("click", async () => {
         if (await popupDeleteConfirm(`${char.name}'s status data`) === 0) return;
@@ -622,8 +656,8 @@ export function formStatusSingleChar(char) {
             refreshButton.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-arrows-rotate", "interactable");
 
             const refreshSpan = document.createElement("span");
-            refreshSpan.dataset.i18n = `Re-create ${char.name}'s Status data`;
-            refreshSpan.innerText = `Re-create ${char.name}'s Status data`;
+            refreshSpan.dataset.i18n = `Re-create ${escapedCharName}'s Status data`;
+            refreshSpan.innerText = `Re-create ${escapedCharName}'s Status data`;
 
             const refreshContainer = document.createElement("div");
             refreshContainer.classList.add("d-flex", "flex-wrap", "flex-center");
@@ -634,19 +668,19 @@ export function formStatusSingleChar(char) {
 
             refreshButton.addEventListener("click", () => {
                 /**@type {HTMLDivElement}*/
-                const newContainer = formStatusSingleChar(char);
+                const newContainer = getCharStatusForm(char);
                 const nodesArray = Array.from(newContainer.childNodes);
 
                 destroyElement(container.childNodes);
 
                 container.append(...nodesArray);
-            }, {once: true});
+            }, { once: true, passive: true });
 
             destroyElement(container.childNodes);
 
             container.append(refreshContainer);
         }
-    });
+    }, { passive: true });
 
     // @ts-ignore
     $(content).sortable({
@@ -667,7 +701,7 @@ export function formStatusSingleChar(char) {
 }
 
 export async function popupStatusSingleChar(char) {
-    const container = await formStatusSingleChar(char);
+    const container = await getCharStatusForm(char);
 
     await callGenericPopup(container, POPUP_TYPE.TEXT, "", {
         okButton: t`Close Status`,
@@ -684,7 +718,7 @@ export async function popupStatusMultiChar(chars) {
     content.id = "stat-us-max-popup-multi-char";
 
     for (const char of chars) {
-        const charForm = await formStatusSingleChar(char);
+        const charForm = await getCharStatusForm(char);
         charForm.classList.add("multi-char-popup");
         content.append(charForm);
     }

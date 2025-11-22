@@ -46,7 +46,7 @@ export function startListeners() {
         addGroupStatusButtons();
     });
 
-    eventSource.on(event_types.CHAT_CHANGED, async (...args) => {
+    eventSource.makeFirst(event_types.CHAT_CHANGED, async (...args) => {
         log("CHAT_CHANGED", args);
 
         if (!args[0]) return;
@@ -58,6 +58,20 @@ export function startListeners() {
         fillMissingMetadata();
         fetchStatus({forceUIUpdate: true});
         scrollChatToBottom();
+    });
+
+    eventSource.makeFirst(event_types.CHAT_CREATED, async (...args) => {
+        log("CHAT_CREATED", args);
+        
+        if (!args[0]) return;
+        if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
+    });
+
+    eventSource.makeFirst(event_types.GROUP_CHAT_CREATED, async (...args) => {
+        log("CHAT_CREATED", args);
+        
+        if (!args[0]) return;
+        if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
     });
 
     eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, async (...args) => {

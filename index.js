@@ -1,6 +1,6 @@
 import { extension_settings } from "../../../extensions.js";
 import { saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar, substituteParams } from "../../../../script.js";
-import { getGroupMembers, selected_group } from "../../../group-chats.js";
+import { getGroupMembers, groups, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
 import { createCharStatus, getCharAltValue, getCharStatus, saveMetadataSTUM, updateCharEntry } from "./source/js/statusControls.js";
 import { power_user } from "../../../power-user.js";
@@ -53,13 +53,16 @@ const defaultSettings = {
     hideInputLabels: false,
     rangeInputWidth: "auto",
     showWhiteSpaces: false,
+    minPromptDepth: 0,
+    alwaysIncludeUnmutedMembers: false,
+    altMacroTemplateBehavior: false,
     debug: false
 };
 
 const regexTextInput = /({{text)(::[^{}]*)?(}})/g;
 const regexNumberInput = /({{number)(::-?\d+\.?\d*)?(}})/g;
 const regexBooleanInput = /({{boolean)(::((false)|(true))::[^}\n]+::[^}\n]+)?(}})/g;
-const regexRangeInput = /({{range::)([\d]+(\.[\d]+)?)(::[\d]+(\.[\d]+)?){3}(}})/g;
+const regexRangeInput = /({{range::)(-?[\d]+(\.[\d]+)?)(::-?[\d]+(\.[\d]+)?){3}(}})/g;
 const FETCH_STATUS_TIMEOUT_MS = 300;
 
 let fetchStatusTimeout;
@@ -73,7 +76,7 @@ export const log = (...msg) => {
     console.log("[" + extensionName + "]", ...msg);
 };
 
-// * MARK:Extension methods
+// * MARK:# Extension Methods
 
 /** Destroys an element and all data associated with it
     @param {string|HTMLElement|Node|JQuery<any>|HTMLElement[]|NodeList} element
@@ -183,12 +186,17 @@ export function getActiveParticipants(discard = []) {
 
     if (selected_group) {
         const members = getGroupMembers();
+        const muted_members = groups
+            ?.find(g => g.id == selected_group)
+            ?.disabled_members
+            ?.map(m => { return {avatar: m} }) ?? [];
+        const members_ignore = [...muted_members, ...discard];
 
-        for (const member of members) {
-            if (discard.some(c => c.avatar === member.avatar)) continue;
-            else chars.push(member);
-        }
+        for (const member of members)
+            if (member && !members_ignore.some(c => c.avatar === member.avatar))
+                chars.push(member);
     }
+
     else if (this_chid !== undefined) {
         const character = characters[this_chid];
 
@@ -279,8 +287,16 @@ function hidePopper(popperInstance, tooltip) {
     }));
 }
 
+/**
+    @param {HTMLElement} span
+    @param {*} text
+    @param {*} caretPos
+    @param {*} selectEnd
+ */
 function renderCaret(span, text, caretPos, selectEnd = caretPos) {
     const esc = s => lodash.escape(s);
+
+    destroyElement(span.childNodes);
 
     if (caretPos < 0) return span.textContent = text;
 
@@ -334,8 +350,7 @@ export function deleteCharTracker(character) {
     destroyElement(`.status-value-uid-options.list-group[avatar-target="${character.avatar}"]`);
 }
 
-/**
-    MARK:addTracker()
+/** MARK:addTracker()
 */
 function addTracker(status, character) {
     const $chat = document.getElementById("chat");
@@ -361,13 +376,13 @@ function addTracker(status, character) {
                 <input type="hidden" name="value_uid">
             </form>
             <div class="d-flex flex-center-between gap-15px fs-90p text-muted hover-highlight">
-                <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state." data-i18n="Toggle entry's active state."></div>
+                <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state" data-i18n="Toggle entry's active state"></div>
                 <p class="text-left flex-grow-1 m-0 d-table">
                     <span class="status-title fw-bolder d-contents"></span>
                     <span class="status-separator"></span>
                     <span class="status-description d-contents"></span>
                 </p>
-                <div class="status-value-uid fa-solid fa-bars-progress m-0" aria-describedby="tooltip"></div>
+                <div class="status-value-uid fa-solid fa-bars-progress m-0" aria-describedby="tooltip" title="Swap entry description" data-i18n="Swap entry description"></div>
             </div>
         </td>
     `;
@@ -407,8 +422,11 @@ function addTracker(status, character) {
 
     const el = (target, class_name) => target.querySelector(class_name);
 
-    const dispatchInput = (/**@type {HTMLElement}*/target) => {
-        setTimeout(() => target.dispatchEvent(inputEvent), 10);
+    const dispatchInput = (/**@type {HTMLElement}*/target, {time = 10, callback = () => {}} = {}) => {
+        return setTimeout(() => {
+            callback();
+            target.dispatchEvent(inputEvent);
+        }, time);
     }
 
     /** @param {HTMLElement} el */
@@ -432,7 +450,7 @@ function addTracker(status, character) {
         if (!metadata || !metadata.length) return toastr.warning(t`There's no metadata to edit, open a chat or refresh the current one`);
 
         return await popupStatusSingleChar(character);
-    });
+    }, {passive: true});
 
     statusTable.querySelector(".menu_button.fa-eye").addEventListener("click", async () => {
         const collapse = !statusTableBody.classList.contains("d-none");
@@ -440,24 +458,27 @@ function addTracker(status, character) {
 
         toggleVisibility(statusTableBody, collapse);
         saveMetadataSTUM();
-    });
+    }, {passive: true});
 
-    const createInputs = (/**@type {String}*/text) => {
+    const createInputs = (/**@type {String}*/text, entry_uid) => {
         const parsedText = lodash.escape(substituteParams(processMacros(text, {char: character, processInputs: false}))).replaceAll(/\n/g, "<br>");
 
         if (!extensionSettings.editNumbersFromChat)
             return `<span class="text-line">${parsedText}</span>`;
 
+        const characterName = character.name.replaceAll(" ", "-").toLowerCase();
         let newText = `<span class="text-line">${parsedText}</span>`;
+        let inputID = 0;
 
         newText = newText.replaceAll(regexTextInput, (match) => {
             const value = match.replaceAll(/((^{{text(::)?)|(}}$))/g, "").replaceAll("<br>", "\n");
             const input = `
                 <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
-                <textarea type="text" class="type-text fake-input chat-input-editor" data-pattern="^[^{}]*$" autocomplete="off" data-stee--handled="1">${value}</textarea>
+                <textarea type="text" class="type-text fake-input chat-input-editor mw-unset" data-pattern="^[^{}]*$" autocomplete="off" data-stee--handled="1" tabindex="-1">${value}</textarea>
                 <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? "show-spaces" : ""}">${value}</span></span>
             `;
 
+            inputID++;
             return input;
         });
 
@@ -475,6 +496,7 @@ function addTracker(status, character) {
                 </span>
             `;
 
+            inputID++;
             return input;
         });
 
@@ -488,22 +510,24 @@ function addTracker(status, character) {
                 <span class="text-quote"> ${checked === "true" ? trueValue : falseValue}</span>
             `;
 
+            inputID++;
             return input;
         });
 
         newText = newText.replaceAll(regexRangeInput, (match) => {
             const props = match.replaceAll(/(({{range::)|(}}))/g, "").split("::");
             const min = props[0];
-            const max = props[1];
-            const step = props[2];
+            const max = Number(props[1]) < Number(min) ? min : props[1];
+            const step = Number(props[2]) <= 0 ? 1 : props[2];
             const value = props[3];
             const input = `
                 <span class="d-flex flex-col flex-center gap-0 type-range chat-input-editor">
-                    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider" />
-                    <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input" />
+                    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider" id="${characterName}-${entry_uid}-${inputID}" />
+                    <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input" data-for="${characterName}-${entry_uid}-${inputID}" id="counter-${characterName}-${entry_uid}-${inputID}" />
                 </span>
             `;
 
+            inputID++;
             return input;
         });
 
@@ -600,10 +624,10 @@ function addTracker(status, character) {
 
         el(newRow, '.status-separator').innerHTML = lodash.escape(entry.separator).replaceAll(/\n/g, "<br>");
 
-        const updateDescription = (text, el_target, form_target) => {
+        const updateDescription = (text, el_target, form_target, entry_uid) => {
             destroyElement(el(newRow, el_target).children);
 
-            el(newRow, el_target).innerHTML = createInputs(text);
+            el(newRow, el_target).innerHTML = createInputs(text, entry_uid);
             el(newRow, el_target).querySelector('.text-line').dataset.originalText = text;
 
             if (!extensionSettings.editNumbersFromChat) return;
@@ -611,7 +635,6 @@ function addTracker(status, character) {
             el(newRow, el_target)
             .querySelectorAll('input.type-text[type="text"]')
             .forEach((/**@type {HTMLInputElement}*/input) => {
-
                 input.onkeydown = (event) => {
                     if (/[{}\n]/.test(event.key)) event.preventDefault();
                 }
@@ -620,7 +643,6 @@ function addTracker(status, character) {
             el(newRow, el_target)
             .querySelectorAll('.chat-input-editor:not(.type-range)')
             .forEach((/**@type {HTMLInputElement|HTMLTextAreaElement}*/input) => {
-
                 if (input.type === "checkbox") {
                     // @ts-ignore
                     input.nextElementSibling.textContent = " " + (input.checked ? input.dataset.true : input.dataset.false);
@@ -631,12 +653,13 @@ function addTracker(status, character) {
 
                         el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
                         dispatchInput(form);
-                    });
+                    }, {passive: true});
                 } else {
                     const eventTargets = [input.nextElementSibling, input.previousElementSibling];
                     let lastValid = input.value;
+                    let inputTimeout;
 
-                    eventTargets.forEach((/**@type {HTMLSpanElement}*/span) => {
+                    eventTargets.forEach((/**@type {HTMLSpanElement} */span) => {
                         let spanSelected = false;
                         let incrementsPressed;
                         let incrementsCooldown;
@@ -645,11 +668,11 @@ function addTracker(status, character) {
                             if (spanSelected) return;
 
                             spanSelected = true;
-                        });
+                        }, {passive: true});
 
                         document.addEventListener("click", (e) => {
                             clearInterval(incrementsPressed);
-                            clearInterval(incrementsCooldown);
+                            clearTimeout(incrementsCooldown);
 
                             if (!spanSelected) return;
 
@@ -661,7 +684,7 @@ function addTracker(status, character) {
 
                             input.setSelectionRange(selection.start, selection.end);
                             input.focus();
-                        });
+                        }, {passive: true});
 
                         if (input.classList.contains("type-number") && span.classList.contains("text-quote")) {
                             const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: false, cancelable: true});
@@ -670,7 +693,7 @@ function addTracker(status, character) {
                             span.addEventListener("wheel", async (e) => {
                                 if (!input.matches(':focus')) return;
 
-                                e.preventDefault();
+                                if (e.cancelable) e.preventDefault();
 
                                 let direction;
 
@@ -679,7 +702,7 @@ function addTracker(status, character) {
                                 if (e.deltaY > 0) direction = arrowDown;
 
                                 setTimeout(() => input.dispatchEvent(direction), 10);
-                            });
+                            }, {passive: false});
 
                             /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-caret-left');
                             /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-caret-right');
@@ -691,7 +714,7 @@ function addTracker(status, character) {
                                 incrementsCooldown = setTimeout(() => {
                                     incrementsPressed = setInterval(() => input.dispatchEvent(arrowDown), 75);
                                 }, 300);
-                            });
+                            }, {passive: true});
 
                             plusButton.addEventListener("pointerdown", (e) => {
                                 if (e.button === 2) return;
@@ -700,7 +723,7 @@ function addTracker(status, character) {
                                 incrementsCooldown = setTimeout(() => {
                                     incrementsPressed = setInterval(() => input.dispatchEvent(arrowUp), 75);
                                 }, 300);
-                            });
+                            }, {passive: true});
                         }
                     });
 
@@ -712,27 +735,31 @@ function addTracker(status, character) {
                             else input.value = lastValid;
                         } else lastValid = input.value;
 
-                        el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
-                        dispatchInput(form);
-                    });
+
+                        clearTimeout(inputTimeout);
+                        inputTimeout = dispatchInput(form, {time: 300, callback: () =>
+                            el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target)
+                        });
+                    }, {passive: true});
 
                     if (input.classList.contains("type-number")) {
                         input.addEventListener("keydown", (/**@type {KeyboardEvent}*/e) => {
-                            if (!["ArrowUp", "ArrowDown"].includes(e.key)) return setTimeout(() => updateCaretDisplay(input, lastValid), 10);
+                            if (!["ArrowUp", "ArrowDown"].includes(e.key))
+                                return setTimeout(() => updateCaretDisplay(input, lastValid), 75);
 
                             e.preventDefault();
 
                             input.value = String(Number(input.value) + ((e.key === "ArrowUp") ? 1 : -1));
 
                             dispatchInput(input);
-                            setTimeout(() => updateCaretDisplay(input, lastValid), 10);
-                        });
+                            setTimeout(() => updateCaretDisplay(input, lastValid), 75);
+                        }, {passive: false});
                     } else {
-                        input.addEventListener("keydown", () => setTimeout(() => updateCaretDisplay(input, lastValid), 10));
+                        input.addEventListener("keydown", () => setTimeout(() => updateCaretDisplay(input, lastValid), 75), {passive: true});
                     }
 
-                    input.addEventListener("focus", () => updateCaretDisplay(input, lastValid));
-                    input.addEventListener("blur", () => renderCaret(input.nextElementSibling.querySelector('.value'), lastValid, -1));
+                    input.addEventListener("focus", () => updateCaretDisplay(input, lastValid), {passive: true});
+                    input.addEventListener("blur", () => renderCaret(input.nextElementSibling.querySelector('.value'), lastValid, -1), {passive: true});
                 }
             });
 
@@ -751,12 +778,12 @@ function addTracker(status, character) {
 
                     el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
                     dispatchInput(form);
-                });
+                }, {passive: true});
             });
         }
 
-        updateDescription(entry.key, '.status-title', 'key');
-        updateDescription(descriptionValue, '.status-description', descriptionTarget);
+        updateDescription(entry.key, '.status-title', 'key', entry.uid);
+        updateDescription(descriptionValue, '.status-description', descriptionTarget, entry.uid);
 
         // Add listeners
         form.addEventListener("submit", (e) => {
@@ -765,7 +792,7 @@ function addTracker(status, character) {
             const formData = new FormData(form);
 
             updateCharEntry(character, entry.uid, formData);
-        });
+        }, { passive: false });
 
         form.addEventListener("input", () => {
             clearTimeout(formDebounceTimer);
@@ -773,9 +800,9 @@ function addTracker(status, character) {
             formDebounceTimer = setTimeout(() => form.requestSubmit(), DEBOUNCE_MS);
         });
 
-        killSwitch.addEventListener('pointerdown', e =>
-            document.addEventListener('contextmenu', e => e.preventDefault(), {once: true})
-        );
+        killSwitch.addEventListener('pointerdown', () =>
+            document.addEventListener('contextmenu', e => e.preventDefault(), { once: true, passive: false })
+        , {passive: true});
 
         killSwitch.addEventListener("pointerup", (/**@type {PointerEvent}*/e) => {
             e.preventDefault();
@@ -799,7 +826,7 @@ function addTracker(status, character) {
             });
 
             dispatchInput(form);
-        });
+        }, { passive: false });
 
         // Set up UI
         if (!entry.enabled) toggleSwitch(killSwitch, (state) => {
@@ -856,9 +883,9 @@ function addTracker(status, character) {
                         formTarget = "alt_key";
                     }
 
-                    updateDescription(formText, '.status-description', formTarget);
+                    updateDescription(formText, '.status-description', formTarget, entry.uid);
                     dispatchInput(form);
-                });
+                }, {passive: true});
 
                 optionsValueUID.append(option);
             }
@@ -931,8 +958,7 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
     return newText;
 }
 
-/**
-    MARK:fetchStatus()
+/** MARK:fetchStatus()
     @typedef {object} FetchOptions
     @property {boolean} [forceUIUpdate]
     @property {number} [depthModifier]
@@ -940,17 +966,21 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
     @property {String} [forceDepth.avatar]
     @property {number} [forceDepth.depth]
     @property {String} [generationType]
-
+*/
+/**
+    Updates prompt injections with the status blocks of the present characters
     @param {FetchOptions?} options
 */
 export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDepth = undefined, generationType = ""} = {}) {
     if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
 
-    const real_chat = !extension_settings["Presence"] ? chat.slice(chat_metadata.lastInContextMessageId) : chat;
+    const real_chat = extension_settings["Presence"] ? chat : chat.slice(chat_metadata.lastInContextMessageId);
     const metadata = chat_metadata.stat_us_maximus;
     const chars = getActiveParticipants();
+    const fallbackDepth = extensionSettings.minPromptDepth - depthModifier;
 
-    if (!metadata?.length) chars.push(...getAllParticipantsInChat(real_chat));
+    if (!metadata?.length && extensionSettings.autoDetectParticipants)
+        chars.push(...getAllParticipantsInChat(real_chat));
 
     const raw_data = chars.map(character => ({
         char: character,
@@ -973,14 +1003,14 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
 
         if (!character) continue;
 
-        const statusCustomDepth = Number(data[i].status.forceDepth === "" ? NaN : data[i].status.forceDepth);
+        const statusCustomDepth = Number(data[i].status.forceDepth === "" ? -1 : data[i].status.forceDepth);
         const ignoreDepthFailSafe = forceDepth?.avatar === character.avatar || statusCustomDepth >= 0;
 
         const dynamicDepth = getStatusDepth(real_chat, character, generationType);
-        const char_depth = ignoreDepthFailSafe ? {depth: (forceDepth?.depth ?? statusCustomDepth)} : dynamicDepth;
+        const charDepth = ignoreDepthFailSafe ? {depth: (forceDepth?.depth ?? statusCustomDepth)} : dynamicDepth;
 
         if (statusCustomDepth >= 0)
-            char_depth.depth = statusCustomDepth;
+            charDepth.depth = statusCustomDepth;
 
         if (!data[i].status && extensionSettings.autoDetectParticipants)
             data[i].status = createCharStatus(character);
@@ -988,7 +1018,10 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
         if (!data[i].status) continue;
 
         // If chat/status is empty or character is not even in the context
-        if (char_depth.depth < 0) continue;
+        if (charDepth.depth < 0) {
+            if (extensionSettings.alwaysIncludeUnmutedMembers) charDepth.depth = fallbackDepth;
+            else continue;
+        }
 
         const detectedLastMesID = dynamicDepth.last_mes_id + dynamicDepth.depth;
         const charLastMesID = data[i].status.last_mes_id + data[i].status.depth;
@@ -1004,7 +1037,8 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
         if (!status.entries.length) continue;
 
         const promptKey = extensionName.toLowerCase() + "-" + character.avatar;
-        const promptDepth = ignoreDepthFailSafe ? char_depth.depth : char_depth.depth + depthModifier;
+        const promptDepth = ignoreDepthFailSafe ? charDepth.depth : (charDepth.depth + depthModifier);
+        const finalPromptDepth = (promptDepth < extensionSettings.minPromptDepth) ? extensionSettings.minPromptDepth : promptDepth;
         let promptValue = "";
 
         for (const entry of status.entries) {
@@ -1017,7 +1051,8 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
 
             if (entry.key !== "" && value !== "") promptValue += entry.separator;
 
-            promptValue += value;
+            promptValue += value
+                .replaceAll(/\/\/.*(\n|$)/g, "$1");
         };
 
         if (!promptValue) continue;
@@ -1029,7 +1064,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
             promptKey,
             promptValue,
             extension_prompt_types.IN_CHAT,
-            promptDepth,
+            finalPromptDepth,
             true,
             status.role
         );
@@ -1039,6 +1074,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
 }
 
 /**
+    Updates prompt injections with the status blocks of the present characters, cancelling ongoing fetch calls to prevent bottle necks
     @param {FetchOptions?} options
 */
 export function fetchStatusDebounced(options = {}) {
@@ -1067,11 +1103,11 @@ export function addGroupStatusButtons() {
 
     for (const avatar of avatars) {
         avatar.removeEventListener("click", groupListAvatarsClick);
-        avatar.addEventListener("click", groupListAvatarsClick);
+        avatar.addEventListener("click", groupListAvatarsClick, {passive: true});
     }
 }
 
-// * MARK:Methods in charge of controlling the extension settings
+// * MARK:# Settings Methods
 
 const settingsCallbacks = {
     rangeInputWidthTimeout: undefined,
@@ -1112,7 +1148,8 @@ const settingsCallbacks = {
 /** Changes a boolean setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsBooleanButton(event) {
     const target = event.target;
-    const value = Boolean($(target).prop("checked"));
+    const value = Boolean($(target).prop("checked")) === true;
+
     const setting = target.getAttribute("stat-us-max-setting");
     const callback = settingsCallbacks[setting];
 
@@ -1128,6 +1165,30 @@ function settingsBooleanButton(event) {
 function settingsTextButton(event) {
     const target = event.target;
     const value = String($(target).val());
+
+    const setting = target.getAttribute("stat-us-max-setting");
+    const callback = settingsCallbacks[setting];
+
+    extensionSettings[setting] = value;
+
+    if (callback) callback();
+
+    log("toggleSetting " + setting, value);
+    saveSettingsDebounced();
+}
+
+/** Changes a number setting value and triggers a callback if there's any on settingsCallbacks. */
+function settingsNumberButton(event) {
+    const target = /** @type {HTMLInputElement} */ (event.target);
+    const raw_value = isNaN(target.valueAsNumber) ? 0 : target.valueAsNumber;
+    const insideMinBoundary = (target.min !== "") ? (Number(target.min) <= raw_value) : true;
+    const insideMaxBoundary = (target.max !== "") ? (Number(target.max) >= raw_value) : true;
+
+    let value = raw_value;
+
+    if (!insideMinBoundary) value = Number(target.min);
+    if (!insideMaxBoundary) value = Number(target.max);
+
     const setting = target.getAttribute("stat-us-max-setting");
     const callback = settingsCallbacks[setting];
 
@@ -1142,10 +1203,13 @@ function settingsTextButton(event) {
 /**	Logs setting's values. */
 function displaySettings() {
     console.debug("[" + extensionName + "]", `Auto detect participants is ${extensionSettings.autoDetectParticipants ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Always include unmuted group members is ${extensionSettings.alwaysIncludeUnmutedMembers ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Alternative behavior for macro template buttons is ${extensionSettings.altMacroTemplateBehavior ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Show input macros in chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Hide input labels is ${extensionSettings.hideInputLabels ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Show whitespaces is ${extensionSettings.showWhiteSpaces ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Range input width is set to ${String(extensionSettings.rangeInputWidth)}`);
+    console.debug("[" + extensionName + "]", `Min prompt depth is set to ${String(extensionSettings.minPromptDepth)}`);
     console.debug("[" + extensionName + "]", `Debug mode is ${extensionSettings.debug ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", structuredClone(extensionSettings));
 }
@@ -1158,10 +1222,13 @@ async function loadHTMLSettings() {
 
     // Event Listeners for the extension HTML
     $("#stat-us-max-auto-detect-participants").on("input", settingsBooleanButton);
+    $("#stat-us-max-always-include-unmuted-members").on("input", settingsBooleanButton);
+    $("#stat-us-max-alt-macro-template-behavior").on("input", settingsBooleanButton);
     $("#stat-us-max-show-input-macros").on("input", settingsBooleanButton);
     $("#stat-us-max-hide-input-labels").on("input", settingsBooleanButton);
     $("#stat-us-max-show-white-spaces").on("input", settingsBooleanButton);
     $("#stat-us-max-range-input-width").on("input", settingsTextButton);
+    $("#stat-us-max-min-prompt-depth").on("input", settingsNumberButton);
     $("#stat-us-max-debug").on("input", settingsBooleanButton);
     $("#stat-us-max-check-configuration").on("click", displaySettings);
 
@@ -1171,10 +1238,13 @@ async function loadHTMLSettings() {
 /** Init setting values on the menu */
 function setSettings() {
     $("#stat-us-max-auto-detect-participants").prop("checked", extensionSettings.autoDetectParticipants);
+    $("#stat-us-max-always-include-unmuted-members").prop("checked", extensionSettings.alwaysIncludeUnmutedMembers);
+    $("#stat-us-max-alt-macro-template-behavior").prop("checked", extensionSettings.altMacroTemplateBehavior);
     $("#stat-us-max-show-input-macros").prop("checked", extensionSettings.editNumbersFromChat);
     $("#stat-us-max-show-white-spaces").prop("checked", extensionSettings.showWhiteSpaces);
     $("#stat-us-max-hide-input-labels").prop("checked", extensionSettings.hideInputLabels).trigger("input");
     $("#stat-us-max-range-input-width").val(extensionSettings.rangeInputWidth).trigger("input");
+    $("#stat-us-max-min-prompt-depth").val(extensionSettings.minPromptDepth);
     $("#stat-us-max-debug").prop("checked", extensionSettings.debug).trigger("input");
 }
 
@@ -1213,7 +1283,7 @@ function initButtons() {
         if (!chars.length) return toastr.warning(t`Characters could not be found in the metadata`);
 
         return await popupStatusMultiChar(chars);
-    });
+    }, {passive: true});
 
     const extensionsMenu = document.getElementById("extensionsMenu");
     extensionsMenu.append(globalStatusMenu);
@@ -1242,7 +1312,7 @@ function initButtons() {
         if (!users.length) return toastr.warning(t`Personas could not be found in the metadata`);
 
         return await popupStatusMultiChar(users);
-    });
+    }, {passive: true});
 
     const personaStatusOpenPopupBtn = document.createElement("div");
     personaStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-user-cog", "interactable", "m-0");
@@ -1255,7 +1325,7 @@ function initButtons() {
         if (!user) return toastr.warning(t`The persona could not be found`);
 
         return await popupStatusSingleChar(user);
-    });
+    }, {passive: true});
 
     const charStatusOpenPopupBtn = document.createElement("div");
     charStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-table", "interactable", "m-0");
@@ -1271,10 +1341,10 @@ function initButtons() {
         if (!char) return toastr.warning(t`The character could not be found`);
 
         return await popupStatusSingleChar(char);
-    });
+    }, {passive: true});
 
     const charStatusMenu = document.createElement("div");
-    charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px", "separator-bottom");
+    charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px", "standoutHeader", "p-5px");
     charStatusMenu.append(charStatusSpan, charStatusOpenPopupBtn, personaStatusOpenPopupBtn, personasStatusOpenPopupBtn);
 
     const charStatusContainer = document.createElement("div");
@@ -1306,7 +1376,7 @@ function initButtons() {
         if (!users.length) return toastr.warning(t`Personas could not be found in the metadata`);
 
         return await popupStatusMultiChar(users);
-    });
+    }, {passive: true});
 
     const groupPersonaBtn = groupStatusContainer.querySelector('.menu_button.fa-user-cog');
     groupPersonaBtn.addEventListener("click", async () => {
@@ -1316,7 +1386,7 @@ function initButtons() {
         if (!user) return toastr.warning(t`The persona could not be found`);
 
         return await popupStatusSingleChar(user);
-    });
+    }, {passive: true});
 
     /** @type {HTMLElement} */const groupMembersButton = groupStatusContainer.querySelector('.menu_button.fa-table');
     groupMembersButton.title = "Open status for all group members";
@@ -1328,7 +1398,7 @@ function initButtons() {
         if (!chars.length) return toastr.warning(t`Group members could not be found in the metadata`);
 
         return await popupStatusMultiChar(chars);
-    });
+    }, {passive: true});
 
     const groupChatsBlock = document.getElementById("rm_group_chats_block");
     groupChatsBlock.querySelector('.inline-drawer').after(groupStatusContainer);

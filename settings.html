@@ -1,6 +1,3 @@
-<!--
-You might want to add additional HTML elements to ST. It's good practice to separate it out from your code
--->
 <div class="example-extension-settings">
 	<div class="inline-drawer">
 		<div class="inline-drawer-toggle inline-drawer-header">
@@ -8,6 +5,13 @@ You might want to add additional HTML elements to ST. It's good practice to sepa
 			<div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
 		</div>
 		<div id="stat-us-max-settings-window" class="inline-drawer-content stat-us-max-custom-css" style="padding: 0.5vh;">
+
+			<div class="flex-container w-100 mb-5px">
+				<a id="stat-us-max-check-docs" class="menu_button w-100 gap-15px" type="button" target="_blank" href="https://github.com/leandrojofre/SillyTavern-Stat-us-Maximus?tab=readme-ov-file#features" title="You will be redirected to the repository page in a new tab" data-i18n="[title]You will be redirected to the repository page in a new tab">
+					Open the docs
+					<i class="fa-solid fa-circle-exclamation" tabindex="0"></i>
+				</a>
+			</div>
 
 			<div class="flex-container flex-column separator-bottom">
 				<b>Settings</b>
@@ -17,11 +21,16 @@ You might want to add additional HTML elements to ST. It's good practice to sepa
 					Automatically add Status data to active participants in the chat
 				</label>
 
-				<div class="flex-container w-100">
-					<a id="stat-us-max-check-docs" title="Link to the repository" class="menu_button w-100" type="button" target="_blank" href="https://github.com/leandrojofre/SillyTavern-Stat-us-Maximus?tab=readme-ov-file#features">
-                        Open the docs
-                    </a>
-				</div>
+				<label class="flex-container">
+					<input id="stat-us-max-always-include-unmuted-members" stat-us-max-setting="alwaysIncludeUnmutedMembers" type="checkbox" />
+					Always include unmuted group members
+					<i class="right_menu_button fa-solid fa-circle-exclamation interactable" title="This will include the Stat blocks of group members that have not interacted with the chat, or their last message is out of the context, but are present" data-i18n="[title]This will include the Stat blocks of group members that have not interacted with the chat, or their last message is out of the context, but are present" tabindex="0" role="button"></i>
+				</label>
+
+				<label class="d-flex flex-col flex-start-center gap-5px">
+                    <small class="text-quote">Set the minimum prompt injection depth</small>
+					<input id="stat-us-max-min-prompt-depth" stat-us-max-setting="minPromptDepth" type="number" min="0" max="10000" step="1" class="text_pole textarea_compact mt-0" />
+				</label>
 			</div>
 
 			<div class="flex-container flex-column separator-bottom">
@@ -50,9 +59,15 @@ You might want to add additional HTML elements to ST. It's good practice to sepa
 					<input id="stat-us-max-hide-input-labels" stat-us-max-setting="hideInputLabels" type="checkbox" />
 					Hide input labels
 				</label>
+
+				<label class="flex-container">
+					<input id="stat-us-max-alt-macro-template-behavior" stat-us-max-setting="altMacroTemplateBehavior" type="checkbox" />
+					Alternative macro template behavior
+					<i class="right_menu_button fa-solid fa-circle-exclamation interactable" title="Put the macro at the end of the entry description box" data-i18n="[title]Put the macro at the end of the entry description box" tabindex="0" role="button"></i>
+				</label>
 			</div>
 
-			<div class="flex-container flex-column">
+			<div class="flex-container flex-column separator-bottom pb-5px">
 				<b>Debug settings</b>
 
 				<div class="flex-container">
@@ -65,8 +80,6 @@ You might want to add additional HTML elements to ST. It's good practice to sepa
 					Enable/Disable the debug console logs
 				</label>
 			</div>
-
-			<hr class="sysHR" />
 		</div>
 	</div>
 </div>

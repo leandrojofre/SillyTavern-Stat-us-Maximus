@@ -148,13 +148,13 @@ const customEnumProviders = {
     @param {object} args
     @param {String} args.char - Character name
     @param {String} args.isuser - Wether to search for personas or characters
-    @returns {Promise<String>} UID of the new entry or empty string
+    @returns {Promise<String>} True if succeeds, False otherwise
 */
 async function commandCreateStatus(args, value) {
     try {
         const {char = "", isuser = "false"} = args;
 
-        if (getParticipantFromName(char)) return "false";
+        if (getParticipantFromName(char)) return "true";
 
         const parsed_isuser = isuser === "true";
         const character = getParticipant(char, parsed_isuser, {field: "name"});
@@ -207,7 +207,7 @@ function commandSetStatusField(args, value = "") {
     @param {object} args
     @param {String} args.char - Character name
     @param {String} args.isuser - Wether to search for personas or characters
-    @returns {Promise<String>} UID of the new entry or empty string
+    @returns {Promise<String>} True if succeeds, False otherwise
 */
 async function commandDeleteStatus(args, value) {
     try {

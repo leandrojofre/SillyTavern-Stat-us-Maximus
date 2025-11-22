@@ -31,6 +31,7 @@ This extension adds a menu per character to have your notes, it is basically a s
 
 ### Slash Commands
 - `/stum-create-status` Creates Status data for the selected character, allows you to add data for non-present chat participants.
+- `/stum-set-status-field` Sets the value of one of the core fields of you Character's status. If you use ST's macros as the field value, you'll need to escape them like this: `{\{char}}`.
 - `/stum-delete-status` Deletes Status data for the selected character.
 - `/stum-create-entry` Creates an entry in the status of a character and returns its UID. If the character is not found in the metadata, it returns false.
 - `/stum-get-entry-uid` Get an entry uid by pairing a Character status field against a value, returning the uid of the first match. If no match is found, an empty string is returned.
@@ -49,8 +50,8 @@ This extension adds a menu per character to have your notes, it is basically a s
 ### Macros
 - `{{name}}` Will be replaced with the name of the Status owner.
 - `{{text}} | {{text::Your text here}}` In the chat UI, it will be replaced with a text input. This does not support newlines or curly braces `{}`.
-- `{{number}} | {{number::1024}}` In the chat UI, it will be replaced with a number input. You need to use dots `.` for decimals, commas are not supported.
-- `{{boolean}} | {{boolean::true::Custom true::Custom false}}` In the chat UI, it will be replaced with a checkbox. The first parameter is the state of the checkbox. By default, the macro will be replaced with `true` or `false`, but you can set a custom text to be displayed when the checkbox is on or off.
+- `{{number}} | {{number::2048}}` In the chat UI, it will be replaced with a number input. You need to use dots `.` for decimals, commas are not supported.
+- `{{boolean}} | {{boolean::DefaultValueTrueOrFalse::Custom True Label::Custom False Label}}` In the chat UI, it will be replaced with a checkbox. The first parameter is the state of the checkbox, and must either be `true` or `false`. By default, the checkbox labels and value sent to prompt will simply be "true" or "false", but you can set custom texts to be displayed/sent instead with the custom label parameters.
 - `{{range::min::max::step::value}}` In the chat UI, it will be replaced with a range input, the same used in the samplers panel. `min` is the minimum value of the range, `max` is the maximum, `step` is the amount of numbers the input will increase/decrease when the buttons of the input are used, and `value` is the value the input will have. All parameters are `numbers`, and decimals only accept dots.
 
 ### Coming Soon
