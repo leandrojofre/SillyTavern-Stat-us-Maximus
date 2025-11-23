@@ -14,6 +14,7 @@ import { lodash, Popper } from "../../../../lib.js";
 /*  # TODO
     - [ ] Setting to disable confirm delete
     - [ ] Setting for deff role
+    - [ ] Rearrange range input into a more compact layout - input[number] [space] input[range|fat]
     - [X] Setting to disable auto detection
     - [X] Replace select button for an icon button
     - [X] Highlight row on hover
@@ -21,19 +22,46 @@ import { lodash, Popper } from "../../../../lib.js";
     - [X] Reduce font-size
     - [X] Button on right nav panel to open user metadata - one for active and another for all
     - [X] Use alt title if description is empty
-    - [ ] Global Stat not attached to character
     - [X] Fix chat UI select button using a similar approach to character export button - thanks Ross
 
-    - [ ] Before I loose the idea - Update chat UI on input input, this would allow sick tricks like modifying a variable value from an input inside the set var macro - That would require
-        - [ ] Parsing ST variables on input (and parsing mine's first)
-        - [ ] Figure out how to update the UI without loosing focus of the input (maybe when the input looses focus?)
-
-    I need to refine this roadmap
-    - [ ] Create a template builder ? from the settings
-        - [ ] Store it in ? extension settings as an array
-        - [ ] Allow to bind templates to both characters and groups (group overrides character)
-        - [ ] ? Merge group and character templates
-        - [ ] ? Allow to assign multiple templates
+    I hate it, but a rewrite is needed, this code is a headache to maintain
+    (TODO once the main TODO of this file is finished)
+    - [ ] Rewrite code using classes
+        - [ ] ChatInputMacro
+        - [ ] StumMacroParser
+            - macroToInput
+            - inputToMacro
+            - parseCoreMacros
+            - parseStumMacros
+            - parseThirdPartyMacros
+            - parseAllMacros
+        - [ ] StatUs // from statusControls.js
+            - assignCharacter // this would allow applying templates
+            - assignChat // this would allow chat templates
+            - assignGlobal // this would allow constantly active templates
+        - [ ] StatUsEntry // from statusControls.js
+        - [ ] TemplateBuilder<StatUs>
+            - getTemplate
+            - createFromSettings
+            - createFromClipboard
+            - applyToClipboard
+        - [ ] StumSlashCommand
+            - registerCommand
+            - validateInputArguments
+            - createFormData
+        - [ ] StatUsPopupBlock
+        - [ ] StatUsChatBlock
+            - runScript ? I would like to continue the idea of triggering scripts by typing in the inputs/switching alt values/disabling and enabling
+        - [ ] StatUsButtonsBlock
+        - [ ] Utilities
+            - debounceFunction //Debounce Func with unique IDs
+            - addHtmlTemplate ? This or create on class instance
+            - getHtmlTemplate
+        - [ ] ExtensionSettings
+    - [ ] Rewrite code using HTML templates
+        - [ ] statUsChatBlock
+        - [ ] statUsPopupBlock
+        - [ ] statUsButtonsBlock
 
     ! THE PLAN
 
@@ -1248,7 +1276,7 @@ function setSettings() {
     $("#stat-us-max-debug").prop("checked", extensionSettings.debug).trigger("input");
 }
 
-// * MARK:Initialize Extension
+// * MARK:Initialize Buttons
 
 function initButtons() {
     /** Magic wand menu */

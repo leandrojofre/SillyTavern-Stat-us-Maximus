@@ -1,4 +1,4 @@
-import { deleteCharTracker, log } from "../../index.js";
+import { deleteCharTracker } from "../../index.js";
 import { chat, chat_metadata, extension_prompt_roles } from "../../../../../../script.js";
 import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { t } from "../../../../../i18n.js";
