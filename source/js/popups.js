@@ -6,7 +6,7 @@ import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
 import { destroyElement, fetchStatusDebounced, extensionSettings } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, saveMetadataSTUM } from "./statusControls.js";
+import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue } from "./statusControls.js";
 
 /*  # TODO
     - [X] Select for alt_values
@@ -154,11 +154,6 @@ function getFullCharAvatar(status) {
 const DEBOUNCE_MS = 400;
 let formDebounceTimer;
 let altKeyDebounceTimer;
-let forceDepthDebounceTimer;
-let separatorDebounceTimer;
-let defEntrySeparatorDebounceTimer;
-let prefixDebounceTimer;
-let suffixDebounceTimer;
 
 /**
  * @param {HTMLElement} target
@@ -627,48 +622,26 @@ export function getCharStatusForm(char) {
 
     selectEntryRole.addEventListener("input", () => {
         metadata.role = Number(selectEntryRole.value);
-
-        saveMetadataSTUM();
     }, { passive: true });
 
     numberAreaForDepth.addEventListener("input", () => {
         metadata.forceDepth = parseValue(numberAreaForDepth.value);
-
-        clearTimeout(forceDepthDebounceTimer);
-
-        forceDepthDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     }, { passive: true });
 
     textareaStatusSeparator.addEventListener("input", () => {
         metadata.separator = un_escapeNewlines(textareaStatusSeparator.value);
-
-        clearTimeout(separatorDebounceTimer);
-
-        separatorDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     }, { passive: true });
 
     textareaDefEntrySeparator.addEventListener("input", () => {
         metadata.def_entry_separator = un_escapeNewlines(textareaDefEntrySeparator.value);
-
-        clearTimeout(defEntrySeparatorDebounceTimer);
-
-        defEntrySeparatorDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     }, { passive: true });
 
     textareaStatusPrefix.addEventListener("input", () => {
         metadata.prefix = un_escapeNewlines(textareaStatusPrefix.value);
-
-        clearTimeout(prefixDebounceTimer);
-
-        prefixDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     }, { passive: true });
 
     textareaStatusSuffix.addEventListener("input", () => {
         metadata.suffix = un_escapeNewlines(textareaStatusSuffix.value);
-
-        clearTimeout(suffixDebounceTimer);
-
-        suffixDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
     }, { passive: true });
 
     cloneStatsBtn.addEventListener("click", async () => {
@@ -746,7 +719,10 @@ export async function popupStatusSingleChar(char) {
         okButton: t`Close Status`,
         allowVerticalScrolling: true,
         wide: true,
-        onClose: async () => destroyElement(container)
+        onClose: async () => {
+            SillyTavern.getContext().saveMetadataDebounced();
+            destroyElement(container)
+        }
     });
 
     fetchStatusDebounced({forceUIUpdate: true});
@@ -766,7 +742,10 @@ export async function popupStatusMultiChar(chars) {
         okButton: t`Close Status`,
         allowVerticalScrolling: true,
         wide: true,
-        onClose: async () => destroyElement(content)
+        onClose: async () => {
+            SillyTavern.getContext().saveMetadataDebounced();
+            destroyElement(content)
+        }
     });
 
     fetchStatusDebounced({forceUIUpdate: true});

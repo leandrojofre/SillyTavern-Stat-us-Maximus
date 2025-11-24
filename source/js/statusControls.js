@@ -1,16 +1,7 @@
 import { deleteCharTracker } from "../../index.js";
 import { chat, chat_metadata, extension_prompt_roles } from "../../../../../../script.js";
-import { saveMetadataDebounced } from "../../../../../extensions.js";
 import { t } from "../../../../../i18n.js";
 import { un_escapeNewlines } from "./popups.js";
-
-let saveDataTimeout;
-const SAVE_DATA_TIMEOUT_MS = 300;
-
-export function saveMetadataSTUM() {
-    clearTimeout(saveDataTimeout)
-    saveDataTimeout = setTimeout(saveMetadataDebounced, SAVE_DATA_TIMEOUT_MS);
-}
 
 export function getFreeDataUid(data) {
     if (!data?.length) return 0;
@@ -49,7 +40,7 @@ export function addCharAltValue(character, entry_uid, alt_value = "") {
 
         entry.alt_values.push(newAlt);
 
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
 
         return newAlt;
     } catch (error) {
@@ -100,7 +91,7 @@ export function updateCharAltValue(character, entry_uid, alt_uid, formData) {
 
         if (entry.value_uid === alt.uid) entry.value = alt.value;
 
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
 
         return alt;
     } catch (error) {
@@ -128,7 +119,7 @@ export function removeCharAltValue(character, entry_uid, alt_uid) {
             entry.value_uid = entry.alt_values[0].uid;
         }
 
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
 
         return true;
     } catch (error) {
@@ -165,7 +156,7 @@ export function addCharEntry(character, entry_key = "", entry_value = "") {
 
         char_status.entries.push(newEntry);
 
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
 
         return newEntry;
     } catch (error) {
@@ -197,7 +188,7 @@ export function refreshCharEntryDisplay(character, display_order) {
 
         char_status.entries = ordered_data;
 
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
@@ -267,7 +258,7 @@ export function updateCharEntry(character, entry_uid, formData) {
         altValue.value = entry.value;
         altValue.key = formData.get("alt_key") ?? altValue.key;
 
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
 
         return entry;
     } catch (error) {
@@ -293,7 +284,7 @@ export function removeCharEntry(character, entry_uid = -1) {
             .filter(s => s.uid !== Number(entry_uid));
 
         getLastDisplayPosition(char_status.entries);
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
 
         return true;
     } catch (error) {
@@ -324,7 +315,7 @@ export function createCharStatus(character, depth = -1) {
 
         chat_metadata.stat_us_maximus.push(status);
 
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
 
         return status;
     } catch (error) {
@@ -367,7 +358,7 @@ export function updateCharStatus(character, formData) {
             status[key] = parsedValue;
         }
 
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
 
         return status;
     } catch (error) {
@@ -418,7 +409,7 @@ export function transferCharStatus(character, target, {deleteOriginal = false, o
 
         if (deleteOriginal) deleteCharStatus(character);
 
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
 
         return true;
     } catch (error) {
@@ -437,7 +428,7 @@ export function deleteCharStatus(character) {
         chat_metadata.stat_us_maximus = chat_metadata.stat_us_maximus
             .filter(stat => stat.avatar !== character.avatar);
 
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
         deleteCharTracker(character);
 
         return true;
@@ -505,7 +496,7 @@ export async function fillMissingMetadata() {
             }
         }
 
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
 
         return true;
     } catch (error) {

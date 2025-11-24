@@ -2,7 +2,7 @@ import { extension_settings } from "../../../extensions.js";
 import { saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar, substituteParams } from "../../../../script.js";
 import { getGroupMembers, groups, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
-import { createCharStatus, getCharAltValue, getCharStatus, saveMetadataSTUM, updateCharEntry } from "./source/js/statusControls.js";
+import { createCharStatus, getCharAltValue, getCharStatus, updateCharEntry } from "./source/js/statusControls.js";
 import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
 import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups.js";
@@ -485,7 +485,7 @@ function addTracker(status, character) {
         status.is_collapsed = collapse;
 
         toggleVisibility(statusTableBody, collapse);
-        saveMetadataSTUM();
+        SillyTavern.getContext().saveMetadataDebounced();
     }, {passive: true});
 
     const createInputs = (/**@type {String}*/text, entry_uid) => {
@@ -1098,7 +1098,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
         );
     }
 
-    saveMetadataSTUM();
+    SillyTavern.getContext().saveMetadataDebounced();
 }
 
 /**
