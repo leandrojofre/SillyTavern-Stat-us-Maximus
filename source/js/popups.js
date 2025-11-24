@@ -135,10 +135,197 @@ async function clonePopup(char) {
     return success ? target : false;
 }
 
+/**
+ * Set user clipboard to a stringified version of an object
+ * @param {object} obj - Object to be sent to the clipboard as text
+ * @returns {Promise<void>}
+ */
+function exportObjectToClipboard(obj = {}) {
+    let stringObj = JSON.stringify(obj);
+    stringObj = escapeNewlines(stringObj);
+
+    return copyText(stringObj);
+}
+
 function getFullCharAvatar(status) {
-    // TODO getThumbnailUrl - on next release
-    if (status.is_user) return getThumbnailUrl("persona", status.avatar); //"/thumbnail?type=persona&file=" + status.avatar;
-    else return getThumbnailUrl("avatar", status.avatar); //"/thumbnail?type=avatar&file=" + status.avatar;
+    return getThumbnailUrl(status.is_user ? "persona" : "avatar", status.avatar);
+}
+
+const DEBOUNCE_MS = 400;
+let formDebounceTimer;
+let altKeyDebounceTimer;
+let forceDepthDebounceTimer;
+let separatorDebounceTimer;
+let defEntrySeparatorDebounceTimer;
+let prefixDebounceTimer;
+let suffixDebounceTimer;
+
+/**
+ * @param {HTMLElement} target
+ * @param {string} class_name
+ * @returns {any}
+ */
+function el(target, class_name) {
+    return target.querySelector(class_name);
+}
+
+/** @param {HTMLElement} el */
+function toggleSwitch(el, callback = (param) => {}) {
+    // True if the final state is on
+    const state = !el.classList.contains("fa-toggle-on");
+    el.classList.toggle("fa-toggle-off", !state);
+    el.classList.toggle("fa-toggle-on", state);
+    callback(state);
+};
+
+function refreshAltValues(target, alts, select_uid = 0) {
+    const select = el(target, 'select[name="value_uid"]');
+
+    destroyElement(select.childNodes);
+
+    for (const alt_val of alts) {
+        const option = document.createElement("option");
+        option.value = String(alt_val.uid);
+        option.text = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
+
+        if (Number(select_uid) === alt_val.uid) {
+            option.selected = true;
+        }
+
+        select.append(option);
+    }
+};
+
+const evChange = new Event('change', { bubbles: true, cancelable: true });
+const evInput = new Event('input', { bubbles: true, cancelable: true });
+
+function addStatusRow({amount = 1, data = [], container, template, char} = {}) {
+    for (let i = 0; i < amount; i++) {
+        const newRow = /** @type {HTMLFormElement} */ (template.cloneNode(true));
+
+        // @ts-ignore
+        if (!data[i]) return toastr.warning(t`Data for new entry is empty - index=${i}`);
+
+        newRow.dataset.uid = data[i].uid;
+        newRow.removeAttribute('action');
+
+        // Set Values
+        el(newRow, 'input[name="key"]').value = data[i].key;
+        el(newRow, 'input[name="separator"]').value = escapeNewlines(data[i].separator);
+        el(newRow, 'textarea[name="value"]').value = data[i].value;
+        el(newRow, 'input[name="enabled"]').value = data[i].enabled;
+        refreshAltValues(newRow, data[i].alt_values, data[i].value_uid);
+        el(newRow, 'select[name="value_uid"]').value = String(data[i].value_uid);
+        el(newRow, 'input[name="alt_key"]').value = data[i].alt_values.find(alt => alt.uid === data[i].value_uid).key;
+
+        if (!data[i].enabled) toggleSwitch(el(newRow, ".kill-switch"));
+
+        // Add listeners
+        newRow.addEventListener("submit", (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(newRow);
+
+            updateCharEntry(char, data[i].uid, formData);
+        }, { passive: false });
+
+        newRow.addEventListener("input", () => {
+            clearTimeout(formDebounceTimer);
+
+            formDebounceTimer = window.setTimeout(() => newRow.requestSubmit(), DEBOUNCE_MS);
+        }, { passive: true });
+
+        el(newRow, 'select[name="value_uid"]').addEventListener("change", () => {
+            const alt = getCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
+
+            el(newRow, 'input[name="alt_key"]').value = alt.key;
+            el(newRow, 'textarea[name="value"]').value = alt.value;
+
+            newRow.dispatchEvent(evInput);
+        }, { passive: true });
+
+        el(newRow, ".delete-row").addEventListener("click", async () => {
+            if (await popupDeleteConfirm("the alt value") === 0) return;
+
+            removeCharEntry(char, data[i].uid);
+            destroyElement(newRow);
+        }, { passive: true });
+
+        el(newRow, ".kill-switch").addEventListener("click", () => {
+            toggleSwitch(el(newRow, ".kill-switch"), (state) => el(newRow, 'input[name="enabled"]').value = state);
+            newRow.requestSubmit();
+        }, { passive: true });
+
+        el(newRow, 'input[name="alt_key"]').addEventListener("keyup", () => {
+            clearTimeout(altKeyDebounceTimer);
+
+            altKeyDebounceTimer = window.setTimeout(() => refreshAltValues(
+                newRow,
+                getCharEntry(char, data[i].uid).alt_values,
+                el(newRow, 'select[name="value_uid"]').value
+            ), DEBOUNCE_MS);
+        }, { passive: true });
+
+        el(newRow, ".add_alt_value").addEventListener("click", () => {
+            const newAlt = addCharAltValue(char, data[i].uid);
+
+            if (!newAlt) return;
+
+            refreshAltValues(newRow, getCharEntry(char, data[i].uid).alt_values, newAlt.uid);
+
+            el(newRow, 'select[name="value_uid"]').value = String(newAlt.uid);
+            el(newRow, 'select[name="value_uid"]').dispatchEvent(evChange);
+        }, { passive: true });
+
+        el(newRow, ".del_alt_value").addEventListener("click", async () => {
+            if (await popupDeleteConfirm("the alt value") === 0) return;
+
+            try {
+                const success = removeCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
+
+                if (!success) return;
+
+                const new_alts = getCharEntry(char, data[i].uid).alt_values;
+
+                refreshAltValues(newRow, new_alts);
+
+                el(newRow, 'select[name="value_uid"]').value = String(new_alts[0].uid);
+                el(newRow, 'select[name="value_uid"]').dispatchEvent(evChange);
+            } catch (error) {
+                // ...
+            }
+        }, { passive: true });
+
+        el(newRow, ".menu_button.export").addEventListener("click", async function() {
+            const currentEntry = getCharEntry(char, data[i].uid);
+
+            await exportObjectToClipboard(currentEntry);
+        }, { passive: true });
+
+        newRow.querySelectorAll(".macro_template").forEach((/**@type {HTMLDivElement}*/btn) => {
+            btn.addEventListener("click", async (e) => {
+                const macroType = /**@type {HTMLDivElement}*/(e.currentTarget).dataset.macroType;
+                let macroTemplate = "";
+
+                if (macroType === "text") macroTemplate = "{{text}}";
+                if (macroType === "number") macroTemplate = "{{number}}";
+                if (macroType === "boolean") macroTemplate = "{{boolean::true::true::false}}";
+                if (macroType === "range") macroTemplate = "{{range::0::100::1::0}}";
+
+                if (extensionSettings.altMacroTemplateBehavior) {
+                    const valueTextarea = el(newRow, 'textarea[name="value"]')
+                    valueTextarea.value += macroTemplate;
+                    valueTextarea.dispatchEvent(evInput);
+
+                    return;
+                } else {
+                    await copyText(macroTemplate);
+                }
+            }, { passive: true });
+        });
+
+        container.append(newRow);
+    }
 }
 
 export function getCharStatusForm(char) {
@@ -165,16 +352,6 @@ export function getCharStatusForm(char) {
         return labelTemplate;
     }
 
-    const createButtonsWrapper = (/**@type {HTMLElement[]}*/buttons, lessPadding) => {
-        const buttonsWrapper = document.createElement("div");
-        buttonsWrapper.classList.add("d-flex", "flex-center-start", "buttons-wrapper");
-        buttonsWrapper.append(...buttons);
-
-        if (lessPadding) buttonsWrapper.classList.add("gap-5px");
-
-        return buttonsWrapper;
-    }
-
     /**
      * Creates a button element with specified classes and title.
      * @param {string} title - The title and data-i18n attribute for the button
@@ -192,6 +369,26 @@ export function getCharStatusForm(char) {
             button.dataset[key] = value;
 
         return button;
+    };
+
+    /**
+     * Creates a button element with specified classes and title.
+     * @param {HTMLElement[]?} elements - The title and data-i18n attribute for the button
+     * @param {string[]?} classes - Array of class names to add to the button
+     * @param {object?} data - Additional data attributes to set on the button
+     * @returns {HTMLDivElement} The created button element
+     */
+    const createRowWrapper = (elements = [], classes = [], data = {}) => {
+        const row = document.createElement("div");
+        row.classList.add("d-flex", ...classes);
+
+        for (const [key, value] of Object.entries(data))
+            row.dataset[key] = value;
+
+        for (const elem of elements)
+            row.append(elem);
+
+        return row;
     };
 
     const escapedCharName = lodash.escape(char.name);
@@ -271,38 +468,6 @@ export function getCharStatusForm(char) {
     const compressEntriesBtn = createButton("Compress all entries", ["fa-compress"]);
     const newStatBtn = createButton(`Add an status to ${escapedCharName}`, ["fa-plus"]);
 
-    const statInputsWrapper = document.createElement("div");
-    statInputsWrapper.classList.add("d-flex", "flex-end-start", "w-100", "gap-5px", "stat-wrapper");
-    statInputsWrapper.append(
-        createInputLabel(selectEntryRole),
-        createInputLabel(numberAreaForDepth),
-        createInputLabel(textareaStatusSeparator),
-        createInputLabel(textareaDefEntrySeparator),
-        createInputLabel(textareaStatusPrefix),
-        createInputLabel(textareaStatusSuffix),
-        createButtonsWrapper([
-            deleteStatsBtn,
-            cloneStatsBtn,
-            expandEntriesBtn,
-            compressEntriesBtn,
-            newStatBtn
-        ], true)
-    );
-
-    const contentHeaderWrapper = document.createElement("div");
-    contentHeaderWrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px");
-    contentHeaderWrapper.append(
-        avatarContainer,
-        statInputsWrapper
-    );
-
-    const wrapper = document.createElement("div");
-    wrapper.classList.add("d-flex", "flex-col", "flex-start-center", "gap-5px");
-    wrapper.append(
-        charName,
-        contentHeaderWrapper
-    );
-
     /** Create input template */
     /** - Key */
     const dragHandle = document.createElement("span");
@@ -340,18 +505,6 @@ export function getCharStatusForm(char) {
     deleteStatRowBtn.dataset.i18n = "Delete Status entry";
     deleteStatRowBtn.classList.add("menu_button", "fa-fw", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "delete-row", "big-button");
 
-    const drawerHeader = document.createElement("div");
-    drawerHeader.classList.add("inline-drawer-header", "key", "w-100", "d-flex", "flex-center", "p-0");
-    drawerHeader.append(
-        dragHandle,
-        drawerToggle,
-        enableRowToggle,
-        enableRowBtn,
-        textareaKey,
-        textareaSeparator,
-        deleteStatRowBtn
-    );
-
     /** - Value */
     const selectAltValues = document.createElement("select");
     selectAltValues.ariaPlaceholder = t`Select entry description`;
@@ -370,215 +523,90 @@ export function getCharStatusForm(char) {
     warningAltKey.title = "This is only used in the prompt if description is empty";
     warningAltKey.dataset.i18n = "This is only used in the prompt if description is empty";
 
-    const settingsInputs = document.createElement("div");
-    settingsInputs.classList.add("d-flex", "flex-end-start");
-    settingsInputs.append(
-        createInputLabel(selectAltValues, "mw-25"),
-        createInputLabel(textareaAltKey, "mw-25"),
-        createButtonsWrapper([
-            warningAltKey,
-            createButton("Add alt descriptions", ["big-button", "fa-plus", "add_alt_value"]),
-            createButton("Delete current alt description", ["big-button", "fa-trash-can", "del_alt_value", "redWarningBG"]),
-            createButton("Add template for text macro", ["big-button", "fa-t", "macro_template", "px-5px"], {macroType: "text"}),
-            createButton("Add template for number macro", ["big-button", "fa-n", "macro_template", "px-5px"], {macroType: "number"}),
-            createButton("Add template for boolean macro", ["big-button", "fa-b", "macro_template", "px-5px"], {macroType: "boolean"}),
-            createButton("Add template for range macro", ["big-button", "fa-r", "macro_template", "px-5px"], {macroType: "range"}),
-        ])
-    );
-
     const textareaValue = document.createElement("textarea");
     textareaValue.name = "value";
     textareaValue.placeholder = t`Entry description...`;
     textareaValue.classList.add("text_pole", "m-0");
 
-    const drawerContentContainer = document.createElement("div");
-    drawerContentContainer.classList.add("d-flex", "flex-col");
-    drawerContentContainer.append(settingsInputs, textareaValue);
+    /** - Key/Value Block */
+    const entryBodyToolButtons = createRowWrapper([
+        warningAltKey,
+        createButton("Add alt descriptions", ["big-button", "fa-plus", "add_alt_value"]),
+        createButton("Delete current alt description", ["big-button", "fa-trash-can", "del_alt_value", "redWarningBG"]),
+        createButton("Import entry from clipboard", ["big-button", "fa-arrow-right-to-file", "import", "px-5px"]),
+        createButton("Export entry from clipboard", ["big-button", "fa-arrow-right-from-file", "export", "px-5px"]),
+        createButton("Add template for text macro", ["big-button", "fa-t", "macro_template", "px-5px"], {macroType: "text"}),
+        createButton("Add template for number macro", ["big-button", "fa-n", "macro_template", "px-5px"], {macroType: "number"}),
+        createButton("Add template for boolean macro", ["big-button", "fa-b", "macro_template", "px-5px"], {macroType: "boolean"}),
+        createButton("Add template for range macro", ["big-button", "fa-r", "macro_template", "px-5px"], {macroType: "range"}),
+    ], ["flex-center-start", "buttons-wrapper"]);
+
+    const entryBodyToolbar = createRowWrapper([
+        createInputLabel(selectAltValues, "mw-25"),
+        createInputLabel(textareaAltKey, "mw-25"),
+        entryBodyToolButtons
+    ], ["flex-end-start"])
 
     const drawerContent = document.createElement("div");
     drawerContent.classList.add("inline-drawer-content", "value", "w-100", "p-0", "mb-5px");
-    drawerContent.append(drawerContentContainer);
+    drawerContent.append(
+        createRowWrapper([
+            entryBodyToolbar,
+            textareaValue
+        ], ["flex-col"])
+    );
 
-    /** - Key/Value Block */
     const formRow = document.createElement("form");
     formRow.classList.add("stat-us-max-popup-row", "d-flex", "flex-col", "inline-drawer");
-    formRow.append(drawerHeader, drawerContent);
+    formRow.append(
+        createRowWrapper([ // Drawer Header
+            dragHandle,
+            drawerToggle,
+            enableRowToggle,
+            enableRowBtn,
+            textareaKey,
+            textareaSeparator,
+            deleteStatRowBtn
+        ], ["inline-drawer-header", "key", "w-100", "flex-center", "p-0"]),
+        drawerContent // Drawer Body
+    );
 
     /** Create Menu container and assemble Menu */
-    const content = document.createElement("div");
-    content.classList.add("d-flex", "flex-col", "gap-5px", "pt-5px");
+    const statusHeaderButtons = createRowWrapper([
+        deleteStatsBtn,
+        cloneStatsBtn,
+        expandEntriesBtn,
+        compressEntriesBtn,
+        newStatBtn
+    ], ["gap-5px", "flex-center-start", "buttons-wrapper"]);
 
-    const container = document.createElement("div");
-    container.dataset.char = metadata.avatar;
-    container.dataset.isUser = metadata.is_user;
-    container.classList.add("stat-us-max-popup");
-    container.append(wrapper, content);
+    const statusHeaderInputs = createRowWrapper([
+        createInputLabel(selectEntryRole),
+        createInputLabel(numberAreaForDepth),
+        createInputLabel(textareaStatusSeparator),
+        createInputLabel(textareaDefEntrySeparator),
+        createInputLabel(textareaStatusPrefix),
+        createInputLabel(textareaStatusSuffix),
+        statusHeaderButtons
+    ], ["flex-end-start", "w-100", "gap-5px", "stat-wrapper"]);
+
+    const statusHeaderForm = createRowWrapper([
+        avatarContainer,
+        statusHeaderInputs
+    ], ["flex-center-start", "w-100", "py-5px"]);
+
+    const statusHeader = createRowWrapper([
+        charName,
+        statusHeaderForm
+    ], ["flex-col", "flex-start-center", "gap-5px"]);
+
+    const content = createRowWrapper(undefined, ["flex-col", "gap-5px", "pt-5px"]);
+    const container = createRowWrapper([
+        statusHeader,
+        content
+    ], ["stat-us-max-popup", "flex-col"], {char: metadata.avatar, isUser: metadata.is_user});
 
     /** Add listeners */
-    const DEBOUNCE_MS = 400;
-    let formDebounceTimer;
-    let altKeyDebounceTimer;
-    let forceDepthDebounceTimer;
-    let separatorDebounceTimer;
-    let defEntrySeparatorDebounceTimer;
-    let prefixDebounceTimer;
-    let suffixDebounceTimer;
-
-    const el = (target, class_name) => target.querySelector(class_name);
-
-    /** @param {HTMLElement} el */
-    const toggleSwitch = (el, callback = (param) => {}) => {
-        // True if the final state is on
-        const state = !el.classList.contains("fa-toggle-on");
-        el.classList.toggle("fa-toggle-off", !state);
-        el.classList.toggle("fa-toggle-on", state);
-        callback(state);
-    };
-
-    const refreshAltValues = (target, alts, select_uid = 0) => {
-        const select = el(target, 'select[name="value_uid"]');
-
-        destroyElement(select.childNodes);
-
-        for (const alt_val of alts) {
-            const option = document.createElement("option");
-            option.value = String(alt_val.uid);
-            option.text = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
-
-            if (Number(select_uid) === alt_val.uid) {
-                option.selected = true;
-            }
-
-            select.append(option);
-        }
-    };
-
-    const evChange = new Event('change', { bubbles: true, cancelable: true });
-    const evInput = new Event('input', { bubbles: true, cancelable: true });
-
-    const addRow = ({amount = 1, data = []} = {}) => {
-        for (let i = 0; i < amount; i++) {
-            const newRow = /** @type {HTMLFormElement} */ (formRow.cloneNode(true));
-
-            // @ts-ignore
-            if (!data[i]) return toastr.warning(t`Data for new entry is empty - index=${i}`);
-
-            newRow.dataset.uid = data[i].uid;
-            newRow.removeAttribute('action');
-
-            // Set Values
-            el(newRow, 'input[name="key"]').value = data[i].key;
-            el(newRow, 'input[name="separator"]').value = escapeNewlines(data[i].separator);
-            el(newRow, 'textarea[name="value"]').value = data[i].value;
-            el(newRow, 'input[name="enabled"]').value = data[i].enabled;
-            refreshAltValues(newRow, data[i].alt_values, data[i].value_uid);
-            el(newRow, 'select[name="value_uid"]').value = String(data[i].value_uid);
-            el(newRow, 'input[name="alt_key"]').value = data[i].alt_values.find(alt => alt.uid === data[i].value_uid).key;
-
-            if (!data[i].enabled) toggleSwitch(el(newRow, ".kill-switch"));
-
-            // Add listeners
-            newRow.addEventListener("submit", (e) => {
-                e.preventDefault();
-
-                const formData = new FormData(newRow);
-
-                updateCharEntry(char, data[i].uid, formData);
-            }, { passive: false });
-
-            newRow.addEventListener("input", () => {
-                clearTimeout(formDebounceTimer);
-
-                formDebounceTimer = window.setTimeout(() => newRow.requestSubmit(), DEBOUNCE_MS);
-            }, { passive: true });
-
-            el(newRow, 'select[name="value_uid"]').addEventListener("change", () => {
-                const alt = getCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
-
-                el(newRow, 'input[name="alt_key"]').value = alt.key;
-                el(newRow, 'textarea[name="value"]').value = alt.value;
-
-                newRow.dispatchEvent(evInput);
-            }, { passive: true });
-
-            el(newRow, ".delete-row").addEventListener("click", async () => {
-                if (await popupDeleteConfirm("the alt value") === 0) return;
-
-                removeCharEntry(char, data[i].uid);
-                destroyElement(newRow);
-            }, { passive: true });
-
-            el(newRow, ".kill-switch").addEventListener("click", () => {
-                toggleSwitch(el(newRow, ".kill-switch"), (state) => el(newRow, 'input[name="enabled"]').value = state);
-                newRow.requestSubmit();
-            }, { passive: true });
-
-            el(newRow, 'input[name="alt_key"]').addEventListener("keyup", () => {
-                clearTimeout(altKeyDebounceTimer);
-
-                altKeyDebounceTimer = window.setTimeout(() => refreshAltValues(
-                    newRow,
-                    getCharEntry(char, data[i].uid).alt_values,
-                    el(newRow, 'select[name="value_uid"]').value
-                ), DEBOUNCE_MS);
-            }, { passive: true });
-
-            el(newRow, ".add_alt_value").addEventListener("click", () => {
-                const newAlt = addCharAltValue(char, data[i].uid);
-
-                if (!newAlt) return;
-
-                refreshAltValues(newRow, getCharEntry(char, data[i].uid).alt_values, newAlt.uid);
-
-                el(newRow, 'select[name="value_uid"]').value = String(newAlt.uid);
-                el(newRow, 'select[name="value_uid"]').dispatchEvent(evChange);
-            }, { passive: true });
-
-            el(newRow, ".del_alt_value").addEventListener("click", async () => {
-                if (await popupDeleteConfirm("the alt value") === 0) return;
-
-                try {
-                    const success = removeCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
-
-                    if (!success) return;
-
-                    const new_alts = getCharEntry(char, data[i].uid).alt_values;
-
-                    refreshAltValues(newRow, new_alts);
-
-                    el(newRow, 'select[name="value_uid"]').value = String(new_alts[0].uid);
-                    el(newRow, 'select[name="value_uid"]').dispatchEvent(evChange);
-                } catch (error) {
-                    // ...
-                }
-            }, { passive: true });
-
-            newRow.querySelectorAll(".macro_template").forEach((/**@type {HTMLDivElement}*/btn) => {
-                btn.addEventListener("click", (e) => {
-                    const macroType = /**@type {HTMLDivElement}*/(e.currentTarget).dataset.macroType;
-                    let macroTemplate = "";
-
-                    if (macroType === "text") macroTemplate = "{{text}}";
-                    if (macroType === "number") macroTemplate = "{{number}}";
-                    if (macroType === "boolean") macroTemplate = "{{boolean::true::true::false}}";
-                    if (macroType === "range") macroTemplate = "{{range::0::100::1::0}}";
-
-                    if (extensionSettings.altMacroTemplateBehavior) {
-                        const valueTextarea = el(newRow, 'textarea[name="value"]')
-                        valueTextarea.value += macroTemplate;
-                        valueTextarea.dispatchEvent(evInput);
-
-                        return;
-                    } else {
-                        copyText(macroTemplate);
-                    }
-                }, { passive: true });
-            });
-
-            content.append(newRow);
-        }
-    }
-
     expandEntriesBtn.addEventListener("click", () =>
         content.querySelectorAll(".inline-drawer-toggle.down").forEach((/**@type {HTMLElement}*/toggle) => toggle.click())
     , { passive: true });
@@ -589,7 +617,12 @@ export function getCharStatusForm(char) {
 
     newStatBtn.addEventListener("click", () => {
         const newEntry = addCharEntry(char, "", "");
-        addRow({data: [newEntry]});
+        addStatusRow({
+            data: [newEntry],
+            container: content,
+            template: formRow,
+            char: char
+        });
     }, { passive: true });
 
     selectEntryRole.addEventListener("input", () => {
@@ -682,20 +715,26 @@ export function getCharStatusForm(char) {
         }
     }, { passive: true });
 
+    /** Add def rows */
+    if (metadata.entries.length > 0) addStatusRow({
+        amount: metadata.entries.length,
+        data: metadata.entries,
+        container: content,
+        template: formRow,
+        char: char
+    });
+
     // @ts-ignore
     $(content).sortable({
         items: '.stat-us-max-popup-row',
         delay: getSortableDelay(),
         handle: '.drag-handle',
-        stop: async function (_event, _ui) {
+        stop: function (_event, _ui) {
             const forms = content.querySelectorAll("form");
 
             refreshCharEntryDisplay(char, forms);
         },
     });
-
-    /** Add def rows */
-    if (metadata.entries.length > 0) addRow({amount: metadata.entries.length, data: metadata.entries});
 
     return container;
 }
