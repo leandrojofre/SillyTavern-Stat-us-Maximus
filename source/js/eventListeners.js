@@ -1,4 +1,5 @@
-import { characters, chat, chat_metadata, event_types, eventSource, scrollChatToBottom, this_chid, user_avatar } from "../../../../../../script.js";
+import { characters, chat, chat_metadata, eventSource, scrollChatToBottom, this_chid, user_avatar } from "../../../../../../script.js";
+import { event_types } from "../../../../../events.js";
 import { selected_group } from "../../../../../group-chats.js";
 import { power_user } from "../../../../../power-user.js";
 import { addGroupStatusButtons, callbacksClickValueUID, extensionSettings, fetchStatus, fetchStatusDebounced, getActiveParticipants, getStatusDepth, log } from "../../index.js";
@@ -44,6 +45,10 @@ export function startListeners() {
     eventSource.on('groupSelected', async (...args) => { // WTF - Why isn't this in event_types?
         log("groupSelected", args);
         addGroupStatusButtons();
+    });
+
+    eventSource.on(event_types.CHARACTER_RENAMED_IN_PAST_CHAT, async (currentChat, oldAvatar, newAvatar) => {
+        // log(currentChat, oldAvatar, newAvatar);
     });
 
     eventSource.makeFirst(event_types.CHAT_CHANGED, async (...args) => {

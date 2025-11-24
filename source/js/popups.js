@@ -177,18 +177,18 @@ export function getCharStatusForm(char) {
 
     /**
      * Creates a button element with specified classes and title.
-     * @param {string} title - The title and data-i18n attribute for the button
-     * @param {string[]} classes - Array of class names to add to the button
-     * @param {object} data - Additional data attributes to set on the button
+     * @param {string?} title - The title and data-i18n attribute for the button
+     * @param {string[]?} classes - Array of class names to add to the button
+     * @param {object?} data - Additional data attributes to set on the button
      * @returns {HTMLDivElement} The created button element
      */
-    const createButton = function(title, classes, data) {
+    const createButton = function(title = "", classes = [], data = {}) {
         const button = document.createElement("div");
         button.title = title;
         button.dataset.i18n = title;
         button.classList.add("menu_button", "menu_button_icon", "fa-fw", "fa-solid", "interactable", "m-0", ...classes);
 
-        for (const [key, value] of Object.entries(data || {}))
+        for (const [key, value] of Object.entries(data))
             button.dataset[key] = value;
 
         return button;
