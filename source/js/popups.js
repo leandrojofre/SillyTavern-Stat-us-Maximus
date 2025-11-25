@@ -216,8 +216,9 @@ function addStatusRow({data = [], container, template, char}) {
         // @ts-ignore
         if (!entry) return toastr.warning(t`Data for new entry is empty - index=${i}`);
 
-        newRow.dataset.uid = entry.uid;
+        newRow.dataset.uid = String(entry.uid);
         newRow.dataset.charAvatar = char.avatar;
+        newRow.dataset.modified = String(false);
         newRow.removeAttribute('action');
 
         // Set Values
@@ -244,6 +245,10 @@ function addStatusRow({data = [], container, template, char}) {
         if (!entry.enabled) toggleSwitch(newRow, ".kill-switch");
 
         // Add listeners
+        newRow.addEventListener("input", function() {
+            newRow.dataset.modified = String(true);
+        }, { passive: true });
+
         newRow.querySelector(".kill-switch").addEventListener("click", function () {
             const newState = toggleSwitch(newRow, ".kill-switch");
             inputEntryEnabled.value = String(newState);
@@ -740,9 +745,10 @@ export async function popupStatusSingleChar(char) {
             const forms = charFrom.querySelectorAll('form');
 
             for (const form of forms)
-                updateCharEntry(char, form.dataset.uid, new FormData(form));
+                if (form.dataset.modified === "true")
+                    updateCharEntry(char, form.dataset.uid, new FormData(form));
 
-            destroyElement(charFrom)
+            destroyElement(charFrom);
         }
     });
 
@@ -776,11 +782,12 @@ export async function popupStatusMultiChar(chars) {
                 const char = chars.find(char => char.avatar === form.dataset.charAvatar);
 
                 if (!char) continue;
+                if (form.dataset.modified === "false") continue;
 
                 updateCharEntry(char, form.dataset.uid, new FormData(form));
             }
 
-            destroyElement(content)
+            destroyElement(content);
         }
     });
 
