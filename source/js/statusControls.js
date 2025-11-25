@@ -497,6 +497,55 @@ const altEntryTemplate = {
     value: ""
 };
 
+export function evaluateEntry(entryObj) {
+    for (const key of Object.keys(entryTemplate)) {
+        if (key === 'uid' || key === 'display_position') continue;
+
+        if (entryObj[key] === undefined) {
+            toastr.warning(t`Wrong metadata: key ${key} is missing`);
+            return false;
+        }
+    }
+
+    for (const [k, v] of Object.entries(entryObj)) {
+        if (k === 'uid' || k === 'display_position') continue;
+
+        if (entryTemplate[k] === undefined) {
+            delete entryObj[k];
+            continue;
+        }
+
+        const realEntryType = typeof entryTemplate[k];
+        const entryObjType = typeof v;
+
+        if (realEntryType !== entryObjType) {
+            toastr.warning(t`Wrong metadata: value type of key ${k} is ${entryObjType}, ${realEntryType} expected`);
+            return false;
+        }
+    }
+
+    for (const alt of entryObj.alt_values) {
+        for (const [k, v] of Object.entries(alt)) {
+            if (k === 'uid') continue;
+
+            if (altEntryTemplate[k] === undefined) {
+                delete alt[k];
+                continue;
+            }
+
+            const realAltType = typeof altEntryTemplate[k];
+            const entryObjAltType = typeof v;
+
+            if (realAltType !== entryObjAltType) {
+                toastr.warning(t`Wrong metadata: value type of key ${k} in alt entry is ${entryObjAltType}, ${realAltType} expected`);
+                return false;
+            }
+        }
+    }
+    
+    return true;
+}
+
 /** I hate this code */
 export async function fillMissingMetadata() {
     try {

@@ -6,7 +6,7 @@ import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
 import { destroyElement, fetchStatusDebounced, extensionSettings } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, updateCharEntry, getCharAltValue, flushCharAltValues, updateCharAltValue } from "./statusControls.js";
+import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, updateCharEntry, getCharAltValue, flushCharAltValues, updateCharAltValue, evaluateEntry } from "./statusControls.js";
 
 /*  # TODO
     - [X] Select for alt_values
@@ -320,12 +320,14 @@ function addStatusRow({data = [], container, template, char}) {
 
             try {
                 newEntry = await navigator.clipboard.readText();
+                newEntry = JSON.parse(newEntry);
             } catch (error) {
                 console.error('Error reading clipboard:', error);
-                return toastr.warning(t`Failed to read clipboard text. Have you granted the permission?`);
+                return toastr.warning(t`Failed to read clipboard text. Make sure you granted permissions and the text is a JSON object.`);
             }
 
-            newEntry = JSON.parse(newEntry);
+            if (!newEntry) return toastr.warning(t`Your clipboard has wrong metadata format: JSON expected`);
+            if (!evaluateEntry(newEntry)) return;
 
             const newSelect = {
                 value_uid: false,
