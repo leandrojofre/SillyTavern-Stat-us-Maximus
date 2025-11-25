@@ -6,7 +6,7 @@ import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
 import { destroyElement, fetchStatusDebounced, extensionSettings } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, updateCharEntry, getCharAltValue } from "./statusControls.js";
+import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, updateCharEntry, getCharAltValue, flushCharAltValues, updateCharAltValue } from "./statusControls.js";
 
 /*  # TODO
     - [X] Select for alt_values
@@ -308,6 +308,68 @@ function addStatusRow({data = [], container, template, char}) {
             } catch (error) {
                 // ...
             }
+        }, { passive: true });
+
+        newRow.querySelector(".menu_button.import").addEventListener("click", async function() {
+            if (await popupConfirmAction("overwrite the data of this entry") === 0) return;
+
+            let newEntry;
+
+            if (!navigator.clipboard)
+                return toastr.warning(t`Clipboard API not available in this context.`);
+
+            try {
+                newEntry = await navigator.clipboard.readText();
+            } catch (error) {
+                console.error('Error reading clipboard:', error);
+                return toastr.warning(t`Failed to read clipboard text. Have you granted the permission?`);
+            }
+
+            newEntry = JSON.parse(newEntry);
+
+            const newSelect = {
+                value_uid: false,
+                alt_values: []
+            };
+
+            for (const [k, v] of Object.entries(newEntry)) {
+                if (k === "display_position" || k === "uid") continue;
+
+                if (k === "alt_values" || k === "value_uid") {
+                    newSelect[k] = v;
+                    continue;
+                }
+
+                /** @type {HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement} */
+                const input = newRow.querySelector(`[name="${k}"]`);
+                input.value = String(v);
+            }
+
+            flushCharAltValues(char, entry.uid, true);
+
+            entry = getCharEntry(char, entry.uid);
+
+            const formDataFirstEntry = new FormData();
+            formDataFirstEntry.set("key", newSelect.alt_values[0].key);
+            formDataFirstEntry.set("value", newSelect.alt_values[0].value);
+            updateCharAltValue(char, entry.uid, entry.alt_values[0].uid, formDataFirstEntry);
+
+            for (const alt of newSelect.alt_values.slice(1))
+                addCharAltValue(char, entry.uid, {value: alt.value, key: alt.key});
+
+            entry = getCharEntry(char, entry.uid);
+
+            newSelect.value_uid = entry.value_uid;
+            newSelect.alt_values = entry.alt_values;
+            const selectedAlt = newSelect.alt_values.find(alt => alt.uid === newSelect.value_uid);
+
+            toggleSwitch(newRow, ".kill-switch", newEntry.enabled);
+            refreshAltValues(newRow, newSelect.alt_values, selectedAlt.uid);
+            selectAltValues.value = String(selectedAlt.uid);
+            selectAltValues.dataset.prevValue = String(selectedAlt.uid);
+            inputAltKey.value = String(selectedAlt.key);
+
+            updateCharEntry(char, entry.uid, new FormData(newRow), false);
         }, { passive: true });
 
         newRow.querySelector(".menu_button.export").addEventListener("click", async function() {

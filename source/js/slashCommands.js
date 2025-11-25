@@ -454,15 +454,9 @@ function commandCreateEntryAltValue(args, value = "") {
         if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
         if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
 
-        const alt = addCharAltValue(character, parsed_uid, String(value));
+        const alt = addCharAltValue(character, parsed_uid, {value: String(value), key: String(key)});
 
         if (!alt) return "";
-        if (Boolean(key)) {
-            const formData = new FormData();
-            formData.set("key", key);
-
-            updateCharAltValue(character, parsed_uid, alt.uid, formData);
-        }
 
         fetchStatusDebounced({forceUIUpdate: true});
 

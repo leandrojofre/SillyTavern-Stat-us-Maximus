@@ -26,7 +26,7 @@ export function getLastDisplayPosition(data) {
     return data.length;
 }
 
-export function addCharAltValue(character, entry_uid, alt_value = "") {
+export function addCharAltValue(character, entry_uid, {value = "", key = ""} = {}) {
     try {
         const entry = getCharEntry(character, entry_uid);
 
@@ -34,8 +34,8 @@ export function addCharAltValue(character, entry_uid, alt_value = "") {
 
         const newAlt = {
             uid: getFreeDataUid(entry.alt_values),
-            key: "",
-            value: alt_value
+            key: key,
+            value: value
         };
 
         entry.alt_values.push(newAlt);
@@ -125,6 +125,29 @@ export function removeCharAltValue(character, entry_uid, alt_uid) {
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to delete Status Metadata: ${error.message}`);
+        console.error(error.message);
+
+        return false;
+    }
+}
+
+export function flushCharAltValues(character, entry_uid, silent = false) {
+    try {
+        const entry = getCharEntry(character, entry_uid);
+
+        if (!entry) throw new Error(`Entry with uid=${entry_uid} could not be found`);
+        if (entry.alt_values.length <= 1) throw new Error("There are no more alt descriptions to delete");
+
+        
+        entry.alt_values = entry.alt_values.filter(alt => alt.uid === entry.value_uid);
+        const remainingAlt = entry.alt_values[0];
+
+        entry.value = remainingAlt.value;
+        entry.value_uid = remainingAlt.uid;
+
+        return true;
+    } catch (error) {
+        if (!silent) toastr.error(t`Failed to delete Status Metadata: ${error.message}`);
         console.error(error.message);
 
         return false;
