@@ -6,7 +6,7 @@ import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
 import { destroyElement, fetchStatusDebounced, extensionSettings } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue } from "./statusControls.js";
+import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, updateCharEntry, getCharAltValue } from "./statusControls.js";
 
 /*  # TODO
     - [X] Select for alt_values
@@ -164,13 +164,19 @@ function el(target, class_name) {
     return target.querySelector(class_name);
 }
 
-/** @param {HTMLElement} el */
-function toggleSwitch(el, callback = (param) => {}) {
+/**
+ * @param {HTMLElement} parent
+ * @param {string} selector
+ * @returns {boolean}
+ */
+function toggleSwitch(parent, selector) {
     // True if the final state is on
-    const state = !el.classList.contains("fa-toggle-on");
-    el.classList.toggle("fa-toggle-off", !state);
-    el.classList.toggle("fa-toggle-on", state);
-    callback(state);
+    /** @type {HTMLElement} */
+    const elem = el(parent, selector);
+    const isOn = !elem.classList.contains("fa-toggle-on");
+    elem.classList.toggle("fa-toggle-on", isOn);
+    elem.classList.toggle("fa-toggle-off", !isOn);
+    return isOn;
 };
 
 function refreshAltValues(target, alts, select_uid = 0) {
@@ -192,107 +198,114 @@ function refreshAltValues(target, alts, select_uid = 0) {
 };
 
 const evChange = new Event('change', { bubbles: true, cancelable: true });
-const evInput = new Event('input', { bubbles: true, cancelable: true });
 
-function addStatusRow({amount = 1, data = [], container, template, char} = {}) {
-    for (let i = 0; i < amount; i++) {
+/**
+ * Add a new entry row to the active status popup block
+ * @param {object} options
+ * @param {object[]} options.data
+ * @param {HTMLElement} options.container
+ * @param {HTMLElement} options.template
+ * @param {object} options.char
+ * @returns void
+ */
+function addStatusRow({data = [], container, template, char}) {
+    for (const entryData of data) {
+        let entry = getCharEntry(char, entryData.uid);
         const newRow = /** @type {HTMLFormElement} */ (template.cloneNode(true));
 
         // @ts-ignore
-        if (!data[i]) return toastr.warning(t`Data for new entry is empty - index=${i}`);
+        if (!entry) return toastr.warning(t`Data for new entry is empty - index=${i}`);
 
-        newRow.dataset.uid = data[i].uid;
+        newRow.dataset.uid = entry.uid;
+        newRow.dataset.charAvatar = char.avatar;
         newRow.removeAttribute('action');
 
         // Set Values
-        el(newRow, 'input[name="key"]').value = data[i].key;
-        el(newRow, 'input[name="separator"]').value = escapeNewlines(data[i].separator);
-        el(newRow, 'textarea[name="value"]').value = data[i].value;
-        el(newRow, 'input[name="enabled"]').value = data[i].enabled;
-        refreshAltValues(newRow, data[i].alt_values, data[i].value_uid);
-        el(newRow, 'select[name="value_uid"]').value = String(data[i].value_uid);
-        el(newRow, 'input[name="alt_key"]').value = data[i].alt_values.find(alt => alt.uid === data[i].value_uid).key;
+        const inputEntryEnabled = /** @type {HTMLInputElement} */ (newRow.querySelector('input[name="enabled"]'));
+        inputEntryEnabled.value = String(entry.enabled);
 
-        if (!data[i].enabled) toggleSwitch(el(newRow, ".kill-switch"));
+        const inputKey = /** @type {HTMLInputElement} */ (newRow.querySelector('input[name="key"]'));
+        inputKey.value = entry.key;
+
+        const textareaValue = /** @type {HTMLTextAreaElement} */ (newRow.querySelector('textarea[name="value"]'));
+        textareaValue.value = entry.value;
+
+        const inputSeparator = /** @type {HTMLInputElement} */ (newRow.querySelector('input[name="separator"]'));
+        inputSeparator.value = escapeNewlines(entry.separator);
+
+        const selectAltValues = /** @type {HTMLSelectElement} */ (newRow.querySelector('select[name="value_uid"]'));
+        selectAltValues.value = String(entry.value_uid);
+        selectAltValues.dataset.prevValue = String(entry.value_uid);
+        refreshAltValues(newRow, entry.alt_values, entry.value_uid);
+
+        const inputAltKey = /** @type {HTMLInputElement} */ (newRow.querySelector('input[name="alt_key"]'));
+        inputAltKey.value = entry.alt_values.find(alt => alt.uid === entry.value_uid).key;
+
+        if (!entry.enabled) toggleSwitch(newRow, ".kill-switch");
 
         // Add listeners
-        newRow.addEventListener("submit", (e) => {
-            e.preventDefault();
-
-            const formData = new FormData(newRow);
-
-            updateCharEntry(char, data[i].uid, formData);
-        }, { passive: false });
-
-        newRow.addEventListener("input", () => {
-            clearTimeout(formDebounceTimer);
-
-            formDebounceTimer = window.setTimeout(() => newRow.requestSubmit(), DEBOUNCE_MS);
+        newRow.querySelector(".kill-switch").addEventListener("click", function () {
+            const newState = toggleSwitch(newRow, ".kill-switch");
+            inputEntryEnabled.value = String(newState);
         }, { passive: true });
 
-        el(newRow, 'select[name="value_uid"]').addEventListener("change", () => {
-            const alt = getCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
+        selectAltValues.addEventListener("change", async function () {
+            const newValue = selectAltValues.value;
 
-            el(newRow, 'input[name="alt_key"]').value = alt.key;
-            el(newRow, 'textarea[name="value"]').value = alt.value;
+            selectAltValues.value = selectAltValues.dataset.prevValue;
+            await updateCharEntry(char, entry.uid, new FormData(newRow), true);
 
-            newRow.dispatchEvent(evInput);
+            selectAltValues.value = newValue;
+            selectAltValues.dataset.prevValue = newValue;
+            const alt = getCharAltValue(char, entry.uid, selectAltValues.value);
+
+            inputAltKey.value = alt.key;
+            textareaValue.value = alt.value;
         }, { passive: true });
 
-        el(newRow, ".delete-row").addEventListener("click", async () => {
-            if (await popupDeleteConfirm("the alt value") === 0) return;
-
-            removeCharEntry(char, data[i].uid);
-            destroyElement(newRow);
+        inputAltKey.addEventListener("input", function () {
+            /** @type {HTMLOptionElement} */
+            const optionInDisplay = selectAltValues.querySelector(`option[value="${selectAltValues.value}"]`);
+            optionInDisplay.text = inputAltKey.value;
         }, { passive: true });
 
-        el(newRow, ".kill-switch").addEventListener("click", () => {
-            toggleSwitch(el(newRow, ".kill-switch"), (state) => el(newRow, 'input[name="enabled"]').value = state);
-            newRow.requestSubmit();
-        }, { passive: true });
+        newRow.querySelector(".add_alt_value").addEventListener("click", async function () {
+            await updateCharEntry(char, entry.uid, new FormData(newRow), true);
 
-        el(newRow, 'input[name="alt_key"]').addEventListener("keyup", () => {
-            clearTimeout(altKeyDebounceTimer);
-
-            altKeyDebounceTimer = window.setTimeout(() => refreshAltValues(
-                newRow,
-                getCharEntry(char, data[i].uid).alt_values,
-                el(newRow, 'select[name="value_uid"]').value
-            ), DEBOUNCE_MS);
-        }, { passive: true });
-
-        el(newRow, ".add_alt_value").addEventListener("click", () => {
-            const newAlt = addCharAltValue(char, data[i].uid);
+            const newAlt = addCharAltValue(char, entry.uid);
 
             if (!newAlt) return;
 
-            refreshAltValues(newRow, getCharEntry(char, data[i].uid).alt_values, newAlt.uid);
-
-            el(newRow, 'select[name="value_uid"]').value = String(newAlt.uid);
-            el(newRow, 'select[name="value_uid"]').dispatchEvent(evChange);
+            refreshAltValues(newRow, entry.alt_values, newAlt.uid);
+            selectAltValues.value = String(newAlt.uid);
+            selectAltValues.dispatchEvent(evChange);
         }, { passive: true });
 
-        el(newRow, ".del_alt_value").addEventListener("click", async () => {
+        newRow.querySelector(".del_alt_value").addEventListener("click", async function () {
             if (await popupDeleteConfirm("the alt value") === 0) return;
 
             try {
-                const success = removeCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
+                await updateCharEntry(char, entry.uid, new FormData(newRow), true);
+
+                const success = removeCharAltValue(char, entry.uid, selectAltValues.value);
 
                 if (!success) return;
 
-                const new_alts = getCharEntry(char, data[i].uid).alt_values;
+                entry = getCharEntry(char, entry.uid);
+                const firstAlt = entry.alt_values[0];
 
-                refreshAltValues(newRow, new_alts);
-
-                el(newRow, 'select[name="value_uid"]').value = String(new_alts[0].uid);
-                el(newRow, 'select[name="value_uid"]').dispatchEvent(evChange);
+                refreshAltValues(newRow, entry.alt_values, firstAlt.uid);
+                selectAltValues.value = String(firstAlt.uid);
+                selectAltValues.dataset.prevValue = String(firstAlt.uid);
+                inputAltKey.value = firstAlt.key;
+                textareaValue.value = firstAlt.value;
             } catch (error) {
                 // ...
             }
         }, { passive: true });
 
-        el(newRow, ".menu_button.export").addEventListener("click", async function() {
-            const currentEntry = getCharEntry(char, data[i].uid);
+        newRow.querySelector(".menu_button.export").addEventListener("click", async function() {
+            const currentEntry = getCharEntry(char, entry.uid);
 
             await exportObjectToClipboard(currentEntry);
         }, { passive: true });
@@ -307,22 +320,25 @@ function addStatusRow({amount = 1, data = [], container, template, char} = {}) {
                 if (macroType === "boolean") macroTemplate = "{{boolean::true::true::false}}";
                 if (macroType === "range") macroTemplate = "{{range::0::100::1::0}}";
 
-                if (extensionSettings.altMacroTemplateBehavior) {
-                    const valueTextarea = el(newRow, 'textarea[name="value"]')
-                    valueTextarea.value += macroTemplate;
-                    valueTextarea.dispatchEvent(evInput);
-
-                    return;
-                } else {
-                    await copyText(macroTemplate);
-                }
+                if (extensionSettings.altMacroTemplateBehavior) textareaValue.value += macroTemplate;
+                else await copyText(macroTemplate);
             }, { passive: true });
         });
+
+        newRow.querySelector(".delete-row").addEventListener("click", async function () {
+            if (await popupDeleteConfirm("the alt value") === 0) return;
+
+            removeCharEntry(char, entry.uid);
+            destroyElement(newRow);
+        }, { passive: true });
 
         container.append(newRow);
     }
 }
 
+/**
+ * @returns {HTMLDivElement}
+ */
 export function getCharStatusForm(char) {
     let metadata = getCharStatus(char);
 
@@ -690,7 +706,6 @@ export function getCharStatusForm(char) {
 
     /** Add def rows */
     if (metadata.entries.length > 0) addStatusRow({
-        amount: metadata.entries.length,
         data: metadata.entries,
         container: content,
         template: formRow,
@@ -713,27 +728,39 @@ export function getCharStatusForm(char) {
 }
 
 export async function popupStatusSingleChar(char) {
-    const container = await getCharStatusForm(char);
+    const charFrom = await getCharStatusForm(char);
 
-    await callGenericPopup(container, POPUP_TYPE.TEXT, "", {
+    if (!charFrom) return;
+
+    await callGenericPopup(charFrom, POPUP_TYPE.TEXT, "", {
         okButton: t`Close Status`,
         allowVerticalScrolling: true,
         wide: true,
         onClose: async () => {
-            SillyTavern.getContext().saveMetadataDebounced();
-            destroyElement(container)
+            const forms = charFrom.querySelectorAll('form');
+
+            for (const form of forms)
+                updateCharEntry(char, form.dataset.uid, new FormData(form));
+
+            destroyElement(charFrom)
         }
     });
 
     fetchStatusDebounced({forceUIUpdate: true});
 }
 
+/**
+ * @param {object[]} chars
+ */
 export async function popupStatusMultiChar(chars) {
     const content = document.createElement("div");
     content.id = "stat-us-max-popup-multi-char";
 
     for (const char of chars) {
         const charForm = await getCharStatusForm(char);
+
+        if (!charForm) continue;
+
         charForm.classList.add("multi-char-popup");
         content.append(charForm);
     }
@@ -743,7 +770,16 @@ export async function popupStatusMultiChar(chars) {
         allowVerticalScrolling: true,
         wide: true,
         onClose: async () => {
-            SillyTavern.getContext().saveMetadataDebounced();
+            const forms = content.querySelectorAll('form');
+
+            for (const form of forms) {
+                const char = chars.find(char => char.avatar === form.dataset.charAvatar);
+
+                if (!char) continue;
+
+                updateCharEntry(char, form.dataset.uid, new FormData(form));
+            }
+
             destroyElement(content)
         }
     });

@@ -232,9 +232,10 @@ export function parseValue(val) {
     @param {object} character
     @param {Number|String} entry_uid
     @param {FormData} formData
-    @returns {object|Boolean}
+    @param {boolean?} doAwait
+    @returns {Promise} Entry object or false
 */
-export function updateCharEntry(character, entry_uid, formData) {
+export async function updateCharEntry(character, entry_uid, formData, doAwait = false) {
     try {
         const entry = getCharEntry(character, entry_uid);
 
@@ -258,7 +259,8 @@ export function updateCharEntry(character, entry_uid, formData) {
         altValue.value = entry.value;
         altValue.key = formData.get("alt_key") ?? altValue.key;
 
-        SillyTavern.getContext().saveMetadataDebounced();
+        if (doAwait) await SillyTavern.getContext().saveMetadata();
+        else SillyTavern.getContext().saveMetadataDebounced();
 
         return entry;
     } catch (error) {
@@ -281,7 +283,7 @@ export function removeCharEntry(character, entry_uid = -1) {
 
         char_status.entries = char_status
             .entries
-            .filter(s => s.uid !== Number(entry_uid));
+            .filter(entry => entry.uid !== Number(entry_uid));
 
         getLastDisplayPosition(char_status.entries);
         SillyTavern.getContext().saveMetadataDebounced();
