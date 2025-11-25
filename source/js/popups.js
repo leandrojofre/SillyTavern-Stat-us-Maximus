@@ -42,26 +42,26 @@ export function un_escapeNewlines(str) {
         .replace(/\\r/g, "\r");
 }
 
-async function popupDeleteConfirm(del_name = "this") {
-    const delete_title = document.createElement("div");
-    delete_title.textContent = t`WARNING`;
-    delete_title.classList.add("fw-bolder");
+async function popupConfirmAction(del_name = "this") {
+    const confirm_title = document.createElement("div");
+    confirm_title.textContent = t`WARNING`;
+    confirm_title.classList.add("fw-bolder");
 
-    const delete_text = document.createElement("div");
-    delete_text.textContent = t`Are you sure want to delete ${del_name}?`;
+    const confirm_text = document.createElement("div");
+    confirm_text.textContent = t`Are you sure want to ${del_name}?`;
 
-    const delete_container = document.createElement("div");
-    delete_container.classList.add("d-flex", "flex-col", "flex-center", "w-100", "mb-5px", "gap-5px");
-    delete_container.append(delete_title, delete_text);
+    const confirm_container = document.createElement("div");
+    confirm_container.classList.add("d-flex", "flex-col", "flex-center", "w-100", "mb-5px", "gap-5px");
+    confirm_container.append(confirm_title, confirm_text);
 
-    const delete_css_block = document.createElement("div");
-    delete_css_block.classList.add("stat-us-max-custom-css");
-    delete_css_block.append(delete_container);
+    const confirm_css_block = document.createElement("div");
+    confirm_css_block.classList.add("stat-us-max-custom-css");
+    confirm_css_block.append(confirm_container);
 
-    return await callGenericPopup(delete_css_block, POPUP_TYPE.CONFIRM, "", {
+    return await callGenericPopup(confirm_css_block, POPUP_TYPE.CONFIRM, "", {
         okButton: t`Confirm`,
         cancelButton: t`Cancel`,
-        onClose: () => destroyElement(delete_css_block)
+        onClose: () => destroyElement(confirm_css_block)
     });
 };
 
@@ -287,7 +287,7 @@ function addStatusRow({data = [], container, template, char}) {
         }, { passive: true });
 
         newRow.querySelector(".del_alt_value").addEventListener("click", async function () {
-            if (await popupDeleteConfirm("the alt value") === 0) return;
+            if (await popupConfirmAction("delete the alt value") === 0) return;
 
             try {
                 await updateCharEntry(char, entry.uid, new FormData(newRow), true);
@@ -331,7 +331,7 @@ function addStatusRow({data = [], container, template, char}) {
         });
 
         newRow.querySelector(".delete-row").addEventListener("click", async function () {
-            if (await popupDeleteConfirm("the alt value") === 0) return;
+            if (await popupConfirmAction("delete the alt value") === 0) return;
 
             removeCharEntry(char, entry.uid);
             destroyElement(newRow);
@@ -672,7 +672,7 @@ export function getCharStatusForm(char) {
     }, { passive: true });
 
     deleteStatsBtn.addEventListener("click", async () => {
-        if (await popupDeleteConfirm(`${char.name}'s status data`) === 0) return;
+        if (await popupConfirmAction(`delete ${char.name}'s status data`) === 0) return;
 
         const success = deleteCharStatus(char);
 
