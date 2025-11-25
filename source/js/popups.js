@@ -733,22 +733,22 @@ export function getCharStatusForm(char) {
 }
 
 export async function popupStatusSingleChar(char) {
-    const charFrom = await getCharStatusForm(char);
+    const charForm = await getCharStatusForm(char);
 
-    if (!charFrom) return;
+    if (!charForm) return;
 
-    await callGenericPopup(charFrom, POPUP_TYPE.TEXT, "", {
+    await callGenericPopup(charForm, POPUP_TYPE.TEXT, "", {
         okButton: t`Close Status`,
         allowVerticalScrolling: true,
         wide: true,
         onClose: async () => {
-            const forms = charFrom.querySelectorAll('form');
+            const forms = charForm.querySelectorAll('form');
 
             for (const form of forms)
                 if (form.dataset.modified === "true")
                     updateCharEntry(char, form.dataset.uid, new FormData(form));
 
-            destroyElement(charFrom);
+            destroyElement(charForm);
         }
     });
 
