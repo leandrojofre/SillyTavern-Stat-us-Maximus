@@ -84,6 +84,7 @@ const defaultSettings = {
     minPromptDepth: 0,
     alwaysIncludeUnmutedMembers: false,
     altMacroTemplateBehavior: false,
+    autoSaveMetadata: true,
     debug: false
 };
 
@@ -427,6 +428,7 @@ function addTracker(status, character) {
                         <span class="stat-us-max-chat-title">${character.name}</span>
                     </span>
                     <div class="d-flex flex-center">
+                        <div class="menu_button menu_button_icon fa-solid fa-floppy-disk interactable m-0"></div>
                         <div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0"></div>
                         <div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0"></div>
                     </div>
@@ -471,7 +473,11 @@ function addTracker(status, character) {
         el.classList.toggle("d-none", state);
     };
 
-    statusTable.querySelector(".menu_button.fa-pen").addEventListener("click", async () => {
+    statusTable.querySelector(".menu_button.fa-floppy-disk").addEventListener("click", async function () {
+        SillyTavern.getContext().saveChat();
+    }, { passive: true });
+
+    statusTable.querySelector(".menu_button.fa-pen").addEventListener("click", async function () {
         const metadata = chat_metadata.stat_us_maximus;
 
         // @ts-ignore
@@ -480,12 +486,12 @@ function addTracker(status, character) {
         return await popupStatusSingleChar(character);
     }, {passive: true});
 
-    statusTable.querySelector(".menu_button.fa-eye").addEventListener("click", async () => {
+    statusTable.querySelector(".menu_button.fa-eye").addEventListener("click", async function () {
         const collapse = !statusTableBody.classList.contains("d-none");
         status.is_collapsed = collapse;
 
         toggleVisibility(statusTableBody, collapse);
-        SillyTavern.getContext().saveMetadataDebounced();
+        if (extensionSettings.autoSaveMetadata) SillyTavern.getContext().saveChat();
     }, {passive: true});
 
     const createInputs = (/**@type {String}*/text, entry_uid) => {
@@ -819,7 +825,7 @@ function addTracker(status, character) {
 
             const formData = new FormData(form);
 
-            updateCharEntry(character, entry.uid, formData);
+            updateCharEntry(character, entry.uid, formData, extensionSettings.autoSaveMetadata);
         }, { passive: false });
 
         form.addEventListener("input", () => {
@@ -1098,7 +1104,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
         );
     }
 
-    SillyTavern.getContext().saveMetadataDebounced();
+    if (extensionSettings.autoSaveMetadata) SillyTavern.getContext().saveChat();
 }
 
 /**
@@ -1232,6 +1238,7 @@ function settingsNumberButton(event) {
 function displaySettings() {
     console.debug("[" + extensionName + "]", `Auto detect participants is ${extensionSettings.autoDetectParticipants ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Always include unmuted group members is ${extensionSettings.alwaysIncludeUnmutedMembers ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Auto save metadata is ${extensionSettings.autoSaveMetadata ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Alternative behavior for macro template buttons is ${extensionSettings.altMacroTemplateBehavior ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Show input macros in chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Hide input labels is ${extensionSettings.hideInputLabels ? "active" : "not active"}`);
@@ -1251,6 +1258,7 @@ async function loadHTMLSettings() {
     // Event Listeners for the extension HTML
     $("#stat-us-max-auto-detect-participants").on("input", settingsBooleanButton);
     $("#stat-us-max-always-include-unmuted-members").on("input", settingsBooleanButton);
+    $("#stat-us-max-auto-save-metadata").on("input", settingsBooleanButton);
     $("#stat-us-max-alt-macro-template-behavior").on("input", settingsBooleanButton);
     $("#stat-us-max-show-input-macros").on("input", settingsBooleanButton);
     $("#stat-us-max-hide-input-labels").on("input", settingsBooleanButton);
@@ -1267,6 +1275,7 @@ async function loadHTMLSettings() {
 function setSettings() {
     $("#stat-us-max-auto-detect-participants").prop("checked", extensionSettings.autoDetectParticipants);
     $("#stat-us-max-always-include-unmuted-members").prop("checked", extensionSettings.alwaysIncludeUnmutedMembers);
+    $("#stat-us-max-auto-save-metadata").prop("checked", extensionSettings.autoSaveMetadata);
     $("#stat-us-max-alt-macro-template-behavior").prop("checked", extensionSettings.altMacroTemplateBehavior);
     $("#stat-us-max-show-input-macros").prop("checked", extensionSettings.editNumbersFromChat);
     $("#stat-us-max-show-white-spaces").prop("checked", extensionSettings.showWhiteSpaces);

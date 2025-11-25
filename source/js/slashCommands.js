@@ -424,7 +424,7 @@ function commandSwitchEntryValue(args, value) {
         formData.set("value", alt.value);
         formData.set("value_uid", alt.uid);
 
-        updateCharEntry(character, parsed_uid, formData);
+        updateCharEntry(character, parsed_uid, formData, false);
         fetchStatusDebounced({forceUIUpdate: true});
 
         return "";
@@ -636,7 +636,7 @@ function commandDeleteAltEntry(args, value) {
 async function commandDeleteChatStatus() {
     try {
         delete SillyTavern.getContext().chatMetadata.stat_us_maximus;
-        SillyTavern.getContext().saveMetadataDebounced();
+        SillyTavern.getContext().saveChat();
     } catch (error) {
         return "false";
     }

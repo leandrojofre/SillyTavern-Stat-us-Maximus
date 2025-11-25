@@ -167,13 +167,14 @@ function el(target, class_name) {
 /**
  * @param {HTMLElement} parent
  * @param {string} selector
+ * @param {boolean?} forceState
  * @returns {boolean}
  */
-function toggleSwitch(parent, selector) {
+function toggleSwitch(parent, selector, forceState = null) {
     // True if the final state is on
     /** @type {HTMLElement} */
     const elem = el(parent, selector);
-    const isOn = !elem.classList.contains("fa-toggle-on");
+    const isOn = forceState === null ? !elem.classList.contains("fa-toggle-on") : forceState;
     elem.classList.toggle("fa-toggle-on", isOn);
     elem.classList.toggle("fa-toggle-off", !isOn);
     return isOn;
@@ -254,11 +255,11 @@ function addStatusRow({data = [], container, template, char}) {
             inputEntryEnabled.value = String(newState);
         }, { passive: true });
 
-        selectAltValues.addEventListener("change", async function () {
+        selectAltValues.addEventListener("change", function () {
             const newValue = selectAltValues.value;
 
             selectAltValues.value = selectAltValues.dataset.prevValue;
-            await updateCharEntry(char, entry.uid, new FormData(newRow), true);
+            updateCharEntry(char, entry.uid, new FormData(newRow), false);
 
             selectAltValues.value = newValue;
             selectAltValues.dataset.prevValue = newValue;
@@ -274,8 +275,8 @@ function addStatusRow({data = [], container, template, char}) {
             optionInDisplay.text = inputAltKey.value;
         }, { passive: true });
 
-        newRow.querySelector(".add_alt_value").addEventListener("click", async function () {
-            await updateCharEntry(char, entry.uid, new FormData(newRow), true);
+        newRow.querySelector(".add_alt_value").addEventListener("click", function () {
+            updateCharEntry(char, entry.uid, new FormData(newRow), false);
 
             const newAlt = addCharAltValue(char, entry.uid);
 
@@ -290,7 +291,7 @@ function addStatusRow({data = [], container, template, char}) {
             if (await popupConfirmAction("delete the alt value") === 0) return;
 
             try {
-                await updateCharEntry(char, entry.uid, new FormData(newRow), true);
+                updateCharEntry(char, entry.uid, new FormData(newRow), false);
 
                 const success = removeCharAltValue(char, entry.uid, selectAltValues.value);
 
@@ -746,7 +747,7 @@ export async function popupStatusSingleChar(char) {
 
             for (const form of forms)
                 if (form.dataset.modified === "true")
-                    updateCharEntry(char, form.dataset.uid, new FormData(form));
+                    updateCharEntry(char, form.dataset.uid, new FormData(form), false);
 
             destroyElement(charForm);
         }
@@ -784,7 +785,7 @@ export async function popupStatusMultiChar(chars) {
                 if (!char) continue;
                 if (form.dataset.modified === "false") continue;
 
-                updateCharEntry(char, form.dataset.uid, new FormData(form));
+                updateCharEntry(char, form.dataset.uid, new FormData(form), false);
             }
 
             destroyElement(content);

@@ -27,6 +27,12 @@
 					<i class="right_menu_button fa-solid fa-circle-exclamation interactable" title="This will include the Stat blocks of group members that have not interacted with the chat, or their last message is out of the context, but are present" data-i18n="[title]This will include the Stat blocks of group members that have not interacted with the chat, or their last message is out of the context, but are present" tabindex="0" role="button"></i>
 				</label>
 
+				<label class="flex-container">
+					<input id="stat-us-max-auto-save-metadata" stat-us-max-setting="autoSaveMetadata" type="checkbox" />
+					Automatically save metadata
+					<i class="right_menu_button fa-solid fa-circle-exclamation interactable" title="In long chats, saving metadata can freeze the browser, disabling this option will prevent this at the cost of having to manually save your changes" data-i18n="[title]In long chats, saving metadata can freeze the browser, disabling this option will prevent this at the cost of having to manually save your changes" tabindex="0" role="button"></i>
+				</label>
+
 				<label class="d-flex flex-col flex-start-center gap-5px">
                     <small class="text-quote">Set the minimum prompt injection depth</small>
 					<input id="stat-us-max-min-prompt-depth" stat-us-max-setting="minPromptDepth" type="number" min="0" max="10000" step="1" class="text_pole textarea_compact mt-0" />

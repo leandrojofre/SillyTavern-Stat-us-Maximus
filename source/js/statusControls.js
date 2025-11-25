@@ -40,7 +40,7 @@ export function addCharAltValue(character, entry_uid, alt_value = "") {
 
         entry.alt_values.push(newAlt);
 
-        SillyTavern.getContext().saveMetadataDebounced();
+        SillyTavern.getContext().saveChat();
 
         return newAlt;
     } catch (error) {
@@ -91,7 +91,7 @@ export function updateCharAltValue(character, entry_uid, alt_uid, formData) {
 
         if (entry.value_uid === alt.uid) entry.value = alt.value;
 
-        SillyTavern.getContext().saveMetadataDebounced();
+        SillyTavern.getContext().saveChat();
 
         return alt;
     } catch (error) {
@@ -108,7 +108,7 @@ export function removeCharAltValue(character, entry_uid, alt_uid) {
         const entry = getCharEntry(character, entry_uid);
 
         if (!entry) throw new Error(`Entry with uid=${entry_uid} could not be found`);
-        if (entry.alt_values.length <= 1) throw new Error("You can't delete all alt descriptions");
+        if (entry.alt_values.length <= 1) throw new Error("There are no more alt descriptions to delete");
 
         entry.alt_values = entry
             .alt_values
@@ -119,7 +119,7 @@ export function removeCharAltValue(character, entry_uid, alt_uid) {
             entry.value_uid = entry.alt_values[0].uid;
         }
 
-        SillyTavern.getContext().saveMetadataDebounced();
+        SillyTavern.getContext().saveChat();
 
         return true;
     } catch (error) {
@@ -156,7 +156,7 @@ export function addCharEntry(character, entry_key = "", entry_value = "") {
 
         char_status.entries.push(newEntry);
 
-        SillyTavern.getContext().saveMetadataDebounced();
+        SillyTavern.getContext().saveChat();
 
         return newEntry;
     } catch (error) {
@@ -188,7 +188,7 @@ export function refreshCharEntryDisplay(character, display_order) {
 
         char_status.entries = ordered_data;
 
-        SillyTavern.getContext().saveMetadataDebounced();
+        SillyTavern.getContext().saveChat();
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
@@ -232,10 +232,10 @@ export function parseValue(val) {
     @param {object} character
     @param {Number|String} entry_uid
     @param {FormData} formData
-    @param {boolean?} doAwait
+    @param {boolean?} doSaveData
     @returns {Promise} Entry object or false
 */
-export async function updateCharEntry(character, entry_uid, formData, doAwait = false) {
+export async function updateCharEntry(character, entry_uid, formData, doSaveData = true) {
     try {
         const entry = getCharEntry(character, entry_uid);
 
@@ -259,8 +259,7 @@ export async function updateCharEntry(character, entry_uid, formData, doAwait = 
         altValue.value = entry.value;
         altValue.key = formData.get("alt_key") ?? altValue.key;
 
-        if (doAwait) await SillyTavern.getContext().saveMetadata();
-        else SillyTavern.getContext().saveMetadataDebounced();
+        if (doSaveData) SillyTavern.getContext().saveChat();
 
         return entry;
     } catch (error) {
@@ -286,7 +285,7 @@ export function removeCharEntry(character, entry_uid = -1) {
             .filter(entry => entry.uid !== Number(entry_uid));
 
         getLastDisplayPosition(char_status.entries);
-        SillyTavern.getContext().saveMetadataDebounced();
+        SillyTavern.getContext().saveChat();
 
         return true;
     } catch (error) {
@@ -317,7 +316,7 @@ export function createCharStatus(character, depth = -1) {
 
         chat_metadata.stat_us_maximus.push(status);
 
-        SillyTavern.getContext().saveMetadataDebounced();
+        SillyTavern.getContext().saveChat();
 
         return status;
     } catch (error) {
@@ -360,7 +359,7 @@ export function updateCharStatus(character, formData) {
             status[key] = parsedValue;
         }
 
-        SillyTavern.getContext().saveMetadataDebounced();
+        SillyTavern.getContext().saveChat();
 
         return status;
     } catch (error) {
@@ -411,7 +410,7 @@ export function transferCharStatus(character, target, {deleteOriginal = false, o
 
         if (deleteOriginal) deleteCharStatus(character);
 
-        SillyTavern.getContext().saveMetadataDebounced();
+        SillyTavern.getContext().saveChat();
 
         return true;
     } catch (error) {
@@ -430,7 +429,7 @@ export function deleteCharStatus(character) {
         chat_metadata.stat_us_maximus = chat_metadata.stat_us_maximus
             .filter(stat => stat.avatar !== character.avatar);
 
-        SillyTavern.getContext().saveMetadataDebounced();
+        SillyTavern.getContext().saveChat();
         deleteCharTracker(character);
 
         return true;
@@ -498,7 +497,7 @@ export async function fillMissingMetadata() {
             }
         }
 
-        SillyTavern.getContext().saveMetadataDebounced();
+        SillyTavern.getContext().saveChat();
 
         return true;
     } catch (error) {
