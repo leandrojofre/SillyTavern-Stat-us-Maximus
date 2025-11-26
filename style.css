@@ -1,6 +1,7 @@
 :root {
     --stum-input-label-display: block;
     --stum-range-input-width: auto;
+    --stum-save-state-color: transparent;
 }
 
 #stat-us-max-settings-window div.flex-container.flex-column,
@@ -628,5 +629,9 @@ div[name="templatesAndPopupsWrapper"] {
         z-index: 40;
         overflow-y: scroll;
         max-height: 15vh;
+    }
+
+    .menu_button.fa-floppy-disk {
+        background-color: var(--stum-save-state-color);
     }
 }

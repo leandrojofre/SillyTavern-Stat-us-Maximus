@@ -140,6 +140,15 @@ export function destroyElement(element) {
 	elem.remove();
 }
 
+/**
+ * @param {boolean} state
+ */
+export function setSaveStateFlag(state) {
+    const nextState = state ? "transparent" : "red";
+
+    document.documentElement.style.setProperty('--stum-save-state-color', nextState);
+}
+
 function getCharacter(value, search_key = "avatar") {
     return characters.find(c => c[search_key] === value) ?? false;
 }
@@ -405,13 +414,13 @@ function addTracker(status, character) {
                 <input type="hidden" name="value_uid">
             </form>
             <div class="d-flex flex-center-between gap-15px fs-90p text-muted hover-highlight">
-                <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state" data-i18n="Toggle entry's active state"></div>
+                <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state" data-i18n="[title]Toggle entry's active state"></div>
                 <p class="text-left flex-grow-1 m-0 d-table">
                     <span class="status-title fw-bolder d-contents"></span>
                     <span class="status-separator"></span>
                     <span class="status-description d-contents"></span>
                 </p>
-                <div class="status-value-uid fa-solid fa-bars-progress m-0" aria-describedby="tooltip" title="Swap entry description" data-i18n="Swap entry description"></div>
+                <div class="status-value-uid fa-solid fa-bars-progress m-0" aria-describedby="tooltip" title="Swap entry description" data-i18n="[title]Swap entry description"></div>
             </div>
         </td>
     `;
@@ -428,7 +437,7 @@ function addTracker(status, character) {
                         <span class="stat-us-max-chat-title">${character.name}</span>
                     </span>
                     <div class="d-flex flex-center">
-                        <div class="menu_button menu_button_icon fa-solid fa-floppy-disk interactable m-0"></div>
+                        <div class="menu_button menu_button_icon fa-solid fa-floppy-disk interactable m-0 px-10px" title="Force Status metadata to save" data-i18n="[title]Force Status metadata to save"></div>
                         <div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0"></div>
                         <div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0"></div>
                     </div>
@@ -474,6 +483,7 @@ function addTracker(status, character) {
     };
 
     statusTable.querySelector(".menu_button.fa-floppy-disk").addEventListener("click", async function () {
+        setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
     }, { passive: true });
 
@@ -491,6 +501,7 @@ function addTracker(status, character) {
         status.is_collapsed = collapse;
 
         toggleVisibility(statusTableBody, collapse);
+        setSaveStateFlag(extensionSettings.autoSaveMetadata);
         if (extensionSettings.autoSaveMetadata) SillyTavern.getContext().saveChat();
     }, {passive: true});
 
@@ -825,6 +836,7 @@ function addTracker(status, character) {
 
             const formData = new FormData(form);
 
+            setSaveStateFlag(extensionSettings.autoSaveMetadata);
             updateCharEntry(character, entry.uid, formData, extensionSettings.autoSaveMetadata);
         }, { passive: false });
 
@@ -1103,8 +1115,6 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
             status.role
         );
     }
-
-    if (extensionSettings.autoSaveMetadata) SillyTavern.getContext().saveChat();
 }
 
 /**
@@ -1306,7 +1316,7 @@ function initButtons() {
     globalStatusMenu.id = extensionName.toLowerCase().replace("-", "_") + "_wand_container";
     globalStatusMenu.classList.add("extension_container", "interactable");
     globalStatusMenu.append(globalStatusButton);
-    globalStatusMenu.addEventListener("click", async () => {
+    globalStatusMenu.addEventListener("click", async function () {
         const metadata = chat_metadata.stat_us_maximus;
         const chars = [];
 
@@ -1331,11 +1341,20 @@ function initButtons() {
     charStatusSpan.dataset.i18n = "Stat-us Maximus";
     charStatusSpan.classList.add("flex-grow-1");
 
+    const saveStatusDataBtn = document.createElement("div");
+    saveStatusDataBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-floppy-disk", "interactable", "m-0", "px-10px");
+    saveStatusDataBtn.title = "Force Status metadata to save";
+    saveStatusDataBtn.dataset.i18n = "Force Status metadata to save";
+    saveStatusDataBtn.addEventListener("click", async function () {
+        setSaveStateFlag(true);
+        SillyTavern.getContext().saveChat();
+    }, { passive: true });
+
     const personasStatusOpenPopupBtn = document.createElement("div");
     personasStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-users-cog", "interactable", "m-0");
     personasStatusOpenPopupBtn.title = "Open status for all the personas with status";
     personasStatusOpenPopupBtn.dataset.i18n = "Open status for all the personas with status";
-    personasStatusOpenPopupBtn.addEventListener("click", async () => {
+    personasStatusOpenPopupBtn.addEventListener("click", async function () {
         const metadata = chat_metadata.stat_us_maximus.filter(s => s.is_user);
         const users = [];
 
@@ -1355,7 +1374,7 @@ function initButtons() {
     personaStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-user-cog", "interactable", "m-0");
     personaStatusOpenPopupBtn.title = "Open status for the active persona";
     personaStatusOpenPopupBtn.dataset.i18n = "Open status for the active persona";
-    personaStatusOpenPopupBtn.addEventListener("click", async () => {
+    personaStatusOpenPopupBtn.addEventListener("click", async function () {
         const user = getUser();
 
         // @ts-ignore
@@ -1368,7 +1387,7 @@ function initButtons() {
     charStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-table", "interactable", "m-0");
     charStatusOpenPopupBtn.title = "Open status for the active character";
     charStatusOpenPopupBtn.dataset.i18n = "Open status for the active character";
-    charStatusOpenPopupBtn.addEventListener("click", async () => {
+    charStatusOpenPopupBtn.addEventListener("click", async function () {
         // @ts-ignore
         if (this_chid === undefined) return toastr.warning(t`An active character to edit could not be found`);
 
@@ -1382,7 +1401,7 @@ function initButtons() {
 
     const charStatusMenu = document.createElement("div");
     charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px", "standoutHeader", "p-5px");
-    charStatusMenu.append(charStatusSpan, charStatusOpenPopupBtn, personaStatusOpenPopupBtn, personasStatusOpenPopupBtn);
+    charStatusMenu.append(charStatusSpan, saveStatusDataBtn, charStatusOpenPopupBtn, personaStatusOpenPopupBtn, personasStatusOpenPopupBtn);
 
     const charStatusContainer = document.createElement("div");
     charStatusContainer.classList.add("stat-us-max-custom-css");
@@ -1398,8 +1417,14 @@ function initButtons() {
     groupStatusContainer.firstElementChild.classList.add("border", "border-faded");
     groupStatusContainer.firstElementChild.classList.remove("separator-bottom");
 
+    const groupSaveStatusDataBtn = groupStatusContainer.querySelector('.menu_button.fa-floppy-disk');
+    groupSaveStatusDataBtn.addEventListener("click", function () {
+        setSaveStateFlag(true);
+        SillyTavern.getContext().saveChat();
+    }, { passive: true });
+
     const groupPersonasBtn = groupStatusContainer.querySelector('.menu_button.fa-users-cog');
-    groupPersonasBtn.addEventListener("click", async () => {
+    groupPersonasBtn.addEventListener("click", async function () {
         const metadata = chat_metadata.stat_us_maximus.filter(s => s.is_user);
         const users = [];
 
@@ -1416,7 +1441,7 @@ function initButtons() {
     }, {passive: true});
 
     const groupPersonaBtn = groupStatusContainer.querySelector('.menu_button.fa-user-cog');
-    groupPersonaBtn.addEventListener("click", async () => {
+    groupPersonaBtn.addEventListener("click", async function () {
         const user = getUser();
 
         // @ts-ignore
@@ -1428,7 +1453,7 @@ function initButtons() {
     /** @type {HTMLElement} */const groupMembersButton = groupStatusContainer.querySelector('.menu_button.fa-table');
     groupMembersButton.title = "Open status for all group members";
     groupMembersButton.dataset.i18n = "Open status for all group members";
-    groupMembersButton.addEventListener("click", async () => {
+    groupMembersButton.addEventListener("click", async function () {
         const chars = getActiveParticipants([{avatar: user_avatar}]);
 
         // @ts-ignore
