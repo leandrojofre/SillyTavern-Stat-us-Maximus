@@ -74,6 +74,20 @@ export function startListeners() {
         if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
     });
 
+    eventSource.on(event_types.CHARACTER_RENAMED_IN_PAST_CHAT, function (currentChat, oldAvatar, newAvatar) {
+        log("CHARACTER_RENAMED_IN_PAST_CHAT", currentChat, oldAvatar, newAvatar);
+
+        const metadata = currentChat[0]?.chat_metadata ?? false;
+        if (!metadata) return;
+        if (!metadata?.stat_us_maximus) metadata.stat_us_maximus = [];
+
+        metadata.stat_us_maximus = metadata.stat_us_maximus.map(stat => {
+            if (String(stat.avatar) === String(oldAvatar)) stat.avatar = String(newAvatar);
+
+            return stat;
+        });
+    });
+
     eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, async (...args) => {
         log("CHARACTER_MESSAGE_RENDERED", args);
         fetchStatus();
