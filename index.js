@@ -437,6 +437,7 @@ function addTracker(status, character) {
                         <span class="stat-us-max-chat-title">${character.name}</span>
                     </span>
                     <div class="d-flex flex-center">
+                        <div class="menu_button menu_button_icon fa-solid fa-arrows-rotate interactable m-0 px-10px" title="Refresh the block display and macros" data-i18n="[title]Refresh the block display and macros"></div>
                         <div class="menu_button menu_button_icon fa-solid fa-floppy-disk interactable m-0 px-10px" title="Force Status metadata to save" data-i18n="[title]Force Status metadata to save"></div>
                         <div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0"></div>
                         <div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0"></div>
@@ -485,6 +486,10 @@ function addTracker(status, character) {
     statusTable.querySelector(".menu_button.fa-floppy-disk").addEventListener("click", async function () {
         setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
+    }, { passive: true });
+
+    statusTable.querySelector(".menu_button.fa-arrows-rotate").addEventListener("click", async function () {
+        addTracker(status, character);
     }, { passive: true });
 
     statusTable.querySelector(".menu_button.fa-pen").addEventListener("click", async function () {
