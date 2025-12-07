@@ -1,4 +1,4 @@
-import { deleteCharTracker, setSaveStateFlag } from "../../index.js";
+import { deleteCharTracker, extensionSettings, setSaveStateFlag } from "../../index.js";
 import { chat, chat_metadata, extension_prompt_roles } from "../../../../../../script.js";
 import { t } from "../../../../../i18n.js";
 import { un_escapeNewlines } from "./popups.js";
@@ -292,8 +292,8 @@ export async function updateCharEntry(character, entry_uid, formData, doSaveData
         altValue.value = entry.value;
         altValue.key = formData.get("alt_key") ?? altValue.key;
 
-        setSaveStateFlag(doSaveData);
-        if (doSaveData) SillyTavern.getContext().saveChat();
+        setSaveStateFlag(extensionSettings.autoSaveMetadata === true || doSaveData);
+        if (extensionSettings.autoSaveMetadata === true || doSaveData) SillyTavern.getContext().saveChat();
 
         return entry;
     } catch (error) {

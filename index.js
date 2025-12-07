@@ -144,7 +144,7 @@ export function destroyElement(element) {
  * @param {boolean} state
  */
 export function setSaveStateFlag(state) {
-    const nextState = state ? "transparent" : "red";
+    const nextState = state ? "var(--SmartThemeBlurTintColor)" : "red";
 
     document.documentElement.style.setProperty('--stum-save-state-color', nextState);
 }
@@ -1157,19 +1157,19 @@ const settingsCallbacks = {
     rangeInputWidthTimeout: undefined,
 
     /**	Triggers on editNumbersFromChat change. */
-    editNumbersFromChat: () => {
+    editNumbersFromChat: function () {
         fetchStatus({forceUIUpdate: true});
     },
 
     /**	Triggers on hideInputLabels change. */
-    hideInputLabels: () => {
+    hideInputLabels: function () {
         const newDisplay = extensionSettings.hideInputLabels ? 'none' : 'block';
 
         document.documentElement.style.setProperty('--stum-input-label-display', newDisplay);
     },
 
     /**	Triggers on rangeInputWidth change. */
-    rangeInputWidth: () => {
+    rangeInputWidth: function () {
         clearTimeout(settingsCallbacks.rangeInputWidthTimeout);
 
         const newWidth = String($("#stat-us-max-range-input-width").val());
@@ -1180,12 +1180,20 @@ const settingsCallbacks = {
     },
 
     /**	Triggers on showWhiteSpaces change. */
-    showWhiteSpaces: () => {
+    showWhiteSpaces: function () {
         document
         .querySelectorAll('#chat .stat-us-max-custom-css .text-quote .value')
         .forEach((/**@type {HTMLSpanElement}*/span) =>
             span.classList.toggle("show-spaces", extensionSettings.showWhiteSpaces)
         );
+    },
+
+    /**	Triggers on autoSaveMetadata change. */
+    autoSaveMetadata: function () {
+        if (extensionSettings.autoSaveMetadata) {
+            setSaveStateFlag(true);
+            SillyTavern.getContext().saveChat();
+        }
     }
 }
 
