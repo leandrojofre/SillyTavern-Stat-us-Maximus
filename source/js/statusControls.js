@@ -3,6 +3,18 @@ import { chat, chat_metadata, extension_prompt_roles } from "../../../../../../s
 import { t } from "../../../../../i18n.js";
 import { un_escapeNewlines } from "./popups.js";
 
+/** @type {Function} */
+toastr.error
+
+/** @type {Function} */
+toastr.warning
+
+/** @type {Function} */
+toastr.info
+
+/** @type {Function} */
+toastr.success
+
 export function getFreeDataUid(data) {
     if (!data?.length) return 0;
 
@@ -40,11 +52,11 @@ export function addCharAltValue(character, entry_uid, {value = "", key = ""} = {
 
         entry.alt_values.push(newAlt);
 
+        setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
 
         return newAlt;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         console.error(error.message);
 
@@ -66,7 +78,6 @@ export function getCharAltValue(character, entry_uid, alt_uid) {
 
         return alt;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         console.error(error.message);
 
@@ -91,11 +102,11 @@ export function updateCharAltValue(character, entry_uid, alt_uid, formData) {
 
         if (entry.value_uid === alt.uid) entry.value = alt.value;
 
+        setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
 
         return alt;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         console.error(error.message);
 
@@ -119,11 +130,11 @@ export function removeCharAltValue(character, entry_uid, alt_uid) {
             entry.value_uid = entry.alt_values[0].uid;
         }
 
+        setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
 
         return true;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to delete Status Metadata: ${error.message}`);
         console.error(error.message);
 
@@ -179,11 +190,11 @@ export function addCharEntry(character, entry_key = "", entry_value = "") {
 
         char_status.entries.push(newEntry);
 
+        setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
 
         return newEntry;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         console.error(error.message);
 
@@ -211,9 +222,9 @@ export function refreshCharEntryDisplay(character, display_order) {
 
         char_status.entries = ordered_data;
 
+        setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         console.error(error.message);
     }
@@ -233,7 +244,6 @@ export function getCharEntry(character, entry_uid) {
 
         return entry;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         console.error(error.message);
 
@@ -287,7 +297,6 @@ export async function updateCharEntry(character, entry_uid, formData, doSaveData
 
         return entry;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         console.error(error.message);
 
@@ -309,11 +318,11 @@ export function removeCharEntry(character, entry_uid = -1) {
             .filter(entry => entry.uid !== Number(entry_uid));
 
         getLastDisplayPosition(char_status.entries);
+        setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
 
         return true;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to delete Status Metadata: ${error.message}`);
         console.error(error.message);
 
@@ -340,11 +349,11 @@ export function createCharStatus(character, depth = -1) {
 
         chat_metadata.stat_us_maximus.push(status);
 
+        setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
 
         return status;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to create Status Metadata - Check the browser console for more details`);
         console.error(error);
 
@@ -383,11 +392,11 @@ export function updateCharStatus(character, formData) {
             status[key] = parsedValue;
         }
 
+        setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
 
         return status;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         console.error(error.message);
 
@@ -434,11 +443,11 @@ export function transferCharStatus(character, target, {deleteOriginal = false, o
 
         if (deleteOriginal) deleteCharStatus(character);
 
+        setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
 
         return true;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to transfer Status Metadata - Check the browser console for more details`);
         console.error(error);
 
@@ -453,12 +462,12 @@ export function deleteCharStatus(character) {
         chat_metadata.stat_us_maximus = chat_metadata.stat_us_maximus
             .filter(stat => stat.avatar !== character.avatar);
 
+        setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
         deleteCharTracker(character);
 
         return true;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to delete Status Metadata - Check the browser console for more details`);
         console.error(error);
 
@@ -570,11 +579,11 @@ export async function fillMissingMetadata() {
             }
         }
 
+        setSaveStateFlag(true);
         SillyTavern.getContext().saveChat();
 
         return true;
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to fill Status Metadata: ${error.message}`);
         console.error(error.message);
 
