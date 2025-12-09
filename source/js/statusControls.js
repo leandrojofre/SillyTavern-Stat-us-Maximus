@@ -292,8 +292,8 @@ export async function updateCharEntry(character, entry_uid, formData, doSaveData
         altValue.value = entry.value;
         altValue.key = formData.get("alt_key") ?? altValue.key;
 
-        setSaveStateFlag(extensionSettings.autoSaveMetadata === true || doSaveData);
-        if (extensionSettings.autoSaveMetadata === true || doSaveData) SillyTavern.getContext().saveChat();
+        setSaveStateFlag(extensionSettings.autoSaveMetadata || doSaveData);
+        if (extensionSettings.autoSaveMetadata || doSaveData) SillyTavern.getContext().saveChat();
 
         return entry;
     } catch (error) {

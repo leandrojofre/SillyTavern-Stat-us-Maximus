@@ -151,10 +151,6 @@ function getFullCharAvatar(status) {
     return getThumbnailUrl(status.is_user ? "persona" : "avatar", status.avatar);
 }
 
-const DEBOUNCE_MS = 400;
-let formDebounceTimer;
-let altKeyDebounceTimer;
-
 /**
  * @param {HTMLElement} target
  * @param {string} class_name
@@ -253,6 +249,7 @@ function addStatusRow({data = [], container, template, char}) {
         newRow.querySelector(".kill-switch").addEventListener("click", function () {
             const newState = toggleSwitch(newRow, ".kill-switch");
             inputEntryEnabled.value = String(newState);
+            newRow.dataset.modified = String(true);
         }, { passive: true });
 
         selectAltValues.addEventListener("change", function () {
@@ -810,7 +807,7 @@ export async function popupStatusSingleChar(char) {
             const forms = charForm.querySelectorAll('form');
 
             for (const form of forms)
-                if (form.dataset.modified === "true")
+                if (String(form.dataset.modified) === "true")
                     updateCharEntry(char, form.dataset.uid, new FormData(form), false);
 
             destroyElement(charForm);
@@ -847,7 +844,7 @@ export async function popupStatusMultiChar(chars) {
                 const char = chars.find(char => char.avatar === form.dataset.charAvatar);
 
                 if (!char) continue;
-                if (form.dataset.modified === "false") continue;
+                if (String(form.dataset.modified) === "false") continue;
 
                 updateCharEntry(char, form.dataset.uid, new FormData(form), false);
             }
