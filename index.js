@@ -1103,7 +1103,9 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
             if (entry.key !== "" && value !== "") promptValue += entry.separator;
 
             promptValue += value
-                .replaceAll(/\/\/.*(\n|$)/g, "$1");
+                .replaceAll(/\/\/.*(?=\}\})/g, "")
+                .replaceAll(/\/\/.*(?=\n)/g, "")
+                .replaceAll(/\/\/.*(?=$)/g, "");
         };
 
         if (!promptValue) continue;
