@@ -511,7 +511,7 @@ function addTracker(status, character) {
     }, {passive: true});
 
     const createInputs = (/**@type {String}*/text, entry_uid) => {
-        const parsedText = lodash.escape(substituteParams(processMacros(text, {char: character, processInputs: false}))).replaceAll(/\n/g, "<br>");
+        const parsedText = lodash.escape(processMacros(text, {char: character, processInputs: false, removeComments: false})).replaceAll(/\n/g, "<br>");
 
         if (!extensionSettings.editNumbersFromChat)
             return `<span class="text-line">${parsedText}</span>`;
@@ -965,7 +965,18 @@ function addTracker(status, character) {
     toggleVisibility(statusTableBody, status.is_collapsed ?? false);
 }
 
-export function processMacros(text, {char = undefined, processInputs = true} = {}) {
+
+/**
+ * Replaces macros in the given text with their corresponding values.
+ * @param {string} text
+ * @param {object} options
+ * @param {object} options.char
+ * @param {boolean} options.processInputs
+ * @param {boolean} options.removeComments
+ * @param {boolean} options.replaceAppMacros
+ * @returns {string}
+ */
+export function processMacros(text = '', {char = undefined, processInputs = true, removeComments = true, replaceAppMacros = true} = {}) {
     let newText = text;
 
     if (char) {
@@ -1005,6 +1016,14 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
                 newText = newText.replace(match, value);
             });
     }
+
+    if (replaceAppMacros)
+        newText = substituteParams(newText);
+
+    if (removeComments)
+        newText = newText
+            .replaceAll(/\/\/.*(?=\n)/g, "")
+            .replaceAll(/\/\/.*(?=$)/g, "");
 
     return newText;
 }
@@ -1102,10 +1121,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
 
             if (entry.key !== "" && value !== "") promptValue += entry.separator;
 
-            promptValue += value
-                .replaceAll(/\/\/.*(?=\}\})/g, "")
-                .replaceAll(/\/\/.*(?=\n)/g, "")
-                .replaceAll(/\/\/.*(?=$)/g, "");
+            promptValue += value;
         };
 
         if (!promptValue) continue;

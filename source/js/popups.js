@@ -454,10 +454,11 @@ export function getCharStatusForm(char) {
      * @param {HTMLElement[]?} elements - The title and data-i18n attribute for the button
      * @param {string[]?} classes - Array of class names to add to the button
      * @param {object?} data - Additional data attributes to set on the button
+     * @param {string?} element_type - Type of the HTML element to create
      * @returns {HTMLDivElement} The created button element
      */
-    const createRowWrapper = (elements = [], classes = [], data = {}) => {
-        const row = document.createElement("div");
+    const createRowWrapper = (elements = [], classes = [], data = {}, element_type = "div") => {
+        const row = document.createElement(element_type);
         row.classList.add("d-flex", ...classes);
 
         for (const [key, value] of Object.entries(data))
