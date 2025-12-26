@@ -81,6 +81,7 @@ div[name="templatesAndPopupsWrapper"] {
 .popup:has(.stat-us-max-popup) {
     background-color: var(--SmartThemeBotMesBlurTintColor);
     border-color: var(--stat-us-border-color) !important;
+    width: 90vw;
 }
 
 #stat-us-max-popup-multi-char {
