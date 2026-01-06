@@ -5,7 +5,7 @@ import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
-import { destroyElement, fetchStatusDebounced, extensionSettings } from "../../index.js";
+import { destroyElement, fetchStatusDebounced, extensionSettings, setSaveStateFlag } from "../../index.js";
 import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, updateCharEntry, getCharAltValue, flushCharAltValues, updateCharAltValue, evaluateEntry } from "./statusControls.js";
 
 /*  # TODO
@@ -404,7 +404,7 @@ function addStatusRow({data = [], container, template, char}) {
 }
 
 /**
- * @returns {HTMLDivElement}
+ * @returns {HTMLElement}
  */
 export function getCharStatusForm(char) {
     let metadata = getCharStatus(char);
@@ -455,7 +455,7 @@ export function getCharStatusForm(char) {
      * @param {string[]?} classes - Array of class names to add to the button
      * @param {object?} data - Additional data attributes to set on the button
      * @param {string?} element_type - Type of the HTML element to create
-     * @returns {HTMLDivElement} The created button element
+     * @returns {HTMLElement} The created button element
      */
     const createRowWrapper = (elements = [], classes = [], data = {}, element_type = "div") => {
         const row = document.createElement(element_type);
@@ -667,7 +667,7 @@ export function getCharStatusForm(char) {
         createInputLabel(textareaStatusPrefix),
         createInputLabel(textareaStatusSuffix),
         statusHeaderButtons
-    ], ["flex-end-start", "w-100", "gap-5px", "stat-wrapper"]);
+    ], ["flex-end-start", "w-100", "gap-5px", "stat-wrapper"], {modified: false, charAvatar: char.avatar}, "form");
 
     const statusHeaderForm = createRowWrapper([
         avatarContainer,
@@ -704,28 +704,34 @@ export function getCharStatusForm(char) {
         });
     }, { passive: true });
 
-    selectEntryRole.addEventListener("input", () => {
+    selectEntryRole.addEventListener("change", () => {
         metadata.role = Number(selectEntryRole.value);
+        statusHeaderInputs.dataset.modified = String(true);
     }, { passive: true });
 
     numberAreaForDepth.addEventListener("input", () => {
         metadata.forceDepth = parseValue(numberAreaForDepth.value);
+        statusHeaderInputs.dataset.modified = String(true);
     }, { passive: true });
 
     textareaStatusSeparator.addEventListener("input", () => {
         metadata.separator = un_escapeNewlines(textareaStatusSeparator.value);
+        statusHeaderInputs.dataset.modified = String(true);
     }, { passive: true });
 
     textareaDefEntrySeparator.addEventListener("input", () => {
         metadata.def_entry_separator = un_escapeNewlines(textareaDefEntrySeparator.value);
+        statusHeaderInputs.dataset.modified = String(true);
     }, { passive: true });
 
     textareaStatusPrefix.addEventListener("input", () => {
         metadata.prefix = un_escapeNewlines(textareaStatusPrefix.value);
+        statusHeaderInputs.dataset.modified = String(true);
     }, { passive: true });
 
     textareaStatusSuffix.addEventListener("input", () => {
         metadata.suffix = un_escapeNewlines(textareaStatusSuffix.value);
+        statusHeaderInputs.dataset.modified = String(true);
     }, { passive: true });
 
     cloneStatsBtn.addEventListener("click", async () => {
@@ -757,7 +763,7 @@ export function getCharStatusForm(char) {
             );
 
             refreshButton.addEventListener("click", () => {
-                /**@type {HTMLDivElement}*/
+                /**@type {HTMLElement}*/
                 const newContainer = getCharStatusForm(char);
                 const nodesArray = Array.from(newContainer.childNodes);
 
@@ -840,6 +846,7 @@ export async function popupStatusMultiChar(chars) {
         wide: true,
         onClose: async () => {
             const forms = content.querySelectorAll('form');
+            let headerInputsModified = false;
 
             for (const form of forms) {
                 const char = chars.find(char => char.avatar === form.dataset.charAvatar);
@@ -847,7 +854,17 @@ export async function popupStatusMultiChar(chars) {
                 if (!char) continue;
                 if (String(form.dataset.modified) === "false") continue;
 
-                updateCharEntry(char, form.dataset.uid, new FormData(form), false);
+                if (form.classList.contains("stat-us-max-popup-row"))
+                    updateCharEntry(char, form.dataset.uid, new FormData(form), false);
+
+                if (form.classList.contains("stat-wrapper"))
+                    headerInputsModified = true;
+            }
+
+            if (headerInputsModified) {
+                setSaveStateFlag(extensionSettings.autoSaveMetadata);
+
+                if (extensionSettings.autoSaveMetadata) SillyTavern.getContext().saveChat();
             }
 
             destroyElement(content);
