@@ -559,7 +559,7 @@ div[name="templatesAndPopupsWrapper"] {
     }
 
     .fake-input {
-        position: fixed;
+        position: absolute;
         top: 0;
         left: 0;
         pointer-events: none;
