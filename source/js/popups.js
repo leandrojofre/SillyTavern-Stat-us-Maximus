@@ -812,10 +812,23 @@ export async function popupStatusSingleChar(char) {
         wide: true,
         onClose: async () => {
             const forms = charForm.querySelectorAll('form');
+            let headerInputsModified = false;
 
-            for (const form of forms)
-                if (String(form.dataset.modified) === "true")
+            for (const form of forms) {
+                if (String(form.dataset.modified) !== "true") continue;
+
+                if (form.classList.contains("stat-us-max-popup-row"))
                     updateCharEntry(char, form.dataset.uid, new FormData(form), false);
+
+                if (form.classList.contains("stat-wrapper"))
+                    headerInputsModified = true;
+            }
+
+            if (headerInputsModified) {
+                setSaveStateFlag(extensionSettings.autoSaveMetadata);
+
+                if (extensionSettings.autoSaveMetadata) SillyTavern.getContext().saveChat();
+            }
 
             destroyElement(charForm);
         }
