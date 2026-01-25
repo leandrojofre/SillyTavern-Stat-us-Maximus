@@ -1,6 +1,7 @@
 :root {
     --stum-input-label-display: block;
     --stum-range-input-width: auto;
+    --stum-save-state-color: transparent;
 }
 
 #stat-us-max-settings-window div.flex-container.flex-column,
@@ -80,6 +81,7 @@ div[name="templatesAndPopupsWrapper"] {
 .popup:has(.stat-us-max-popup) {
     background-color: var(--SmartThemeBotMesBlurTintColor);
     border-color: var(--stat-us-border-color) !important;
+    width: 90vw;
 }
 
 #stat-us-max-popup-multi-char {
@@ -557,7 +559,7 @@ div[name="templatesAndPopupsWrapper"] {
     }
 
     .fake-input {
-        position: fixed;
+        position: absolute;
         top: 0;
         left: 0;
         pointer-events: none;
@@ -628,5 +630,9 @@ div[name="templatesAndPopupsWrapper"] {
         z-index: 40;
         overflow-y: scroll;
         max-height: 15vh;
+    }
+
+    .menu_button.fa-floppy-disk {
+        background-color: var(--stum-save-state-color);
     }
 }

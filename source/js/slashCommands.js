@@ -8,8 +8,8 @@ import { commonEnumProviders, enumIcons } from "../../../../../slash-commands/Sl
 import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/SlashCommandEnumValue.js";
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
-import { fetchStatusDebounced, getParticipant, log } from "../../index.js";
-import { addCharAltValue, addCharEntry, createCharStatus, deleteCharStatus, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, saveMetadataSTUM, updateCharAltValue, updateCharEntry, updateCharStatus } from "./statusControls.js";
+import { fetchStatusDebounced, getParticipant, setSaveStateFlag } from "../../index.js";
+import { addCharAltValue, addCharEntry, createCharStatus, deleteCharStatus, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry, updateCharStatus } from "./statusControls.js";
 
 /*  # TODO
     - [X] Command to create Status data
@@ -424,7 +424,7 @@ function commandSwitchEntryValue(args, value) {
         formData.set("value", alt.value);
         formData.set("value_uid", alt.uid);
 
-        updateCharEntry(character, parsed_uid, formData);
+        updateCharEntry(character, parsed_uid, formData, false);
         fetchStatusDebounced({forceUIUpdate: true});
 
         return "";
@@ -454,15 +454,9 @@ function commandCreateEntryAltValue(args, value = "") {
         if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
         if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
 
-        const alt = addCharAltValue(character, parsed_uid, String(value));
+        const alt = addCharAltValue(character, parsed_uid, {value: String(value), key: String(key)});
 
         if (!alt) return "";
-        if (Boolean(key)) {
-            const formData = new FormData();
-            formData.set("key", key);
-
-            updateCharAltValue(character, parsed_uid, alt.uid, formData);
-        }
 
         fetchStatusDebounced({forceUIUpdate: true});
 
@@ -636,7 +630,8 @@ function commandDeleteAltEntry(args, value) {
 async function commandDeleteChatStatus() {
     try {
         delete SillyTavern.getContext().chatMetadata.stat_us_maximus;
-        saveMetadataSTUM();
+        setSaveStateFlag(true);
+        SillyTavern.getContext().saveChat();
     } catch (error) {
         return "false";
     }

@@ -5,8 +5,8 @@ import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
-import { destroyElement, fetchStatusDebounced, extensionSettings } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, updateCharEntry, getCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, saveMetadataSTUM } from "./statusControls.js";
+import { destroyElement, fetchStatusDebounced, extensionSettings, setSaveStateFlag } from "../../index.js";
+import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, updateCharEntry, getCharAltValue, flushCharAltValues, updateCharAltValue, evaluateEntry } from "./statusControls.js";
 
 /*  # TODO
     - [X] Select for alt_values
@@ -42,26 +42,26 @@ export function un_escapeNewlines(str) {
         .replace(/\\r/g, "\r");
 }
 
-async function popupDeleteConfirm(del_name = "this") {
-    const delete_title = document.createElement("div");
-    delete_title.textContent = t`WARNING`;
-    delete_title.classList.add("fw-bolder");
+async function popupConfirmAction(del_name = "this") {
+    const confirm_title = document.createElement("div");
+    confirm_title.textContent = t`WARNING`;
+    confirm_title.classList.add("fw-bolder");
 
-    const delete_text = document.createElement("div");
-    delete_text.textContent = t`Are you sure want to delete ${del_name}?`;
+    const confirm_text = document.createElement("div");
+    confirm_text.textContent = t`Are you sure want to ${del_name}?`;
 
-    const delete_container = document.createElement("div");
-    delete_container.classList.add("d-flex", "flex-col", "flex-center", "w-100", "mb-5px", "gap-5px");
-    delete_container.append(delete_title, delete_text);
+    const confirm_container = document.createElement("div");
+    confirm_container.classList.add("d-flex", "flex-col", "flex-center", "w-100", "mb-5px", "gap-5px");
+    confirm_container.append(confirm_title, confirm_text);
 
-    const delete_css_block = document.createElement("div");
-    delete_css_block.classList.add("stat-us-max-custom-css");
-    delete_css_block.append(delete_container);
+    const confirm_css_block = document.createElement("div");
+    confirm_css_block.classList.add("stat-us-max-custom-css");
+    confirm_css_block.append(confirm_container);
 
-    return await callGenericPopup(delete_css_block, POPUP_TYPE.CONFIRM, "", {
+    return await callGenericPopup(confirm_css_block, POPUP_TYPE.CONFIRM, "", {
         okButton: t`Confirm`,
         cancelButton: t`Cancel`,
-        onClose: () => destroyElement(delete_css_block)
+        onClose: () => destroyElement(confirm_css_block)
     });
 };
 
@@ -135,12 +135,277 @@ async function clonePopup(char) {
     return success ? target : false;
 }
 
-function getFullCharAvatar(status) {
-    // TODO getThumbnailUrl - on next release
-    if (status.is_user) return getThumbnailUrl("persona", status.avatar); //"/thumbnail?type=persona&file=" + status.avatar;
-    else return getThumbnailUrl("avatar", status.avatar); //"/thumbnail?type=avatar&file=" + status.avatar;
+/**
+ * Set user clipboard to a stringified version of an object
+ * @param {object} obj - Object to be sent to the clipboard as text
+ * @returns {Promise<void>}
+ */
+function exportObjectToClipboard(obj = {}) {
+    let stringObj = JSON.stringify(obj);
+    stringObj = escapeNewlines(stringObj);
+
+    return copyText(stringObj);
 }
 
+function getFullCharAvatar(status) {
+    return getThumbnailUrl(status.is_user ? "persona" : "avatar", status.avatar);
+}
+
+/**
+ * @param {HTMLElement} target
+ * @param {string} class_name
+ * @returns {any}
+ */
+function el(target, class_name) {
+    return target.querySelector(class_name);
+}
+
+/**
+ * @param {HTMLElement} parent
+ * @param {string} selector
+ * @param {boolean?} forceState
+ * @returns {boolean}
+ */
+function toggleSwitch(parent, selector, forceState = null) {
+    // True if the final state is on
+    /** @type {HTMLElement} */
+    const elem = el(parent, selector);
+    const isOn = forceState === null ? !elem.classList.contains("fa-toggle-on") : forceState;
+    elem.classList.toggle("fa-toggle-on", isOn);
+    elem.classList.toggle("fa-toggle-off", !isOn);
+    return isOn;
+};
+
+function refreshAltValues(target, alts, select_uid = 0) {
+    const select = el(target, 'select[name="value_uid"]');
+
+    destroyElement(select.childNodes);
+
+    for (const alt_val of alts) {
+        const option = document.createElement("option");
+        option.value = String(alt_val.uid);
+        option.text = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
+
+        if (Number(select_uid) === alt_val.uid) {
+            option.selected = true;
+        }
+
+        select.append(option);
+    }
+};
+
+const evChange = new Event('change', { bubbles: true, cancelable: true });
+
+/**
+ * Add a new entry row to the active status popup block
+ * @param {object} options
+ * @param {object[]} options.data
+ * @param {HTMLElement} options.container
+ * @param {HTMLElement} options.template
+ * @param {object} options.char
+ * @returns void
+ */
+function addStatusRow({data = [], container, template, char}) {
+    for (const entryData of data) {
+        let entry = getCharEntry(char, entryData.uid);
+        const newRow = /** @type {HTMLFormElement} */ (template.cloneNode(true));
+
+        // @ts-ignore
+        if (!entry) return toastr.warning(t`Data for new entry is empty - index=${i}`);
+
+        newRow.dataset.uid = String(entry.uid);
+        newRow.dataset.charAvatar = char.avatar;
+        newRow.dataset.modified = String(false);
+        newRow.removeAttribute('action');
+
+        // Set Values
+        const inputEntryEnabled = /** @type {HTMLInputElement} */ (newRow.querySelector('input[name="enabled"]'));
+        inputEntryEnabled.value = String(entry.enabled);
+
+        const inputKey = /** @type {HTMLInputElement} */ (newRow.querySelector('input[name="key"]'));
+        inputKey.value = entry.key;
+
+        const textareaValue = /** @type {HTMLTextAreaElement} */ (newRow.querySelector('textarea[name="value"]'));
+        textareaValue.value = entry.value;
+
+        const inputSeparator = /** @type {HTMLInputElement} */ (newRow.querySelector('input[name="separator"]'));
+        inputSeparator.value = escapeNewlines(entry.separator);
+
+        const selectAltValues = /** @type {HTMLSelectElement} */ (newRow.querySelector('select[name="value_uid"]'));
+        selectAltValues.value = String(entry.value_uid);
+        selectAltValues.dataset.prevValue = String(entry.value_uid);
+        refreshAltValues(newRow, entry.alt_values, entry.value_uid);
+
+        const inputAltKey = /** @type {HTMLInputElement} */ (newRow.querySelector('input[name="alt_key"]'));
+        inputAltKey.value = entry.alt_values.find(alt => alt.uid === entry.value_uid).key;
+
+        if (!entry.enabled) toggleSwitch(newRow, ".kill-switch");
+
+        // Add listeners
+        newRow.addEventListener("input", function() {
+            newRow.dataset.modified = String(true);
+        }, { passive: true });
+
+        newRow.querySelector(".kill-switch").addEventListener("click", function () {
+            const newState = toggleSwitch(newRow, ".kill-switch");
+            inputEntryEnabled.value = String(newState);
+            newRow.dataset.modified = String(true);
+        }, { passive: true });
+
+        selectAltValues.addEventListener("change", function () {
+            const newValue = selectAltValues.value;
+
+            selectAltValues.value = selectAltValues.dataset.prevValue;
+            updateCharEntry(char, entry.uid, new FormData(newRow), false);
+
+            selectAltValues.value = newValue;
+            selectAltValues.dataset.prevValue = newValue;
+            const alt = getCharAltValue(char, entry.uid, selectAltValues.value);
+
+            inputAltKey.value = alt.key;
+            textareaValue.value = alt.value;
+        }, { passive: true });
+
+        inputAltKey.addEventListener("input", function () {
+            /** @type {HTMLOptionElement} */
+            const optionInDisplay = selectAltValues.querySelector(`option[value="${selectAltValues.value}"]`);
+            optionInDisplay.text = inputAltKey.value;
+        }, { passive: true });
+
+        newRow.querySelector(".add_alt_value").addEventListener("click", function () {
+            updateCharEntry(char, entry.uid, new FormData(newRow), false);
+
+            const newAlt = addCharAltValue(char, entry.uid);
+
+            if (!newAlt) return;
+
+            refreshAltValues(newRow, entry.alt_values, newAlt.uid);
+            selectAltValues.value = String(newAlt.uid);
+            selectAltValues.dispatchEvent(evChange);
+        }, { passive: true });
+
+        newRow.querySelector(".del_alt_value").addEventListener("click", async function () {
+            if (await popupConfirmAction("delete the alt value") === 0) return;
+
+            try {
+                updateCharEntry(char, entry.uid, new FormData(newRow), false);
+
+                const success = removeCharAltValue(char, entry.uid, selectAltValues.value);
+
+                if (!success) return;
+
+                entry = getCharEntry(char, entry.uid);
+                const firstAlt = entry.alt_values[0];
+
+                refreshAltValues(newRow, entry.alt_values, firstAlt.uid);
+                selectAltValues.value = String(firstAlt.uid);
+                selectAltValues.dataset.prevValue = String(firstAlt.uid);
+                inputAltKey.value = firstAlt.key;
+                textareaValue.value = firstAlt.value;
+            } catch (error) {
+                // ...
+            }
+        }, { passive: true });
+
+        newRow.querySelector(".menu_button.import").addEventListener("click", async function() {
+            if (await popupConfirmAction("overwrite the data of this entry") === 0) return;
+
+            let newEntry;
+
+            if (!navigator.clipboard)
+                return toastr.warning(t`Clipboard API not available in this context.`);
+
+            try {
+                newEntry = await navigator.clipboard.readText();
+                newEntry = JSON.parse(newEntry);
+            } catch (error) {
+                console.error('Error reading clipboard:', error);
+                return toastr.warning(t`Failed to read clipboard text. Make sure you granted permissions and the text is a JSON object.`);
+            }
+
+            if (!newEntry) return toastr.warning(t`Your clipboard has wrong metadata format: JSON expected`);
+            if (!evaluateEntry(newEntry)) return;
+
+            const newSelect = {
+                value_uid: false,
+                alt_values: []
+            };
+
+            for (const [k, v] of Object.entries(newEntry)) {
+                if (k === "display_position" || k === "uid") continue;
+
+                if (k === "alt_values" || k === "value_uid") {
+                    newSelect[k] = v;
+                    continue;
+                }
+
+                /** @type {HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement} */
+                const input = newRow.querySelector(`[name="${k}"]`);
+                input.value = String(v);
+            }
+
+            flushCharAltValues(char, entry.uid, true);
+
+            entry = getCharEntry(char, entry.uid);
+
+            const formDataFirstEntry = new FormData();
+            formDataFirstEntry.set("key", newSelect.alt_values[0].key);
+            formDataFirstEntry.set("value", newSelect.alt_values[0].value);
+            updateCharAltValue(char, entry.uid, entry.alt_values[0].uid, formDataFirstEntry);
+
+            for (const alt of newSelect.alt_values.slice(1))
+                addCharAltValue(char, entry.uid, {value: alt.value, key: alt.key});
+
+            entry = getCharEntry(char, entry.uid);
+
+            newSelect.value_uid = entry.value_uid;
+            newSelect.alt_values = entry.alt_values;
+            const selectedAlt = newSelect.alt_values.find(alt => alt.uid === newSelect.value_uid);
+
+            toggleSwitch(newRow, ".kill-switch", newEntry.enabled);
+            refreshAltValues(newRow, newSelect.alt_values, selectedAlt.uid);
+            selectAltValues.value = String(selectedAlt.uid);
+            selectAltValues.dataset.prevValue = String(selectedAlt.uid);
+            inputAltKey.value = String(selectedAlt.key);
+
+            updateCharEntry(char, entry.uid, new FormData(newRow), false);
+        }, { passive: true });
+
+        newRow.querySelector(".menu_button.export").addEventListener("click", async function() {
+            const currentEntry = getCharEntry(char, entry.uid);
+
+            await exportObjectToClipboard(currentEntry);
+        }, { passive: true });
+
+        newRow.querySelectorAll(".macro_template").forEach((/**@type {HTMLDivElement}*/btn) => {
+            btn.addEventListener("click", async (e) => {
+                const macroType = /**@type {HTMLDivElement}*/(e.currentTarget).dataset.macroType;
+                let macroTemplate = "";
+
+                if (macroType === "text") macroTemplate = "{{text}}";
+                if (macroType === "number") macroTemplate = "{{number}}";
+                if (macroType === "boolean") macroTemplate = "{{boolean::true::true::false}}";
+                if (macroType === "range") macroTemplate = "{{range::0::100::1::0}}";
+
+                if (extensionSettings.altMacroTemplateBehavior) textareaValue.value += macroTemplate;
+                else await copyText(macroTemplate);
+            }, { passive: true });
+        });
+
+        newRow.querySelector(".delete-row").addEventListener("click", async function () {
+            if (await popupConfirmAction("delete the alt value") === 0) return;
+
+            removeCharEntry(char, entry.uid);
+            destroyElement(newRow);
+        }, { passive: true });
+
+        container.append(newRow);
+    }
+}
+
+/**
+ * @returns {HTMLElement}
+ */
 export function getCharStatusForm(char) {
     let metadata = getCharStatus(char);
 
@@ -165,16 +430,6 @@ export function getCharStatusForm(char) {
         return labelTemplate;
     }
 
-    const createButtonsWrapper = (/**@type {HTMLElement[]}*/buttons, lessPadding) => {
-        const buttonsWrapper = document.createElement("div");
-        buttonsWrapper.classList.add("d-flex", "flex-center-start", "buttons-wrapper");
-        buttonsWrapper.append(...buttons);
-
-        if (lessPadding) buttonsWrapper.classList.add("gap-5px");
-
-        return buttonsWrapper;
-    }
-
     /**
      * Creates a button element with specified classes and title.
      * @param {string?} title - The title and data-i18n attribute for the button
@@ -192,6 +447,27 @@ export function getCharStatusForm(char) {
             button.dataset[key] = value;
 
         return button;
+    };
+
+    /**
+     * Creates a button element with specified classes and title.
+     * @param {HTMLElement[]?} elements - The title and data-i18n attribute for the button
+     * @param {string[]?} classes - Array of class names to add to the button
+     * @param {object?} data - Additional data attributes to set on the button
+     * @param {string?} element_type - Type of the HTML element to create
+     * @returns {HTMLElement} The created button element
+     */
+    const createRowWrapper = (elements = [], classes = [], data = {}, element_type = "div") => {
+        const row = document.createElement(element_type);
+        row.classList.add("d-flex", ...classes);
+
+        for (const [key, value] of Object.entries(data))
+            row.dataset[key] = value;
+
+        for (const elem of elements)
+            row.append(elem);
+
+        return row;
     };
 
     const escapedCharName = lodash.escape(char.name);
@@ -271,38 +547,6 @@ export function getCharStatusForm(char) {
     const compressEntriesBtn = createButton("Compress all entries", ["fa-compress"]);
     const newStatBtn = createButton(`Add an status to ${escapedCharName}`, ["fa-plus"]);
 
-    const statInputsWrapper = document.createElement("div");
-    statInputsWrapper.classList.add("d-flex", "flex-end-start", "w-100", "gap-5px", "stat-wrapper");
-    statInputsWrapper.append(
-        createInputLabel(selectEntryRole),
-        createInputLabel(numberAreaForDepth),
-        createInputLabel(textareaStatusSeparator),
-        createInputLabel(textareaDefEntrySeparator),
-        createInputLabel(textareaStatusPrefix),
-        createInputLabel(textareaStatusSuffix),
-        createButtonsWrapper([
-            deleteStatsBtn,
-            cloneStatsBtn,
-            expandEntriesBtn,
-            compressEntriesBtn,
-            newStatBtn
-        ], true)
-    );
-
-    const contentHeaderWrapper = document.createElement("div");
-    contentHeaderWrapper.classList.add("d-flex", "flex-center-start", "w-100", "py-5px");
-    contentHeaderWrapper.append(
-        avatarContainer,
-        statInputsWrapper
-    );
-
-    const wrapper = document.createElement("div");
-    wrapper.classList.add("d-flex", "flex-col", "flex-start-center", "gap-5px");
-    wrapper.append(
-        charName,
-        contentHeaderWrapper
-    );
-
     /** Create input template */
     /** - Key */
     const dragHandle = document.createElement("span");
@@ -340,18 +584,6 @@ export function getCharStatusForm(char) {
     deleteStatRowBtn.dataset.i18n = "Delete Status entry";
     deleteStatRowBtn.classList.add("menu_button", "fa-fw", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "delete-row", "big-button");
 
-    const drawerHeader = document.createElement("div");
-    drawerHeader.classList.add("inline-drawer-header", "key", "w-100", "d-flex", "flex-center", "p-0");
-    drawerHeader.append(
-        dragHandle,
-        drawerToggle,
-        enableRowToggle,
-        enableRowBtn,
-        textareaKey,
-        textareaSeparator,
-        deleteStatRowBtn
-    );
-
     /** - Value */
     const selectAltValues = document.createElement("select");
     selectAltValues.ariaPlaceholder = t`Select entry description`;
@@ -370,215 +602,90 @@ export function getCharStatusForm(char) {
     warningAltKey.title = "This is only used in the prompt if description is empty";
     warningAltKey.dataset.i18n = "This is only used in the prompt if description is empty";
 
-    const settingsInputs = document.createElement("div");
-    settingsInputs.classList.add("d-flex", "flex-end-start");
-    settingsInputs.append(
-        createInputLabel(selectAltValues, "mw-25"),
-        createInputLabel(textareaAltKey, "mw-25"),
-        createButtonsWrapper([
-            warningAltKey,
-            createButton("Add alt descriptions", ["big-button", "fa-plus", "add_alt_value"]),
-            createButton("Delete current alt description", ["big-button", "fa-trash-can", "del_alt_value", "redWarningBG"]),
-            createButton("Add template for text macro", ["big-button", "fa-t", "macro_template", "px-5px"], {macroType: "text"}),
-            createButton("Add template for number macro", ["big-button", "fa-n", "macro_template", "px-5px"], {macroType: "number"}),
-            createButton("Add template for boolean macro", ["big-button", "fa-b", "macro_template", "px-5px"], {macroType: "boolean"}),
-            createButton("Add template for range macro", ["big-button", "fa-r", "macro_template", "px-5px"], {macroType: "range"}),
-        ])
-    );
-
     const textareaValue = document.createElement("textarea");
     textareaValue.name = "value";
     textareaValue.placeholder = t`Entry description...`;
     textareaValue.classList.add("text_pole", "m-0");
 
-    const drawerContentContainer = document.createElement("div");
-    drawerContentContainer.classList.add("d-flex", "flex-col");
-    drawerContentContainer.append(settingsInputs, textareaValue);
+    /** - Key/Value Block */
+    const entryBodyToolButtons = createRowWrapper([
+        warningAltKey,
+        createButton("Add alt descriptions", ["big-button", "fa-plus", "add_alt_value"]),
+        createButton("Delete current alt description", ["big-button", "fa-trash-can", "del_alt_value", "redWarningBG"]),
+        createButton("Import entry from clipboard", ["big-button", "fa-arrow-right-to-file", "import", "px-5px"]),
+        createButton("Export entry from clipboard", ["big-button", "fa-arrow-right-from-file", "export", "px-5px"]),
+        createButton("Add template for text macro", ["big-button", "fa-t", "macro_template", "px-5px"], {macroType: "text"}),
+        createButton("Add template for number macro", ["big-button", "fa-n", "macro_template", "px-5px"], {macroType: "number"}),
+        createButton("Add template for boolean macro", ["big-button", "fa-b", "macro_template", "px-5px"], {macroType: "boolean"}),
+        createButton("Add template for range macro", ["big-button", "fa-r", "macro_template", "px-5px"], {macroType: "range"}),
+    ], ["flex-center-start", "buttons-wrapper"]);
+
+    const entryBodyToolbar = createRowWrapper([
+        createInputLabel(selectAltValues, "mw-25"),
+        createInputLabel(textareaAltKey, "mw-25"),
+        entryBodyToolButtons
+    ], ["flex-end-start"])
 
     const drawerContent = document.createElement("div");
     drawerContent.classList.add("inline-drawer-content", "value", "w-100", "p-0", "mb-5px");
-    drawerContent.append(drawerContentContainer);
+    drawerContent.append(
+        createRowWrapper([
+            entryBodyToolbar,
+            textareaValue
+        ], ["flex-col"])
+    );
 
-    /** - Key/Value Block */
     const formRow = document.createElement("form");
     formRow.classList.add("stat-us-max-popup-row", "d-flex", "flex-col", "inline-drawer");
-    formRow.append(drawerHeader, drawerContent);
+    formRow.append(
+        createRowWrapper([ // Drawer Header
+            dragHandle,
+            drawerToggle,
+            enableRowToggle,
+            enableRowBtn,
+            textareaKey,
+            textareaSeparator,
+            deleteStatRowBtn
+        ], ["inline-drawer-header", "key", "w-100", "flex-center", "p-0"]),
+        drawerContent // Drawer Body
+    );
 
     /** Create Menu container and assemble Menu */
-    const content = document.createElement("div");
-    content.classList.add("d-flex", "flex-col", "gap-5px", "pt-5px");
+    const statusHeaderButtons = createRowWrapper([
+        deleteStatsBtn,
+        cloneStatsBtn,
+        expandEntriesBtn,
+        compressEntriesBtn,
+        newStatBtn
+    ], ["gap-5px", "flex-center-start", "buttons-wrapper"]);
 
-    const container = document.createElement("div");
-    container.dataset.char = metadata.avatar;
-    container.dataset.isUser = metadata.is_user;
-    container.classList.add("stat-us-max-popup");
-    container.append(wrapper, content);
+    const statusHeaderInputs = createRowWrapper([
+        createInputLabel(selectEntryRole),
+        createInputLabel(numberAreaForDepth),
+        createInputLabel(textareaStatusSeparator),
+        createInputLabel(textareaDefEntrySeparator),
+        createInputLabel(textareaStatusPrefix),
+        createInputLabel(textareaStatusSuffix),
+        statusHeaderButtons
+    ], ["flex-end-start", "w-100", "gap-5px", "stat-wrapper"], {modified: false, charAvatar: char.avatar}, "form");
+
+    const statusHeaderForm = createRowWrapper([
+        avatarContainer,
+        statusHeaderInputs
+    ], ["flex-center-start", "w-100", "py-5px"]);
+
+    const statusHeader = createRowWrapper([
+        charName,
+        statusHeaderForm
+    ], ["flex-col", "flex-start-center", "gap-5px"]);
+
+    const content = createRowWrapper(undefined, ["flex-col", "gap-5px", "pt-5px"]);
+    const container = createRowWrapper([
+        statusHeader,
+        content
+    ], ["stat-us-max-popup", "flex-col"], {char: metadata.avatar, isUser: metadata.is_user});
 
     /** Add listeners */
-    const DEBOUNCE_MS = 400;
-    let formDebounceTimer;
-    let altKeyDebounceTimer;
-    let forceDepthDebounceTimer;
-    let separatorDebounceTimer;
-    let defEntrySeparatorDebounceTimer;
-    let prefixDebounceTimer;
-    let suffixDebounceTimer;
-
-    const el = (target, class_name) => target.querySelector(class_name);
-
-    /** @param {HTMLElement} el */
-    const toggleSwitch = (el, callback = (param) => {}) => {
-        // True if the final state is on
-        const state = !el.classList.contains("fa-toggle-on");
-        el.classList.toggle("fa-toggle-off", !state);
-        el.classList.toggle("fa-toggle-on", state);
-        callback(state);
-    };
-
-    const refreshAltValues = (target, alts, select_uid = 0) => {
-        const select = el(target, 'select[name="value_uid"]');
-
-        destroyElement(select.childNodes);
-
-        for (const alt_val of alts) {
-            const option = document.createElement("option");
-            option.value = String(alt_val.uid);
-            option.text = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
-
-            if (Number(select_uid) === alt_val.uid) {
-                option.selected = true;
-            }
-
-            select.append(option);
-        }
-    };
-
-    const evChange = new Event('change', { bubbles: true, cancelable: true });
-    const evInput = new Event('input', { bubbles: true, cancelable: true });
-
-    const addRow = ({amount = 1, data = []} = {}) => {
-        for (let i = 0; i < amount; i++) {
-            const newRow = /** @type {HTMLFormElement} */ (formRow.cloneNode(true));
-
-            // @ts-ignore
-            if (!data[i]) return toastr.warning(t`Data for new entry is empty - index=${i}`);
-
-            newRow.dataset.uid = data[i].uid;
-            newRow.removeAttribute('action');
-
-            // Set Values
-            el(newRow, 'input[name="key"]').value = data[i].key;
-            el(newRow, 'input[name="separator"]').value = escapeNewlines(data[i].separator);
-            el(newRow, 'textarea[name="value"]').value = data[i].value;
-            el(newRow, 'input[name="enabled"]').value = data[i].enabled;
-            refreshAltValues(newRow, data[i].alt_values, data[i].value_uid);
-            el(newRow, 'select[name="value_uid"]').value = String(data[i].value_uid);
-            el(newRow, 'input[name="alt_key"]').value = data[i].alt_values.find(alt => alt.uid === data[i].value_uid).key;
-
-            if (!data[i].enabled) toggleSwitch(el(newRow, ".kill-switch"));
-
-            // Add listeners
-            newRow.addEventListener("submit", (e) => {
-                e.preventDefault();
-
-                const formData = new FormData(newRow);
-
-                updateCharEntry(char, data[i].uid, formData);
-            }, { passive: false });
-
-            newRow.addEventListener("input", () => {
-                clearTimeout(formDebounceTimer);
-
-                formDebounceTimer = window.setTimeout(() => newRow.requestSubmit(), DEBOUNCE_MS);
-            }, { passive: true });
-
-            el(newRow, 'select[name="value_uid"]').addEventListener("change", () => {
-                const alt = getCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
-
-                el(newRow, 'input[name="alt_key"]').value = alt.key;
-                el(newRow, 'textarea[name="value"]').value = alt.value;
-
-                newRow.dispatchEvent(evInput);
-            }, { passive: true });
-
-            el(newRow, ".delete-row").addEventListener("click", async () => {
-                if (await popupDeleteConfirm("the alt value") === 0) return;
-
-                removeCharEntry(char, data[i].uid);
-                destroyElement(newRow);
-            }, { passive: true });
-
-            el(newRow, ".kill-switch").addEventListener("click", () => {
-                toggleSwitch(el(newRow, ".kill-switch"), (state) => el(newRow, 'input[name="enabled"]').value = state);
-                newRow.requestSubmit();
-            }, { passive: true });
-
-            el(newRow, 'input[name="alt_key"]').addEventListener("keyup", () => {
-                clearTimeout(altKeyDebounceTimer);
-
-                altKeyDebounceTimer = window.setTimeout(() => refreshAltValues(
-                    newRow,
-                    getCharEntry(char, data[i].uid).alt_values,
-                    el(newRow, 'select[name="value_uid"]').value
-                ), DEBOUNCE_MS);
-            }, { passive: true });
-
-            el(newRow, ".add_alt_value").addEventListener("click", () => {
-                const newAlt = addCharAltValue(char, data[i].uid);
-
-                if (!newAlt) return;
-
-                refreshAltValues(newRow, getCharEntry(char, data[i].uid).alt_values, newAlt.uid);
-
-                el(newRow, 'select[name="value_uid"]').value = String(newAlt.uid);
-                el(newRow, 'select[name="value_uid"]').dispatchEvent(evChange);
-            }, { passive: true });
-
-            el(newRow, ".del_alt_value").addEventListener("click", async () => {
-                if (await popupDeleteConfirm("the alt value") === 0) return;
-
-                try {
-                    const success = removeCharAltValue(char, data[i].uid, el(newRow, 'select[name="value_uid"]').value);
-
-                    if (!success) return;
-
-                    const new_alts = getCharEntry(char, data[i].uid).alt_values;
-
-                    refreshAltValues(newRow, new_alts);
-
-                    el(newRow, 'select[name="value_uid"]').value = String(new_alts[0].uid);
-                    el(newRow, 'select[name="value_uid"]').dispatchEvent(evChange);
-                } catch (error) {
-                    // ...
-                }
-            }, { passive: true });
-
-            newRow.querySelectorAll(".macro_template").forEach((/**@type {HTMLDivElement}*/btn) => {
-                btn.addEventListener("click", (e) => {
-                    const macroType = /**@type {HTMLDivElement}*/(e.currentTarget).dataset.macroType;
-                    let macroTemplate = "";
-
-                    if (macroType === "text") macroTemplate = "{{text}}";
-                    if (macroType === "number") macroTemplate = "{{number}}";
-                    if (macroType === "boolean") macroTemplate = "{{boolean::true::true::false}}";
-                    if (macroType === "range") macroTemplate = "{{range::0::100::1::0}}";
-
-                    if (extensionSettings.altMacroTemplateBehavior) {
-                        const valueTextarea = el(newRow, 'textarea[name="value"]')
-                        valueTextarea.value += macroTemplate;
-                        valueTextarea.dispatchEvent(evInput);
-
-                        return;
-                    } else {
-                        copyText(macroTemplate);
-                    }
-                }, { passive: true });
-            });
-
-            content.append(newRow);
-        }
-    }
-
     expandEntriesBtn.addEventListener("click", () =>
         content.querySelectorAll(".inline-drawer-toggle.down").forEach((/**@type {HTMLElement}*/toggle) => toggle.click())
     , { passive: true });
@@ -589,53 +696,42 @@ export function getCharStatusForm(char) {
 
     newStatBtn.addEventListener("click", () => {
         const newEntry = addCharEntry(char, "", "");
-        addRow({data: [newEntry]});
+        addStatusRow({
+            data: [newEntry],
+            container: content,
+            template: formRow,
+            char: char
+        });
     }, { passive: true });
 
-    selectEntryRole.addEventListener("input", () => {
+    selectEntryRole.addEventListener("change", () => {
         metadata.role = Number(selectEntryRole.value);
-
-        saveMetadataSTUM();
+        statusHeaderInputs.dataset.modified = String(true);
     }, { passive: true });
 
     numberAreaForDepth.addEventListener("input", () => {
         metadata.forceDepth = parseValue(numberAreaForDepth.value);
-
-        clearTimeout(forceDepthDebounceTimer);
-
-        forceDepthDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
+        statusHeaderInputs.dataset.modified = String(true);
     }, { passive: true });
 
     textareaStatusSeparator.addEventListener("input", () => {
         metadata.separator = un_escapeNewlines(textareaStatusSeparator.value);
-
-        clearTimeout(separatorDebounceTimer);
-
-        separatorDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
+        statusHeaderInputs.dataset.modified = String(true);
     }, { passive: true });
 
     textareaDefEntrySeparator.addEventListener("input", () => {
         metadata.def_entry_separator = un_escapeNewlines(textareaDefEntrySeparator.value);
-
-        clearTimeout(defEntrySeparatorDebounceTimer);
-
-        defEntrySeparatorDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
+        statusHeaderInputs.dataset.modified = String(true);
     }, { passive: true });
 
     textareaStatusPrefix.addEventListener("input", () => {
         metadata.prefix = un_escapeNewlines(textareaStatusPrefix.value);
-
-        clearTimeout(prefixDebounceTimer);
-
-        prefixDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
+        statusHeaderInputs.dataset.modified = String(true);
     }, { passive: true });
 
     textareaStatusSuffix.addEventListener("input", () => {
         metadata.suffix = un_escapeNewlines(textareaStatusSuffix.value);
-
-        clearTimeout(suffixDebounceTimer);
-
-        suffixDebounceTimer = window.setTimeout(() => saveMetadataSTUM(), DEBOUNCE_MS);
+        statusHeaderInputs.dataset.modified = String(true);
     }, { passive: true });
 
     cloneStatsBtn.addEventListener("click", async () => {
@@ -645,7 +741,7 @@ export function getCharStatusForm(char) {
     }, { passive: true });
 
     deleteStatsBtn.addEventListener("click", async () => {
-        if (await popupDeleteConfirm(`${char.name}'s status data`) === 0) return;
+        if (await popupConfirmAction(`delete ${char.name}'s status data`) === 0) return;
 
         const success = deleteCharStatus(char);
 
@@ -667,7 +763,7 @@ export function getCharStatusForm(char) {
             );
 
             refreshButton.addEventListener("click", () => {
-                /**@type {HTMLDivElement}*/
+                /**@type {HTMLElement}*/
                 const newContainer = getCharStatusForm(char);
                 const nodesArray = Array.from(newContainer.childNodes);
 
@@ -682,43 +778,77 @@ export function getCharStatusForm(char) {
         }
     }, { passive: true });
 
+    /** Add def rows */
+    if (metadata.entries.length > 0) addStatusRow({
+        data: metadata.entries,
+        container: content,
+        template: formRow,
+        char: char
+    });
+
     // @ts-ignore
     $(content).sortable({
         items: '.stat-us-max-popup-row',
         delay: getSortableDelay(),
         handle: '.drag-handle',
-        stop: async function (_event, _ui) {
+        stop: function (_event, _ui) {
             const forms = content.querySelectorAll("form");
 
             refreshCharEntryDisplay(char, forms);
         },
     });
 
-    /** Add def rows */
-    if (metadata.entries.length > 0) addRow({amount: metadata.entries.length, data: metadata.entries});
-
     return container;
 }
 
 export async function popupStatusSingleChar(char) {
-    const container = await getCharStatusForm(char);
+    const charForm = await getCharStatusForm(char);
 
-    await callGenericPopup(container, POPUP_TYPE.TEXT, "", {
+    if (!charForm) return;
+
+    await callGenericPopup(charForm, POPUP_TYPE.TEXT, "", {
         okButton: t`Close Status`,
         allowVerticalScrolling: true,
         wide: true,
-        onClose: async () => destroyElement(container)
+        onClose: async () => {
+            const forms = charForm.querySelectorAll('form');
+            let headerInputsModified = false;
+
+            for (const form of forms) {
+                if (String(form.dataset.modified) !== "true") continue;
+
+                if (form.classList.contains("stat-us-max-popup-row"))
+                    updateCharEntry(char, form.dataset.uid, new FormData(form), false);
+
+                if (form.classList.contains("stat-wrapper"))
+                    headerInputsModified = true;
+            }
+
+            if (headerInputsModified) {
+                setSaveStateFlag(extensionSettings.autoSaveMetadata);
+
+                if (extensionSettings.autoSaveMetadata) SillyTavern.getContext().saveChat();
+            }
+
+            destroyElement(charForm);
+        }
     });
 
     fetchStatusDebounced({forceUIUpdate: true});
 }
 
+/**
+ * @param {object[]} chars
+ */
 export async function popupStatusMultiChar(chars) {
     const content = document.createElement("div");
     content.id = "stat-us-max-popup-multi-char";
 
     for (const char of chars) {
         const charForm = await getCharStatusForm(char);
+
+        if (!charForm) continue;
+
         charForm.classList.add("multi-char-popup");
         content.append(charForm);
     }
@@ -727,7 +857,31 @@ export async function popupStatusMultiChar(chars) {
         okButton: t`Close Status`,
         allowVerticalScrolling: true,
         wide: true,
-        onClose: async () => destroyElement(content)
+        onClose: async () => {
+            const forms = content.querySelectorAll('form');
+            let headerInputsModified = false;
+
+            for (const form of forms) {
+                const char = chars.find(char => char.avatar === form.dataset.charAvatar);
+
+                if (!char) continue;
+                if (String(form.dataset.modified) === "false") continue;
+
+                if (form.classList.contains("stat-us-max-popup-row"))
+                    updateCharEntry(char, form.dataset.uid, new FormData(form), false);
+
+                if (form.classList.contains("stat-wrapper"))
+                    headerInputsModified = true;
+            }
+
+            if (headerInputsModified) {
+                setSaveStateFlag(extensionSettings.autoSaveMetadata);
+
+                if (extensionSettings.autoSaveMetadata) SillyTavern.getContext().saveChat();
+            }
+
+            destroyElement(content);
+        }
     });
 
     fetchStatusDebounced({forceUIUpdate: true});
