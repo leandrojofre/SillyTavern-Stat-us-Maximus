@@ -150,7 +150,6 @@ div[name="templatesAndPopupsWrapper"] {
     --stat-us-border-color: var(--SmartThemeBorderColor);
     --stat-us-avatar-height: var(--avatar-base-height);
     --stat-us-avatar-border-radius: 50%;
-    --stat-us-range-margin-top: 5px;
     --stat-us-separator-bottom: linear-gradient(90deg, var(--transparent), color-mix(in srgb, var(--SmartThemeBodyColor), transparent 80%), var(--transparent)) 1;
     --stat-us-show-spaces-color: color-mix(in srgb, var(--SmartThemeBotMesBlurTintColor), var(--SmartThemeQuoteColor) 12%);
 
@@ -595,22 +594,20 @@ div[name="templatesAndPopupsWrapper"] {
         white-space: break-spaces;
     }
 
-    span.chat-input-editor {
+    .text-quote:has(~ input[type="range"]):hover {
+        cursor: pointer;
+    }
+
+    input[type="range"].chat-input-editor {
         display: inline-flex;
         vertical-align: middle;
         min-width: 5ch;
         width: var(--stum-range-input-width);
         max-width: unset;
+    }
 
-        input[type="range"] {
-            margin-top: var(--stat-us-range-margin-top) !important;
-        }
-
-        input[type="number"] {
-            padding: 2px 5px 0;
-            font-family: monospace;
-            border: unset;
-        }
+    input[type="range"].chat-input-editor:focus {
+        background: var(--SmartThemeQuoteColor);
     }
 
     .input-label {

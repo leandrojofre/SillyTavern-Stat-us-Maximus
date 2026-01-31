@@ -571,10 +571,14 @@ function addTracker(status, character) {
             const step = Number(props[2]) <= 0 ? 1 : props[2];
             const value = props[3];
             const input = `
-                <span class="d-flex flex-col flex-center gap-0 type-range chat-input-editor">
-                    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider" id="${characterName}-${entry_uid}-${inputID}" />
-                    <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input" data-for="${characterName}-${entry_uid}-${inputID}" id="counter-${characterName}-${entry_uid}-${inputID}" />
+                <span class="text-quote" id="${characterName}-${entry_uid}-${inputID}-display">
+                    <span class="value font-monospace">${value}</span>
+                    <span class="d-inline-flex gap-0 text-body cursor-pointer fs-normal">
+                        <span class="fa-solid fa-caret-left m-0 chat-input-icon select-none opacity-60"></span>
+                        <span class="fa-solid fa-caret-right m-0 chat-input-icon select-none"></span>
+                    </span>
                 </span>
+                <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="type-range chat-input-editor" id="${characterName}-${entry_uid}-${inputID}" />
             `;
 
             inputID++;
@@ -600,7 +604,7 @@ function addTracker(status, character) {
             let newMacro = "";
 
             if (chunk instanceof HTMLSpanElement) {
-                /**@type {HTMLInputElement}*/const inputNumber = chunk.querySelector('input[type="number"]');
+                /**@type {HTMLInputElement}*/const inputNumber = chunk.querySelector('input[type="range"]');
                 const min = inputNumber.min;
                 const max = inputNumber.max;
                 const step = inputNumber.step;
@@ -815,20 +819,65 @@ function addTracker(status, character) {
 
             el(newRow, el_target)
             .querySelectorAll('.chat-input-editor.type-range')
-            .forEach((/**@type {HTMLSpanElement}*/span) => {
-                /**@type {HTMLInputElement}*/const inputNumber = span.querySelector('input[type="number"]');
-                /**@type {HTMLInputElement}*/const inputRange = span.querySelector('input[type="range"]');
+            .forEach((/**@type {HTMLInputElement}*/inputRange) => {
+                /**@type {HTMLSpanElement}*/const fakeInput = inputRange.parentElement.querySelector(`#${inputRange.id}-display .value`);
 
-                span.addEventListener("input", (e) => {
+                inputRange.addEventListener("input", function(e) {
                     /**@type {HTMLInputElement}*/
                     // @ts-ignore
                     const original = e.target;
-                    inputNumber.value = original.value;
-                    inputRange.value = original.value;
+                    fakeInput.textContent = original.value;
 
                     el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
                     dispatchInput(form);
                 }, {passive: true});
+
+                inputRange.addEventListener("keypress", function(e) {
+                    const { key } = e;
+
+                    if (!["ArrowUp", "ArrowDown"].includes(key)) return;
+
+                    const nextInc = Number(inputRange.step);
+                    const min = Number(inputRange.min);
+                    const max = Number(inputRange.max);
+                    let direction = 1;
+
+                    if (key === "ArrowDown") direction = -1;
+
+                    const currentValue = Number(inputRange.value);
+                    const nextValue = currentValue + (nextInc * direction);
+
+                    if (nextValue < min) inputRange.value = min;
+                    else if (nextValue > max) inputRange.value = max;
+                    else inputRange.value = nextValue;
+
+                    dispatchInput(inputRange);
+                });
+
+                inputRange.addEventListener("wheel", async (e) => {
+                    if (!inputRange.matches(':focus')) return;
+
+                    if (e.cancelable) e.preventDefault();
+
+                    const nextInc = Number(inputRange.step);
+                    const min = Number(inputRange.min);
+                    const max = Number(inputRange.max);
+                    let direction = 1;
+
+                    if (e.deltaY === 0) return;
+                    if (e.deltaY > 0) direction = -1; // Wheel down
+
+                    const currentValue = Number(inputRange.value);
+                    const nextValue = currentValue + (nextInc * direction);
+
+                    if (nextValue < min) inputRange.value = min;
+                    else if (nextValue > max) inputRange.value = max;
+                    else inputRange.value = nextValue;
+
+                    dispatchInput(inputRange);
+                }, {passive: false});
+
+                fakeInput.addEventListener("click", () => inputRange.focus());
             });
         }
 
