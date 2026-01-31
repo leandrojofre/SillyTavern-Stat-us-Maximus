@@ -603,17 +603,6 @@ function addTracker(status, character) {
             let index;
             let newMacro = "";
 
-            if (chunk instanceof HTMLSpanElement) {
-                /**@type {HTMLInputElement}*/const inputNumber = chunk.querySelector('input[type="range"]');
-                const min = inputNumber.min;
-                const max = inputNumber.max;
-                const step = inputNumber.step;
-                const value = inputNumber.value;
-                index = ++countRange;
-                match = regexRangeInput;
-                newMacro = `{{range::${min}::${max}::${step}::${value}}}`;
-            }
-
             if (chunk instanceof HTMLTextAreaElement) {
                 const value = chunk.value;
                 index = ++countText;
@@ -623,6 +612,16 @@ function addTracker(status, character) {
 
 
             if (chunk instanceof HTMLInputElement) {
+                if (chunk.classList.contains("type-range")) {
+                    const min = chunk.min;
+                    const max = chunk.max;
+                    const step = chunk.step;
+                    const value = chunk.value;
+                    index = ++countRange;
+                    match = regexRangeInput;
+                    newMacro = `{{range::${min}::${max}::${step}::${value}}}`;
+                }
+
                 if (chunk.classList.contains("type-number")) {
                     const value = chunk.value;
                     index = ++countNumber;
@@ -822,15 +821,14 @@ function addTracker(status, character) {
             .forEach((/**@type {HTMLInputElement}*/inputRange) => {
                 /**@type {HTMLSpanElement}*/const fakeInput = inputRange.parentElement.querySelector(`#${inputRange.id}-display .value`);
 
-                inputRange.addEventListener("input", function(e) {
-                    /**@type {HTMLInputElement}*/
-                    // @ts-ignore
-                    const original = e.target;
-                    fakeInput.textContent = original.value;
+                const updateInput = function() {
+                    fakeInput.textContent = inputRange.value;
 
                     el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
                     dispatchInput(form);
-                }, {passive: true});
+                };
+
+                $(inputRange).on('input', {passive: true}, updateInput);
 
                 inputRange.addEventListener("keypress", function(e) {
                     const { key } = e;
@@ -851,7 +849,7 @@ function addTracker(status, character) {
                     else if (nextValue > max) inputRange.value = max;
                     else inputRange.value = nextValue;
 
-                    dispatchInput(inputRange);
+                    updateInput();
                 });
 
                 inputRange.addEventListener("wheel", async (e) => {
@@ -874,7 +872,7 @@ function addTracker(status, character) {
                     else if (nextValue > max) inputRange.value = max;
                     else inputRange.value = nextValue;
 
-                    dispatchInput(inputRange);
+                    updateInput();
                 }, {passive: false});
 
                 fakeInput.addEventListener("click", () => inputRange.focus());
