@@ -604,6 +604,8 @@ div[name="templatesAndPopupsWrapper"] {
         min-width: 5ch;
         width: var(--stum-range-input-width);
         max-width: unset;
+        height: 1ch;
+        border-radius: 5px !important;
     }
 
     input[type="range"].chat-input-editor:focus {
