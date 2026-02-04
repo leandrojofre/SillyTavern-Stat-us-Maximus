@@ -571,14 +571,10 @@ function addTracker(status, character) {
             const step = Number(props[2]) <= 0 ? 1 : props[2];
             const value = props[3];
             const input = `
+                <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="type-range chat-input-editor" id="${characterName}-${entry_uid}-${inputID}" />
                 <span class="text-quote" id="${characterName}-${entry_uid}-${inputID}-display">
                     <span class="value font-monospace">${value}</span>
-                    <span class="d-inline-flex gap-0 text-body cursor-pointer fs-normal">
-                        <span class="fa-solid fa-caret-left m-0 chat-input-icon select-none opacity-60"></span>
-                        <span class="fa-solid fa-caret-right m-0 chat-input-icon select-none"></span>
-                    </span>
                 </span>
-                <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="type-range chat-input-editor" id="${characterName}-${entry_uid}-${inputID}" />
             `;
 
             inputID++;
