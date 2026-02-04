@@ -523,7 +523,7 @@ function addTracker(status, character) {
         newText = newText.replaceAll(regexTextInput, (match) => {
             const value = match.replaceAll(/((^{{text(::)?)|(}}$))/g, "").replaceAll("<br>", "\n");
             const input = `
-                <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
+                <span class="fa-solid fa-t m-0 chat-input-icon focus-button select-none cursor-pointer"></span>
                 <textarea type="text" class="type-text fake-input chat-input-editor mw-unset" data-pattern="^[^{}]*$" autocomplete="off" data-stee--handled="1" tabindex="-1">${value}</textarea>
                 <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? "show-spaces" : ""}">${value}</span></span>
             `;
@@ -535,7 +535,7 @@ function addTracker(status, character) {
         newText = newText.replaceAll(regexNumberInput, (match) => {
             const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
             const input = `
-                <span class="fa-solid fa-n m-0 chat-input-icon select-none cursor-pointer"></span>
+                <span class="fa-solid fa-n m-0 chat-input-icon focus-button select-none cursor-pointer"></span>
                 <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" data-pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0" />
                 <span class="text-quote">
                     <span class="value font-monospace">${value}</span>
@@ -573,6 +573,10 @@ function addTracker(status, character) {
             const input = `
                 <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="type-range chat-input-editor" id="${characterName}-${entry_uid}-${inputID}" />
                 <span class="text-quote" id="${characterName}-${entry_uid}-${inputID}-display">
+                    <span class="d-inline-flex gap-0 text-body input-arrows cursor-pointer fs-normal">
+                        <span class="fa-solid fa-caret-left m-0 chat-input-icon select-none opacity-60" data-direction="-1"></span>
+                        <span class="fa-solid fa-caret-right m-0 chat-input-icon select-none" data-direction="1"></span>
+                    </span>
                     <span class="value font-monospace">${value}</span>
                 </span>
             `;
@@ -816,6 +820,7 @@ function addTracker(status, character) {
             .querySelectorAll('.chat-input-editor.type-range')
             .forEach((/**@type {HTMLInputElement}*/inputRange) => {
                 /**@type {HTMLSpanElement}*/const fakeInput = inputRange.parentElement.querySelector(`#${inputRange.id}-display .value`);
+                /**@type {HTMLSpanElement}*/const inputArrows = inputRange.parentElement.querySelector(`#${inputRange.id}-display .input-arrows`);
 
                 const updateInput = function() {
                     fakeInput.textContent = inputRange.value;
@@ -860,6 +865,24 @@ function addTracker(status, character) {
 
                     if (e.deltaY === 0) return;
                     if (e.deltaY > 0) direction = -1; // Wheel down
+
+                    const currentValue = Number(inputRange.value);
+                    const nextValue = currentValue + (nextInc * direction);
+
+                    if (nextValue < min) inputRange.value = min;
+                    else if (nextValue > max) inputRange.value = max;
+                    else inputRange.value = nextValue;
+
+                    updateInput();
+                }, {passive: false});
+
+                inputArrows.addEventListener("click", function(e) {
+                    inputRange.focus();
+
+                    const direction = e.target.dataset.direction;
+                    const nextInc = Number(inputRange.step);
+                    const min = Number(inputRange.min);
+                    const max = Number(inputRange.max);
 
                     const currentValue = Number(inputRange.value);
                     const nextValue = currentValue + (nextInc * direction);
