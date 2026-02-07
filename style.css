@@ -361,6 +361,10 @@ div[name="templatesAndPopupsWrapper"] {
 
     .disabled {
         color: color-mix(in srgb, currentColor 40%, black);
+
+        .text-line {
+            pointer-events: none;
+        }
     }
 
     .w-auto {
