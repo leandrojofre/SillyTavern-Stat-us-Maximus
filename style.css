@@ -597,6 +597,11 @@ div[name="templatesAndPopupsWrapper"] {
     .text-line .value {
         white-space: break-spaces;
     }
+    
+    .text-line .value[data-empty]::after {
+        content: "...";
+        color: color-mix(in srgb, var(--SmartThemeQuoteColor) 50%, transparent);
+    }
 
     .text-quote:has(~ input[type="range"]):hover {
         cursor: pointer;

@@ -336,6 +336,8 @@ function renderCaret(span, text, caretPos, selectEnd = caretPos) {
 
     destroyElement(span.childNodes);
 
+    if (!text) span.setAttribute('data-empty', '');
+    else span.removeAttribute('data-empty');
     if (caretPos < 0) return span.textContent = text;
 
     const before = esc(text.slice(0, caretPos));
@@ -523,9 +525,8 @@ function addTracker(status, character) {
         newText = newText.replaceAll(regexTextInput, (match) => {
             const value = match.replaceAll(/((^{{text(::)?)|(}}$))/g, "").replaceAll("<br>", "\n");
             const input = `
-                <span class="fa-solid fa-t m-0 chat-input-icon focus-button select-none cursor-pointer"></span>
                 <textarea type="text" class="type-text fake-input chat-input-editor mw-unset" data-pattern="^[^{}]*$" autocomplete="off" data-stee--handled="1" tabindex="-1">${value}</textarea>
-                <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? "show-spaces" : ""}">${value}</span></span>
+                <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? 'show-spaces' : ''}" ${!value ? 'data-empty' : ''}>${value}</span></span>
             `;
 
             inputID++;
@@ -535,7 +536,6 @@ function addTracker(status, character) {
         newText = newText.replaceAll(regexNumberInput, (match) => {
             const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
             const input = `
-                <span class="fa-solid fa-n m-0 chat-input-icon focus-button select-none cursor-pointer"></span>
                 <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" data-pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0" />
                 <span class="text-quote">
                     <span class="value font-monospace">${value}</span>
@@ -708,77 +708,74 @@ function addTracker(status, character) {
                         dispatchInput(form);
                     }, {passive: true});
                 } else {
-                    const eventTargets = [input.nextElementSibling, input.previousElementSibling];
+                    /**@type {HTMLSpanElement} */
+                    const spanInput = input.nextElementSibling;
                     let lastValid = input.value;
                     let inputTimeout;
+                    let spanSelected = false;
+                    let incrementsPressed;
+                    let incrementsCooldown;
 
-                    eventTargets.forEach((/**@type {HTMLSpanElement} */span) => {
-                        let spanSelected = false;
-                        let incrementsPressed;
-                        let incrementsCooldown;
+                    spanInput.addEventListener("pointerdown", (e) => {
+                        if (spanSelected) return;
 
-                        span.addEventListener("pointerdown", (e) => {
-                            if (spanSelected) return;
+                        spanSelected = true;
+                    }, {passive: true});
 
-                            spanSelected = true;
+                    document.addEventListener("click", (e) => {
+                        clearInterval(incrementsPressed);
+                        clearTimeout(incrementsCooldown);
+
+                        if (!spanSelected) return;
+
+                        spanSelected = false;
+                        let selection;
+
+                        selection = getSelectedTextInElem(spanInput.querySelector('.value'));
+
+                        input.setSelectionRange(selection.start, selection.end);
+                        input.focus();
+                    }, {passive: true});
+
+                    if (input.classList.contains("type-number") && spanInput.classList.contains("text-quote")) {
+                        const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: false, cancelable: true});
+                        const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: false, cancelable: true});
+
+                        spanInput.addEventListener("wheel", async (e) => {
+                            if (!input.matches(':focus')) return;
+
+                            if (e.cancelable) e.preventDefault();
+
+                            let direction;
+
+                            if (e.deltaY === 0) return;
+                            if (e.deltaY < 0) direction = arrowUp;
+                            if (e.deltaY > 0) direction = arrowDown;
+
+                            setTimeout(() => input.dispatchEvent(direction), 10);
+                        }, {passive: false});
+
+                        /**@type {HTMLSpanElement}*/const minusButton = spanInput.querySelector('.fa-caret-left');
+                        /**@type {HTMLSpanElement}*/const plusButton = spanInput.querySelector('.fa-caret-right');
+
+                        minusButton.addEventListener("pointerdown", (e) => {
+                            if (e.button === 2) return;
+
+                            input.dispatchEvent(arrowDown);
+                            incrementsCooldown = setTimeout(() => {
+                                incrementsPressed = setInterval(() => input.dispatchEvent(arrowDown), 75);
+                            }, 300);
                         }, {passive: true});
 
-                        document.addEventListener("click", (e) => {
-                            clearInterval(incrementsPressed);
-                            clearTimeout(incrementsCooldown);
+                        plusButton.addEventListener("pointerdown", (e) => {
+                            if (e.button === 2) return;
 
-                            if (!spanSelected) return;
-
-                            spanSelected = false;
-                            let selection;
-
-                            if (span.classList.contains("chat-input-icon")) selection = {start: input.value.length, end: input.value.length};
-                            else selection = getSelectedTextInElem(span.querySelector('.value'));
-
-                            input.setSelectionRange(selection.start, selection.end);
-                            input.focus();
+                            input.dispatchEvent(arrowUp);
+                            incrementsCooldown = setTimeout(() => {
+                                incrementsPressed = setInterval(() => input.dispatchEvent(arrowUp), 75);
+                            }, 300);
                         }, {passive: true});
-
-                        if (input.classList.contains("type-number") && span.classList.contains("text-quote")) {
-                            const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: false, cancelable: true});
-                            const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: false, cancelable: true});
-
-                            span.addEventListener("wheel", async (e) => {
-                                if (!input.matches(':focus')) return;
-
-                                if (e.cancelable) e.preventDefault();
-
-                                let direction;
-
-                                if (e.deltaY === 0) return;
-                                if (e.deltaY < 0) direction = arrowUp;
-                                if (e.deltaY > 0) direction = arrowDown;
-
-                                setTimeout(() => input.dispatchEvent(direction), 10);
-                            }, {passive: false});
-
-                            /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-caret-left');
-                            /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-caret-right');
-
-                            minusButton.addEventListener("pointerdown", (e) => {
-                                if (e.button === 2) return;
-
-                                input.dispatchEvent(arrowDown);
-                                incrementsCooldown = setTimeout(() => {
-                                    incrementsPressed = setInterval(() => input.dispatchEvent(arrowDown), 75);
-                                }, 300);
-                            }, {passive: true});
-
-                            plusButton.addEventListener("pointerdown", (e) => {
-                                if (e.button === 2) return;
-
-                                input.dispatchEvent(arrowUp);
-                                incrementsCooldown = setTimeout(() => {
-                                    incrementsPressed = setInterval(() => input.dispatchEvent(arrowUp), 75);
-                                }, 300);
-                            }, {passive: true});
-                        }
-                    });
+                    }
 
                     input.addEventListener("input", () => {
                         if (input.dataset.pattern) {
