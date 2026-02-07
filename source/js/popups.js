@@ -327,14 +327,13 @@ function addStatusRow({data = [], container, template, char}) {
             if (!evaluateEntry(newEntry)) return;
 
             const newSelect = {
-                value_uid: false,
                 alt_values: []
             };
 
             for (const [k, v] of Object.entries(newEntry)) {
-                if (k === "display_position" || k === "uid") continue;
+                if (k === "display_position" || k === "uid" || k === "value_uid") continue;
 
-                if (k === "alt_values" || k === "value_uid") {
+                if (k === "alt_values") {
                     newSelect[k] = v;
                     continue;
                 }
@@ -351,6 +350,7 @@ function addStatusRow({data = [], container, template, char}) {
             const formDataFirstEntry = new FormData();
             formDataFirstEntry.set("key", newSelect.alt_values[0].key);
             formDataFirstEntry.set("value", newSelect.alt_values[0].value);
+
             updateCharAltValue(char, entry.uid, entry.alt_values[0].uid, formDataFirstEntry);
 
             for (const alt of newSelect.alt_values.slice(1))
@@ -367,8 +367,9 @@ function addStatusRow({data = [], container, template, char}) {
             selectAltValues.value = String(selectedAlt.uid);
             selectAltValues.dataset.prevValue = String(selectedAlt.uid);
             inputAltKey.value = String(selectedAlt.key);
+            textareaValue.value = String(selectedAlt.value);
 
-            updateCharEntry(char, entry.uid, new FormData(newRow), false);
+            await updateCharEntry(char, entry.uid, new FormData(newRow), false);
         }, { passive: true });
 
         newRow.querySelector(".menu_button.export").addEventListener("click", async function() {
