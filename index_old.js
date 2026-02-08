@@ -10,6 +10,7 @@ import { startListeners } from "./source/js/eventListeners.js";
 import { lodash, Popper } from "../../../../lib.js";
 
 // * Extension variables
+// @ts-nocheck
 
 /*  # TODO
     - [ ] Setting to disable confirm delete
