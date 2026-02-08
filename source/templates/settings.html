@@ -1,13 +1,13 @@
-<div class="example-extension-settings">
+<div class="stat-us-max-custom-css">
 	<div class="inline-drawer">
 		<div class="inline-drawer-toggle inline-drawer-header">
 			<b>Stat-us Maximus</b>
 			<div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
 		</div>
-		<div id="stat-us-max-settings-window" class="inline-drawer-content stat-us-max-custom-css" style="padding: 0.5vh;">
+		<div id="stat-us-maximus-settings-window" class="inline-drawer-content p-15px">
 
 			<div class="flex-container w-100 mb-5px">
-				<a id="stat-us-max-check-docs" class="menu_button w-100 gap-15px" type="button" target="_blank" href="https://github.com/leandrojofre/SillyTavern-Stat-us-Maximus?tab=readme-ov-file#features" title="You will be redirected to the repository page in a new tab" data-i18n="[title]You will be redirected to the repository page in a new tab">
+				<a id="stat-us-maximus-check-docs" class="menu_button w-100 gap-15px" type="button" target="_blank" href="https://github.com/leandrojofre/SillyTavern-Stat-us-Maximus?tab=readme-ov-file#features" title="You will be redirected to the repository page in a new tab" data-i18n="[title]You will be redirected to the repository page in a new tab">
 					Open the docs
 					<i class="fa-solid fa-circle-exclamation" tabindex="0"></i>
 				</a>
@@ -17,25 +17,25 @@
 				<b>Settings</b>
 
 				<label class="flex-container">
-					<input id="stat-us-max-auto-detect-participants" stat-us-max-setting="autoDetectParticipants" type="checkbox" />
+					<input id="stat-us-maximus-auto-detect-participants" stat-us-maximus-setting="autoDetectParticipants" type="checkbox" />
 					Automatically add Status data to active participants in the chat
 				</label>
 
 				<label class="flex-container">
-					<input id="stat-us-max-always-include-unmuted-members" stat-us-max-setting="alwaysIncludeUnmutedMembers" type="checkbox" />
+					<input id="stat-us-maximus-always-include-unmuted-members" stat-us-maximus-setting="alwaysIncludeUnmutedMembers" type="checkbox" />
 					Always include unmuted group members
 					<i class="right_menu_button fa-solid fa-circle-exclamation interactable" title="This will include the Stat blocks of group members that have not interacted with the chat, or their last message is out of the context, but are present" data-i18n="[title]This will include the Stat blocks of group members that have not interacted with the chat, or their last message is out of the context, but are present" tabindex="0" role="button"></i>
 				</label>
 
 				<label class="flex-container">
-					<input id="stat-us-max-auto-save-metadata" stat-us-max-setting="autoSaveMetadata" type="checkbox" />
+					<input id="stat-us-maximus-auto-save-metadata" stat-us-maximus-setting="autoSaveMetadata" type="checkbox" />
 					Automatically save metadata
 					<i class="right_menu_button fa-solid fa-circle-exclamation interactable" title="In long chats, saving metadata can freeze the browser, disabling this option will prevent this at the cost of having to manually save your changes" data-i18n="[title]In long chats, saving metadata can freeze the browser, disabling this option will prevent this at the cost of having to manually save your changes" tabindex="0" role="button"></i>
 				</label>
 
-				<label class="d-flex flex-col flex-start-center gap-5px">
+				<label class="d-flex flex-column flex-center-col gap-5px">
                     <small class="text-quote">Set the minimum prompt injection depth</small>
-					<input id="stat-us-max-min-prompt-depth" stat-us-max-setting="minPromptDepth" type="number" min="0" max="10000" step="1" class="text_pole textarea_compact mt-0" />
+					<input id="stat-us-maximus-min-prompt-depth" stat-us-maximus-setting="minPromptDepth" type="number" min="0" max="10000" step="1" class="text_pole textarea_compact mt-0" />
 				</label>
 			</div>
 
@@ -43,18 +43,18 @@
 				<b>Chat UI</b>
 
 				<label class="flex-container">
-					<input id="stat-us-max-show-input-macros" stat-us-max-setting="editNumbersFromChat" type="checkbox" />
+					<input id="stat-us-maximus-show-input-macros" stat-us-maximus-setting="editNumbersFromChat" type="checkbox" />
 					Replace input macros in the chat UI with their respective inputs - Check the docs
 				</label>
 
 				<label class="flex-container">
-					<input id="stat-us-max-show-white-spaces" stat-us-max-setting="showWhiteSpaces" type="checkbox" />
+					<input id="stat-us-maximus-show-white-spaces" stat-us-maximus-setting="showWhiteSpaces" type="checkbox" />
 					Add a background behind text inputs to see whitespaces
 				</label>
 
-				<label class="d-flex flex-col flex-start-center gap-5px">
+				<label class="d-flex flex-column flex-center-col gap-5px">
                     <small class="text-quote">Set the CSS width of range inputs</small>
-					<input id="stat-us-max-range-input-width" stat-us-max-setting="rangeInputWidth" type="text" pattern="[^\s]" class="text_pole textarea_compact mt-0" />
+					<input id="stat-us-maximus-range-input-width" stat-us-maximus-setting="rangeInputWidth" type="text" pattern="[^\s]" class="text_pole textarea_compact mt-0" />
 				</label>
 			</div>
 
@@ -62,12 +62,12 @@
 				<b>Popup Menus</b>
 
 				<label class="flex-container">
-					<input id="stat-us-max-hide-input-labels" stat-us-max-setting="hideInputLabels" type="checkbox" />
+					<input id="stat-us-maximus-hide-input-labels" stat-us-maximus-setting="hideInputLabels" type="checkbox" />
 					Hide input labels
 				</label>
 
 				<label class="flex-container">
-					<input id="stat-us-max-alt-macro-template-behavior" stat-us-max-setting="altMacroTemplateBehavior" type="checkbox" />
+					<input id="stat-us-maximus-alt-macro-template-behavior" stat-us-maximus-setting="altMacroTemplateBehavior" type="checkbox" />
 					Alternative macro template behavior
 					<i class="right_menu_button fa-solid fa-circle-exclamation interactable" title="Put the macro at the end of the entry description box" data-i18n="[title]Put the macro at the end of the entry description box" tabindex="0" role="button"></i>
 				</label>
@@ -77,12 +77,12 @@
 				<b>Debug settings</b>
 
 				<div class="flex-container">
-					<input id="stat-us-max-check-configuration" class="menu_button" type="button" value="Check Configuration" />
+					<input id="stat-us-maximus-check-configuration" class="menu_button" type="button" value="Check Configuration" />
 					Print the configuration values ​​through the console
 				</div>
 
 				<label class="flex-container">
-					<input id="stat-us-max-debug" stat-us-max-setting="debug" type="checkbox" />
+					<input id="stat-us-maximus-debug" stat-us-maximus-setting="debug" type="checkbox" />
 					Enable/Disable the debug console logs
 				</label>
 			</div>
