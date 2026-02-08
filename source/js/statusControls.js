@@ -1,4 +1,4 @@
-import { deleteCharTracker, extensionSettings, setSaveStateFlag } from "../../index.js";
+import { deleteCharTracker, extensionSettings, setSaveStateFlag } from "../../index_old.js";
 import { chat, chat_metadata, extension_prompt_roles } from "../../../../../../script.js";
 import { t } from "../../../../../i18n.js";
 import { un_escapeNewlines } from "./popups.js";

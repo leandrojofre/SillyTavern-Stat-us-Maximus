@@ -2,7 +2,7 @@ import { characters, chat, chat_metadata, eventSource, scrollChatToBottom, this_
 import { event_types } from "../../../../../events.js";
 import { selected_group } from "../../../../../group-chats.js";
 import { power_user } from "../../../../../power-user.js";
-import { addGroupStatusButtons, callbacksClickValueUID, extensionSettings, fetchStatus, fetchStatusDebounced, getActiveParticipants, getStatusDepth, log } from "../../index.js";
+import { addGroupStatusButtons, callbacksClickValueUID, extensionSettings, fetchStatus, fetchStatusDebounced, getActiveParticipants, getStatusDepth, log } from "../../index_old.js";
 import { createCharStatus, fillMissingMetadata, getCharStatus } from "./statusControls.js";
 
 /*

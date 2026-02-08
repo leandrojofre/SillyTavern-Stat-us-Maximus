@@ -5,7 +5,7 @@ import { t } from "../../../../../i18n.js";
 import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
 import { power_user } from "../../../../../power-user.js";
 import { getSortableDelay } from "../../../../../utils.js";
-import { destroyElement, fetchStatusDebounced, extensionSettings, setSaveStateFlag } from "../../index.js";
+import { destroyElement, fetchStatusDebounced, extensionSettings, setSaveStateFlag } from "../../index_old.js";
 import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, updateCharEntry, getCharAltValue, flushCharAltValues, updateCharAltValue, evaluateEntry } from "./statusControls.js";
 
 /*  # TODO

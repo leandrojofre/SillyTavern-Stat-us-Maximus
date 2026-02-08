@@ -8,7 +8,7 @@ import { commonEnumProviders, enumIcons } from "../../../../../slash-commands/Sl
 import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/SlashCommandEnumValue.js";
 import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
 import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
-import { fetchStatusDebounced, getParticipant, setSaveStateFlag } from "../../index.js";
+import { fetchStatusDebounced, getParticipant, setSaveStateFlag } from "../../index_old.js";
 import { addCharAltValue, addCharEntry, createCharStatus, deleteCharStatus, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry, updateCharStatus } from "./statusControls.js";
 
 /*  # TODO
