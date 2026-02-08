@@ -1,4 +1,5 @@
-import { characters, chat, chat_metadata, event_types, eventSource, scrollChatToBottom, this_chid, user_avatar } from "../../../../../../script.js";
+import { characters, chat, chat_metadata, eventSource, scrollChatToBottom, this_chid, user_avatar } from "../../../../../../script.js";
+import { event_types } from "../../../../../events.js";
 import { selected_group } from "../../../../../group-chats.js";
 import { power_user } from "../../../../../power-user.js";
 import { addGroupStatusButtons, callbacksClickValueUID, extensionSettings, fetchStatus, fetchStatusDebounced, getActiveParticipants, getStatusDepth, log } from "../../index.js";
@@ -46,6 +47,10 @@ export function startListeners() {
         addGroupStatusButtons();
     });
 
+    eventSource.on(event_types.CHARACTER_RENAMED_IN_PAST_CHAT, async (currentChat, oldAvatar, newAvatar) => {
+        // log(currentChat, oldAvatar, newAvatar);
+    });
+
     eventSource.makeFirst(event_types.CHAT_CHANGED, async (...args) => {
         log("CHAT_CHANGED", args);
 
@@ -72,6 +77,20 @@ export function startListeners() {
         
         if (!args[0]) return;
         if (!chat_metadata.stat_us_maximus) chat_metadata.stat_us_maximus = [];
+    });
+
+    eventSource.on(event_types.CHARACTER_RENAMED_IN_PAST_CHAT, function (currentChat, oldAvatar, newAvatar) {
+        log("CHARACTER_RENAMED_IN_PAST_CHAT", currentChat, oldAvatar, newAvatar);
+
+        const metadata = currentChat[0]?.chat_metadata ?? false;
+        if (!metadata) return;
+        if (!metadata?.stat_us_maximus) metadata.stat_us_maximus = [];
+
+        metadata.stat_us_maximus = metadata.stat_us_maximus.map(stat => {
+            if (String(stat.avatar) === String(oldAvatar)) stat.avatar = String(newAvatar);
+
+            return stat;
+        });
     });
 
     eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, async (...args) => {

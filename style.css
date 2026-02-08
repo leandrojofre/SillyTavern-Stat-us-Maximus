@@ -1,6 +1,7 @@
 :root {
     --stum-input-label-display: block;
     --stum-range-input-width: auto;
+    --stum-save-state-color: transparent;
 }
 
 #stat-us-max-settings-window div.flex-container.flex-column,
@@ -80,6 +81,7 @@ div[name="templatesAndPopupsWrapper"] {
 .popup:has(.stat-us-max-popup) {
     background-color: var(--SmartThemeBotMesBlurTintColor);
     border-color: var(--stat-us-border-color) !important;
+    width: 90vw;
 }
 
 #stat-us-max-popup-multi-char {
@@ -148,7 +150,6 @@ div[name="templatesAndPopupsWrapper"] {
     --stat-us-border-color: var(--SmartThemeBorderColor);
     --stat-us-avatar-height: var(--avatar-base-height);
     --stat-us-avatar-border-radius: 50%;
-    --stat-us-range-margin-top: 5px;
     --stat-us-separator-bottom: linear-gradient(90deg, var(--transparent), color-mix(in srgb, var(--SmartThemeBodyColor), transparent 80%), var(--transparent)) 1;
     --stat-us-show-spaces-color: color-mix(in srgb, var(--SmartThemeBotMesBlurTintColor), var(--SmartThemeQuoteColor) 12%);
 
@@ -360,6 +361,10 @@ div[name="templatesAndPopupsWrapper"] {
 
     .disabled {
         color: color-mix(in srgb, currentColor 40%, black);
+
+        .text-line {
+            pointer-events: none;
+        }
     }
 
     .w-auto {
@@ -557,7 +562,7 @@ div[name="templatesAndPopupsWrapper"] {
     }
 
     .fake-input {
-        position: fixed;
+        position: absolute;
         top: 0;
         left: 0;
         pointer-events: none;
@@ -592,23 +597,28 @@ div[name="templatesAndPopupsWrapper"] {
     .text-line .value {
         white-space: break-spaces;
     }
+    
+    .text-line .value[data-empty]::after {
+        content: "...";
+        color: color-mix(in srgb, var(--SmartThemeQuoteColor) 50%, transparent);
+    }
 
-    span.chat-input-editor {
+    .text-quote:has(~ input[type="range"]):hover {
+        cursor: pointer;
+    }
+
+    input[type="range"].chat-input-editor {
         display: inline-flex;
         vertical-align: middle;
         min-width: 5ch;
         width: var(--stum-range-input-width);
         max-width: unset;
+        height: 1ch;
+        border-radius: 5px !important;
+    }
 
-        input[type="range"] {
-            margin-top: var(--stat-us-range-margin-top) !important;
-        }
-
-        input[type="number"] {
-            padding: 2px 5px 0;
-            font-family: monospace;
-            border: unset;
-        }
+    input[type="range"].chat-input-editor:focus {
+        background: var(--SmartThemeQuoteColor);
     }
 
     .input-label {
@@ -628,5 +638,9 @@ div[name="templatesAndPopupsWrapper"] {
         z-index: 40;
         overflow-y: scroll;
         max-height: 15vh;
+    }
+
+    .menu_button.fa-floppy-disk {
+        background-color: var(--stum-save-state-color);
     }
 }

@@ -2,7 +2,7 @@ import { extension_settings } from "../../../extensions.js";
 import { saveSettingsDebounced, chat_metadata, this_chid, chat, characters, extension_prompts, setExtensionPrompt, extension_prompt_types, user_avatar, substituteParams } from "../../../../script.js";
 import { getGroupMembers, groups, selected_group } from "../../../group-chats.js";
 import { t } from "../../../i18n.js";
-import { createCharStatus, getCharAltValue, getCharStatus, saveMetadataSTUM, updateCharEntry } from "./source/js/statusControls.js";
+import { createCharStatus, getCharAltValue, getCharStatus, updateCharEntry } from "./source/js/statusControls.js";
 import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
 import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups.js";
@@ -14,6 +14,7 @@ import { lodash, Popper } from "../../../../lib.js";
 /*  # TODO
     - [ ] Setting to disable confirm delete
     - [ ] Setting for deff role
+    - [ ] Rearrange range input into a more compact layout - input[number] [space] input[range|fat]
     - [X] Setting to disable auto detection
     - [X] Replace select button for an icon button
     - [X] Highlight row on hover
@@ -21,19 +22,46 @@ import { lodash, Popper } from "../../../../lib.js";
     - [X] Reduce font-size
     - [X] Button on right nav panel to open user metadata - one for active and another for all
     - [X] Use alt title if description is empty
-    - [ ] Global Stat not attached to character
     - [X] Fix chat UI select button using a similar approach to character export button - thanks Ross
 
-    - [ ] Before I loose the idea - Update chat UI on input input, this would allow sick tricks like modifying a variable value from an input inside the set var macro - That would require
-        - [ ] Parsing ST variables on input (and parsing mine's first)
-        - [ ] Figure out how to update the UI without loosing focus of the input (maybe when the input looses focus?)
-
-    I need to refine this roadmap
-    - [ ] Create a template builder ? from the settings
-        - [ ] Store it in ? extension settings as an array
-        - [ ] Allow to bind templates to both characters and groups (group overrides character)
-        - [ ] ? Merge group and character templates
-        - [ ] ? Allow to assign multiple templates
+    I hate it, but a rewrite is needed, this code is a headache to maintain
+    (TODO once the main TODO of this file is finished)
+    - [ ] Rewrite code using classes
+        - [ ] ChatInputMacro
+        - [ ] StumMacroParser
+            - macroToInput
+            - inputToMacro
+            - parseCoreMacros
+            - parseStumMacros
+            - parseThirdPartyMacros
+            - parseAllMacros
+        - [ ] StatUs // from statusControls.js
+            - assignCharacter // this would allow applying templates
+            - assignChat // this would allow chat templates
+            - assignGlobal // this would allow constantly active templates
+        - [ ] StatUsEntry // from statusControls.js
+        - [ ] TemplateBuilder<StatUs>
+            - getTemplate
+            - createFromSettings
+            - createFromClipboard
+            - applyToClipboard
+        - [ ] StumSlashCommand
+            - registerCommand
+            - validateInputArguments
+            - createFormData
+        - [ ] StatUsPopupBlock
+        - [ ] StatUsChatBlock
+            - runScript ? I would like to continue the idea of triggering scripts by typing in the inputs/switching alt values/disabling and enabling
+        - [ ] StatUsButtonsBlock
+        - [ ] Utilities
+            - debounceFunction //Debounce Func with unique IDs
+            - addHtmlTemplate ? This or create on class instance
+            - getHtmlTemplate
+        - [ ] ExtensionSettings
+    - [ ] Rewrite code using HTML templates
+        - [ ] statUsChatBlock
+        - [ ] statUsPopupBlock
+        - [ ] statUsButtonsBlock
 
     ! THE PLAN
 
@@ -56,6 +84,7 @@ const defaultSettings = {
     minPromptDepth: 0,
     alwaysIncludeUnmutedMembers: false,
     altMacroTemplateBehavior: false,
+    autoSaveMetadata: true,
     debug: false
 };
 
@@ -109,6 +138,15 @@ export function destroyElement(element) {
     }
 
 	elem.remove();
+}
+
+/**
+ * @param {boolean} state
+ */
+export function setSaveStateFlag(state) {
+    const nextState = state ? "var(--SmartThemeBlurTintColor)" : "red";
+
+    document.documentElement.style.setProperty('--stum-save-state-color', nextState);
 }
 
 function getCharacter(value, search_key = "avatar") {
@@ -298,6 +336,8 @@ function renderCaret(span, text, caretPos, selectEnd = caretPos) {
 
     destroyElement(span.childNodes);
 
+    if (!text) span.setAttribute('data-empty', '');
+    else span.removeAttribute('data-empty');
     if (caretPos < 0) return span.textContent = text;
 
     const before = esc(text.slice(0, caretPos));
@@ -376,13 +416,13 @@ function addTracker(status, character) {
                 <input type="hidden" name="value_uid">
             </form>
             <div class="d-flex flex-center-between gap-15px fs-90p text-muted hover-highlight">
-                <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state" data-i18n="Toggle entry's active state"></div>
+                <div class="fa-solid fa-toggle-on kill-switch" title="Toggle entry's active state" data-i18n="[title]Toggle entry's active state"></div>
                 <p class="text-left flex-grow-1 m-0 d-table">
                     <span class="status-title fw-bolder d-contents"></span>
                     <span class="status-separator"></span>
                     <span class="status-description d-contents"></span>
                 </p>
-                <div class="status-value-uid fa-solid fa-bars-progress m-0" aria-describedby="tooltip" title="Swap entry description" data-i18n="Swap entry description"></div>
+                <div class="status-value-uid fa-solid fa-bars-progress m-0" aria-describedby="tooltip" title="Swap entry description" data-i18n="[title]Swap entry description"></div>
             </div>
         </td>
     `;
@@ -399,6 +439,8 @@ function addTracker(status, character) {
                         <span class="stat-us-max-chat-title">${character.name}</span>
                     </span>
                     <div class="d-flex flex-center">
+                        <div class="menu_button menu_button_icon fa-solid fa-arrows-rotate interactable m-0 px-10px" title="Refresh the block display and macros" data-i18n="[title]Refresh the block display and macros"></div>
+                        <div class="menu_button menu_button_icon fa-solid fa-floppy-disk interactable m-0 px-10px" title="Force Status metadata to save" data-i18n="[title]Force Status metadata to save"></div>
                         <div class="menu_button menu_button_icon fa-solid fa-eye interactable m-0"></div>
                         <div class="menu_button menu_button_icon fa-solid fa-pen interactable m-0"></div>
                     </div>
@@ -443,7 +485,16 @@ function addTracker(status, character) {
         el.classList.toggle("d-none", state);
     };
 
-    statusTable.querySelector(".menu_button.fa-pen").addEventListener("click", async () => {
+    statusTable.querySelector(".menu_button.fa-floppy-disk").addEventListener("click", async function () {
+        setSaveStateFlag(true);
+        SillyTavern.getContext().saveChat();
+    }, { passive: true });
+
+    statusTable.querySelector(".menu_button.fa-arrows-rotate").addEventListener("click", async function () {
+        addTracker(status, character);
+    }, { passive: true });
+
+    statusTable.querySelector(".menu_button.fa-pen").addEventListener("click", async function () {
         const metadata = chat_metadata.stat_us_maximus;
 
         // @ts-ignore
@@ -452,16 +503,17 @@ function addTracker(status, character) {
         return await popupStatusSingleChar(character);
     }, {passive: true});
 
-    statusTable.querySelector(".menu_button.fa-eye").addEventListener("click", async () => {
+    statusTable.querySelector(".menu_button.fa-eye").addEventListener("click", async function () {
         const collapse = !statusTableBody.classList.contains("d-none");
         status.is_collapsed = collapse;
 
         toggleVisibility(statusTableBody, collapse);
-        saveMetadataSTUM();
+        setSaveStateFlag(extensionSettings.autoSaveMetadata);
+        if (extensionSettings.autoSaveMetadata) SillyTavern.getContext().saveChat();
     }, {passive: true});
 
     const createInputs = (/**@type {String}*/text, entry_uid) => {
-        const parsedText = lodash.escape(substituteParams(processMacros(text, {char: character, processInputs: false}))).replaceAll(/\n/g, "<br>");
+        const parsedText = lodash.escape(processMacros(text, {char: character, processInputs: false, removeComments: false})).replaceAll(/\n/g, "<br>");
 
         if (!extensionSettings.editNumbersFromChat)
             return `<span class="text-line">${parsedText}</span>`;
@@ -473,9 +525,8 @@ function addTracker(status, character) {
         newText = newText.replaceAll(regexTextInput, (match) => {
             const value = match.replaceAll(/((^{{text(::)?)|(}}$))/g, "").replaceAll("<br>", "\n");
             const input = `
-                <span class="fa-solid fa-t m-0 chat-input-icon select-none cursor-pointer"></span>
                 <textarea type="text" class="type-text fake-input chat-input-editor mw-unset" data-pattern="^[^{}]*$" autocomplete="off" data-stee--handled="1" tabindex="-1">${value}</textarea>
-                <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? "show-spaces" : ""}">${value}</span></span>
+                <span class="text-quote"><span class="value ${extensionSettings.showWhiteSpaces ? 'show-spaces' : ''}" ${!value ? 'data-empty' : ''}>${value}</span></span>
             `;
 
             inputID++;
@@ -485,10 +536,9 @@ function addTracker(status, character) {
         newText = newText.replaceAll(regexNumberInput, (match) => {
             const value = match.replaceAll(/(({{number(::)?)|(}}))/g, "");
             const input = `
-                <span class="fa-solid fa-n m-0 chat-input-icon select-none cursor-pointer"></span>
                 <input type="text" value="${value === "" ? "0" : value}" inputmode="decimal" autocomplete="off" data-pattern="^-?\\d+\\.?\\d*$" class="type-number fake-input chat-input-editor" size="0" />
                 <span class="text-quote">
-                    <span class="value font-monospace">${value}</span>
+                    <span class="value font-monospace">${value === "" ? "0" : value}</span>
                     <span class="d-inline-flex gap-0 text-body cursor-pointer fs-normal">
                         <span class="fa-solid fa-caret-left m-0 chat-input-icon select-none opacity-60"></span>
                         <span class="fa-solid fa-caret-right m-0 chat-input-icon select-none"></span>
@@ -521,9 +571,13 @@ function addTracker(status, character) {
             const step = Number(props[2]) <= 0 ? 1 : props[2];
             const value = props[3];
             const input = `
-                <span class="d-flex flex-col flex-center gap-0 type-range chat-input-editor">
-                    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-slider" id="${characterName}-${entry_uid}-${inputID}" />
-                    <input type="number" min="${min}" max="${max}" step="${step}" value="${value}" class="neo-range-input" data-for="${characterName}-${entry_uid}-${inputID}" id="counter-${characterName}-${entry_uid}-${inputID}" />
+                <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" class="type-range chat-input-editor" id="${characterName}-${entry_uid}-${inputID}" />
+                <span class="text-quote" id="${characterName}-${entry_uid}-${inputID}-display">
+                    <span class="d-inline-flex gap-0 text-body input-arrows cursor-pointer fs-normal">
+                        <span class="fa-solid fa-caret-left m-0 chat-input-icon select-none opacity-60" data-direction="-1"></span>
+                        <span class="fa-solid fa-caret-right m-0 chat-input-icon select-none" data-direction="1"></span>
+                    </span>
+                    <span class="value font-monospace">${value}</span>
                 </span>
             `;
 
@@ -549,17 +603,6 @@ function addTracker(status, character) {
             let index;
             let newMacro = "";
 
-            if (chunk instanceof HTMLSpanElement) {
-                /**@type {HTMLInputElement}*/const inputNumber = chunk.querySelector('input[type="number"]');
-                const min = inputNumber.min;
-                const max = inputNumber.max;
-                const step = inputNumber.step;
-                const value = inputNumber.value;
-                index = ++countRange;
-                match = regexRangeInput;
-                newMacro = `{{range::${min}::${max}::${step}::${value}}}`;
-            }
-
             if (chunk instanceof HTMLTextAreaElement) {
                 const value = chunk.value;
                 index = ++countText;
@@ -569,6 +612,16 @@ function addTracker(status, character) {
 
 
             if (chunk instanceof HTMLInputElement) {
+                if (chunk.classList.contains("type-range")) {
+                    const min = chunk.min;
+                    const max = chunk.max;
+                    const step = chunk.step;
+                    const value = chunk.value;
+                    index = ++countRange;
+                    match = regexRangeInput;
+                    newMacro = `{{range::${min}::${max}::${step}::${value}}}`;
+                }
+
                 if (chunk.classList.contains("type-number")) {
                     const value = chunk.value;
                     index = ++countNumber;
@@ -655,77 +708,74 @@ function addTracker(status, character) {
                         dispatchInput(form);
                     }, {passive: true});
                 } else {
-                    const eventTargets = [input.nextElementSibling, input.previousElementSibling];
+                    /**@type {HTMLSpanElement} */
+                    const spanInput = input.nextElementSibling;
                     let lastValid = input.value;
                     let inputTimeout;
+                    let spanSelected = false;
+                    let incrementsPressed;
+                    let incrementsCooldown;
 
-                    eventTargets.forEach((/**@type {HTMLSpanElement} */span) => {
-                        let spanSelected = false;
-                        let incrementsPressed;
-                        let incrementsCooldown;
+                    spanInput.addEventListener("pointerdown", (e) => {
+                        if (spanSelected) return;
 
-                        span.addEventListener("pointerdown", (e) => {
-                            if (spanSelected) return;
+                        spanSelected = true;
+                    }, {passive: true});
 
-                            spanSelected = true;
+                    document.addEventListener("click", (e) => {
+                        clearInterval(incrementsPressed);
+                        clearTimeout(incrementsCooldown);
+
+                        if (!spanSelected) return;
+
+                        spanSelected = false;
+                        let selection;
+
+                        selection = getSelectedTextInElem(spanInput.querySelector('.value'));
+
+                        input.setSelectionRange(selection.start, selection.end);
+                        input.focus();
+                    }, {passive: true});
+
+                    if (input.classList.contains("type-number") && spanInput.classList.contains("text-quote")) {
+                        const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: false, cancelable: true});
+                        const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: false, cancelable: true});
+
+                        spanInput.addEventListener("wheel", async (e) => {
+                            if (!input.matches(':focus')) return;
+
+                            if (e.cancelable) e.preventDefault();
+
+                            let direction;
+
+                            if (e.deltaY === 0) return;
+                            if (e.deltaY < 0) direction = arrowUp;
+                            if (e.deltaY > 0) direction = arrowDown;
+
+                            setTimeout(() => input.dispatchEvent(direction), 10);
+                        }, {passive: false});
+
+                        /**@type {HTMLSpanElement}*/const minusButton = spanInput.querySelector('.fa-caret-left');
+                        /**@type {HTMLSpanElement}*/const plusButton = spanInput.querySelector('.fa-caret-right');
+
+                        minusButton.addEventListener("pointerdown", (e) => {
+                            if (e.button === 2) return;
+
+                            input.dispatchEvent(arrowDown);
+                            incrementsCooldown = setTimeout(() => {
+                                incrementsPressed = setInterval(() => input.dispatchEvent(arrowDown), 75);
+                            }, 300);
                         }, {passive: true});
 
-                        document.addEventListener("click", (e) => {
-                            clearInterval(incrementsPressed);
-                            clearTimeout(incrementsCooldown);
+                        plusButton.addEventListener("pointerdown", (e) => {
+                            if (e.button === 2) return;
 
-                            if (!spanSelected) return;
-
-                            spanSelected = false;
-                            let selection;
-
-                            if (span.classList.contains("chat-input-icon")) selection = {start: input.value.length, end: input.value.length};
-                            else selection = getSelectedTextInElem(span.querySelector('.value'));
-
-                            input.setSelectionRange(selection.start, selection.end);
-                            input.focus();
+                            input.dispatchEvent(arrowUp);
+                            incrementsCooldown = setTimeout(() => {
+                                incrementsPressed = setInterval(() => input.dispatchEvent(arrowUp), 75);
+                            }, 300);
                         }, {passive: true});
-
-                        if (input.classList.contains("type-number") && span.classList.contains("text-quote")) {
-                            const arrowDown = new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: false, cancelable: true});
-                            const arrowUp = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: false, cancelable: true});
-
-                            span.addEventListener("wheel", async (e) => {
-                                if (!input.matches(':focus')) return;
-
-                                if (e.cancelable) e.preventDefault();
-
-                                let direction;
-
-                                if (e.deltaY === 0) return;
-                                if (e.deltaY < 0) direction = arrowUp;
-                                if (e.deltaY > 0) direction = arrowDown;
-
-                                setTimeout(() => input.dispatchEvent(direction), 10);
-                            }, {passive: false});
-
-                            /**@type {HTMLSpanElement}*/const minusButton = span.querySelector('.fa-caret-left');
-                            /**@type {HTMLSpanElement}*/const plusButton = span.querySelector('.fa-caret-right');
-
-                            minusButton.addEventListener("pointerdown", (e) => {
-                                if (e.button === 2) return;
-
-                                input.dispatchEvent(arrowDown);
-                                incrementsCooldown = setTimeout(() => {
-                                    incrementsPressed = setInterval(() => input.dispatchEvent(arrowDown), 75);
-                                }, 300);
-                            }, {passive: true});
-
-                            plusButton.addEventListener("pointerdown", (e) => {
-                                if (e.button === 2) return;
-
-                                input.dispatchEvent(arrowUp);
-                                incrementsCooldown = setTimeout(() => {
-                                    incrementsPressed = setInterval(() => input.dispatchEvent(arrowUp), 75);
-                                }, 300);
-                            }, {passive: true});
-                        }
-                    });
+                    }
 
                     input.addEventListener("input", () => {
                         if (input.dataset.pattern) {
@@ -765,20 +815,83 @@ function addTracker(status, character) {
 
             el(newRow, el_target)
             .querySelectorAll('.chat-input-editor.type-range')
-            .forEach((/**@type {HTMLSpanElement}*/span) => {
-                /**@type {HTMLInputElement}*/const inputNumber = span.querySelector('input[type="number"]');
-                /**@type {HTMLInputElement}*/const inputRange = span.querySelector('input[type="range"]');
+            .forEach((/**@type {HTMLInputElement}*/inputRange) => {
+                /**@type {HTMLSpanElement}*/const fakeInput = inputRange.parentElement.querySelector(`#${inputRange.id}-display .value`);
+                /**@type {HTMLSpanElement}*/const inputArrows = inputRange.parentElement.querySelector(`#${inputRange.id}-display .input-arrows`);
 
-                span.addEventListener("input", (e) => {
-                    /**@type {HTMLInputElement}*/
-                    // @ts-ignore
-                    const original = e.target;
-                    inputNumber.value = original.value;
-                    inputRange.value = original.value;
+                const updateInput = function() {
+                    fakeInput.textContent = inputRange.value;
 
                     el(form, `input[name="${form_target}"]`).value = createInputStrings(newRow, el_target);
                     dispatchInput(form);
-                }, {passive: true});
+                };
+
+                $(inputRange).on('input', {passive: true}, updateInput);
+
+                inputRange.addEventListener("keypress", function(e) {
+                    const { key } = e;
+
+                    if (!["ArrowUp", "ArrowDown"].includes(key)) return;
+
+                    const nextInc = Number(inputRange.step);
+                    const min = Number(inputRange.min);
+                    const max = Number(inputRange.max);
+                    let direction = 1;
+
+                    if (key === "ArrowDown") direction = -1;
+
+                    const currentValue = Number(inputRange.value);
+                    const nextValue = currentValue + (nextInc * direction);
+
+                    if (nextValue < min) inputRange.value = min;
+                    else if (nextValue > max) inputRange.value = max;
+                    else inputRange.value = nextValue;
+
+                    updateInput();
+                });
+
+                inputRange.addEventListener("wheel", async (e) => {
+                    if (!inputRange.matches(':focus')) return;
+
+                    if (e.cancelable) e.preventDefault();
+
+                    const nextInc = Number(inputRange.step);
+                    const min = Number(inputRange.min);
+                    const max = Number(inputRange.max);
+                    let direction = 1;
+
+                    if (e.deltaY === 0) return;
+                    if (e.deltaY > 0) direction = -1; // Wheel down
+
+                    const currentValue = Number(inputRange.value);
+                    const nextValue = currentValue + (nextInc * direction);
+
+                    if (nextValue < min) inputRange.value = min;
+                    else if (nextValue > max) inputRange.value = max;
+                    else inputRange.value = nextValue;
+
+                    updateInput();
+                }, {passive: false});
+
+                inputArrows.addEventListener("click", function(e) {
+                    inputRange.focus();
+
+                    const direction = e.target.dataset.direction;
+                    const nextInc = Number(inputRange.step);
+                    const min = Number(inputRange.min);
+                    const max = Number(inputRange.max);
+
+                    const currentValue = Number(inputRange.value);
+                    const nextValue = currentValue + (nextInc * direction);
+
+                    if (nextValue < min) inputRange.value = min;
+                    else if (nextValue > max) inputRange.value = max;
+                    else inputRange.value = nextValue;
+
+                    updateInput();
+                }, {passive: false});
+
+                fakeInput.addEventListener("click", () => inputRange.focus());
             });
         }
 
@@ -791,7 +904,8 @@ function addTracker(status, character) {
 
             const formData = new FormData(form);
 
-            updateCharEntry(character, entry.uid, formData);
+            setSaveStateFlag(extensionSettings.autoSaveMetadata);
+            updateCharEntry(character, entry.uid, formData, extensionSettings.autoSaveMetadata);
         }, { passive: false });
 
         form.addEventListener("input", () => {
@@ -914,7 +1028,18 @@ function addTracker(status, character) {
     toggleVisibility(statusTableBody, status.is_collapsed ?? false);
 }
 
-export function processMacros(text, {char = undefined, processInputs = true} = {}) {
+
+/**
+ * Replaces macros in the given text with their corresponding values.
+ * @param {string} text
+ * @param {object} options
+ * @param {object} options.char
+ * @param {boolean} options.processInputs
+ * @param {boolean} options.removeComments
+ * @param {boolean} options.replaceAppMacros
+ * @returns {string}
+ */
+export function processMacros(text = '', {char = undefined, processInputs = true, removeComments = true, replaceAppMacros = true} = {}) {
     let newText = text;
 
     if (char) {
@@ -954,6 +1079,14 @@ export function processMacros(text, {char = undefined, processInputs = true} = {
                 newText = newText.replace(match, value);
             });
     }
+
+    if (replaceAppMacros)
+        newText = substituteParams(newText);
+
+    if (removeComments)
+        newText = newText
+            .replaceAll(/\/\/.*(?=\n)/g, "")
+            .replaceAll(/\/\/.*(?=$)/g, "");
 
     return newText;
 }
@@ -1051,8 +1184,7 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
 
             if (entry.key !== "" && value !== "") promptValue += entry.separator;
 
-            promptValue += value
-                .replaceAll(/\/\/.*(\n|$)/g, "$1");
+            promptValue += value;
         };
 
         if (!promptValue) continue;
@@ -1069,8 +1201,6 @@ export function fetchStatus({forceUIUpdate = false, depthModifier = 0, forceDept
             status.role
         );
     }
-
-    saveMetadataSTUM();
 }
 
 /**
@@ -1113,19 +1243,19 @@ const settingsCallbacks = {
     rangeInputWidthTimeout: undefined,
 
     /**	Triggers on editNumbersFromChat change. */
-    editNumbersFromChat: () => {
+    editNumbersFromChat: function () {
         fetchStatus({forceUIUpdate: true});
     },
 
     /**	Triggers on hideInputLabels change. */
-    hideInputLabels: () => {
+    hideInputLabels: function () {
         const newDisplay = extensionSettings.hideInputLabels ? 'none' : 'block';
 
         document.documentElement.style.setProperty('--stum-input-label-display', newDisplay);
     },
 
     /**	Triggers on rangeInputWidth change. */
-    rangeInputWidth: () => {
+    rangeInputWidth: function () {
         clearTimeout(settingsCallbacks.rangeInputWidthTimeout);
 
         const newWidth = String($("#stat-us-max-range-input-width").val());
@@ -1136,12 +1266,20 @@ const settingsCallbacks = {
     },
 
     /**	Triggers on showWhiteSpaces change. */
-    showWhiteSpaces: () => {
+    showWhiteSpaces: function () {
         document
         .querySelectorAll('#chat .stat-us-max-custom-css .text-quote .value')
         .forEach((/**@type {HTMLSpanElement}*/span) =>
             span.classList.toggle("show-spaces", extensionSettings.showWhiteSpaces)
         );
+    },
+
+    /**	Triggers on autoSaveMetadata change. */
+    autoSaveMetadata: function () {
+        if (extensionSettings.autoSaveMetadata) {
+            setSaveStateFlag(true);
+            SillyTavern.getContext().saveChat();
+        }
     }
 }
 
@@ -1204,6 +1342,7 @@ function settingsNumberButton(event) {
 function displaySettings() {
     console.debug("[" + extensionName + "]", `Auto detect participants is ${extensionSettings.autoDetectParticipants ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Always include unmuted group members is ${extensionSettings.alwaysIncludeUnmutedMembers ? "active" : "not active"}`);
+    console.debug("[" + extensionName + "]", `Auto save metadata is ${extensionSettings.autoSaveMetadata ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Alternative behavior for macro template buttons is ${extensionSettings.altMacroTemplateBehavior ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Show input macros in chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
     console.debug("[" + extensionName + "]", `Hide input labels is ${extensionSettings.hideInputLabels ? "active" : "not active"}`);
@@ -1223,6 +1362,7 @@ async function loadHTMLSettings() {
     // Event Listeners for the extension HTML
     $("#stat-us-max-auto-detect-participants").on("input", settingsBooleanButton);
     $("#stat-us-max-always-include-unmuted-members").on("input", settingsBooleanButton);
+    $("#stat-us-max-auto-save-metadata").on("input", settingsBooleanButton);
     $("#stat-us-max-alt-macro-template-behavior").on("input", settingsBooleanButton);
     $("#stat-us-max-show-input-macros").on("input", settingsBooleanButton);
     $("#stat-us-max-hide-input-labels").on("input", settingsBooleanButton);
@@ -1239,6 +1379,7 @@ async function loadHTMLSettings() {
 function setSettings() {
     $("#stat-us-max-auto-detect-participants").prop("checked", extensionSettings.autoDetectParticipants);
     $("#stat-us-max-always-include-unmuted-members").prop("checked", extensionSettings.alwaysIncludeUnmutedMembers);
+    $("#stat-us-max-auto-save-metadata").prop("checked", extensionSettings.autoSaveMetadata);
     $("#stat-us-max-alt-macro-template-behavior").prop("checked", extensionSettings.altMacroTemplateBehavior);
     $("#stat-us-max-show-input-macros").prop("checked", extensionSettings.editNumbersFromChat);
     $("#stat-us-max-show-white-spaces").prop("checked", extensionSettings.showWhiteSpaces);
@@ -1248,7 +1389,7 @@ function setSettings() {
     $("#stat-us-max-debug").prop("checked", extensionSettings.debug).trigger("input");
 }
 
-// * MARK:Initialize Extension
+// * MARK:Initialize Buttons
 
 function initButtons() {
     /** Magic wand menu */
@@ -1269,7 +1410,7 @@ function initButtons() {
     globalStatusMenu.id = extensionName.toLowerCase().replace("-", "_") + "_wand_container";
     globalStatusMenu.classList.add("extension_container", "interactable");
     globalStatusMenu.append(globalStatusButton);
-    globalStatusMenu.addEventListener("click", async () => {
+    globalStatusMenu.addEventListener("click", async function () {
         const metadata = chat_metadata.stat_us_maximus;
         const chars = [];
 
@@ -1294,11 +1435,20 @@ function initButtons() {
     charStatusSpan.dataset.i18n = "Stat-us Maximus";
     charStatusSpan.classList.add("flex-grow-1");
 
+    const saveStatusDataBtn = document.createElement("div");
+    saveStatusDataBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-floppy-disk", "interactable", "m-0", "px-10px");
+    saveStatusDataBtn.title = "Force Status metadata to save";
+    saveStatusDataBtn.dataset.i18n = "Force Status metadata to save";
+    saveStatusDataBtn.addEventListener("click", async function () {
+        setSaveStateFlag(true);
+        SillyTavern.getContext().saveChat();
+    }, { passive: true });
+
     const personasStatusOpenPopupBtn = document.createElement("div");
     personasStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-users-cog", "interactable", "m-0");
     personasStatusOpenPopupBtn.title = "Open status for all the personas with status";
     personasStatusOpenPopupBtn.dataset.i18n = "Open status for all the personas with status";
-    personasStatusOpenPopupBtn.addEventListener("click", async () => {
+    personasStatusOpenPopupBtn.addEventListener("click", async function () {
         const metadata = chat_metadata.stat_us_maximus.filter(s => s.is_user);
         const users = [];
 
@@ -1318,7 +1468,7 @@ function initButtons() {
     personaStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-user-cog", "interactable", "m-0");
     personaStatusOpenPopupBtn.title = "Open status for the active persona";
     personaStatusOpenPopupBtn.dataset.i18n = "Open status for the active persona";
-    personaStatusOpenPopupBtn.addEventListener("click", async () => {
+    personaStatusOpenPopupBtn.addEventListener("click", async function () {
         const user = getUser();
 
         // @ts-ignore
@@ -1331,7 +1481,7 @@ function initButtons() {
     charStatusOpenPopupBtn.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-table", "interactable", "m-0");
     charStatusOpenPopupBtn.title = "Open status for the active character";
     charStatusOpenPopupBtn.dataset.i18n = "Open status for the active character";
-    charStatusOpenPopupBtn.addEventListener("click", async () => {
+    charStatusOpenPopupBtn.addEventListener("click", async function () {
         // @ts-ignore
         if (this_chid === undefined) return toastr.warning(t`An active character to edit could not be found`);
 
@@ -1345,7 +1495,7 @@ function initButtons() {
 
     const charStatusMenu = document.createElement("div");
     charStatusMenu.classList.add("d-flex", "flex-center-start", "gap-5px", "standoutHeader", "p-5px");
-    charStatusMenu.append(charStatusSpan, charStatusOpenPopupBtn, personaStatusOpenPopupBtn, personasStatusOpenPopupBtn);
+    charStatusMenu.append(charStatusSpan, saveStatusDataBtn, charStatusOpenPopupBtn, personaStatusOpenPopupBtn, personasStatusOpenPopupBtn);
 
     const charStatusContainer = document.createElement("div");
     charStatusContainer.classList.add("stat-us-max-custom-css");
@@ -1361,8 +1511,14 @@ function initButtons() {
     groupStatusContainer.firstElementChild.classList.add("border", "border-faded");
     groupStatusContainer.firstElementChild.classList.remove("separator-bottom");
 
+    const groupSaveStatusDataBtn = groupStatusContainer.querySelector('.menu_button.fa-floppy-disk');
+    groupSaveStatusDataBtn.addEventListener("click", function () {
+        setSaveStateFlag(true);
+        SillyTavern.getContext().saveChat();
+    }, { passive: true });
+
     const groupPersonasBtn = groupStatusContainer.querySelector('.menu_button.fa-users-cog');
-    groupPersonasBtn.addEventListener("click", async () => {
+    groupPersonasBtn.addEventListener("click", async function () {
         const metadata = chat_metadata.stat_us_maximus.filter(s => s.is_user);
         const users = [];
 
@@ -1379,7 +1535,7 @@ function initButtons() {
     }, {passive: true});
 
     const groupPersonaBtn = groupStatusContainer.querySelector('.menu_button.fa-user-cog');
-    groupPersonaBtn.addEventListener("click", async () => {
+    groupPersonaBtn.addEventListener("click", async function () {
         const user = getUser();
 
         // @ts-ignore
@@ -1391,7 +1547,7 @@ function initButtons() {
     /** @type {HTMLElement} */const groupMembersButton = groupStatusContainer.querySelector('.menu_button.fa-table');
     groupMembersButton.title = "Open status for all group members";
     groupMembersButton.dataset.i18n = "Open status for all group members";
-    groupMembersButton.addEventListener("click", async () => {
+    groupMembersButton.addEventListener("click", async function () {
         const chars = getActiveParticipants([{avatar: user_avatar}]);
 
         // @ts-ignore
