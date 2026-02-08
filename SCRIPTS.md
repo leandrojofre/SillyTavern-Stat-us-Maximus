@@ -62,6 +62,7 @@ These scripts will allow you to create your own templates for your chats using a
 ```
 <br><br>
 **Usage Example** - Here we will create the template for a car, because why not.
+
 ```Python traceback
 /* "{{char}} = Car" *|
 /:Stat-us-Max.create_status char="{{char}}" def_title_value_separator=": " prefix="<Status name=\"{{name}}\">\n# {{name}}\n" suffix="\n</Status>" |
