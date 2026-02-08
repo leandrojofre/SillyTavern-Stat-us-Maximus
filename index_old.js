@@ -6,7 +6,7 @@ import { createCharStatus, getCharAltValue, getCharStatus, updateCharEntry } fro
 import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
 import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups.js";
-import { startListeners } from "./source/js/eventListeners.js";
+import { startListeners } from "./source/js/eventListeners_old.js";
 import { lodash, Popper } from "../../../../lib.js";
 
 // * Extension variables
