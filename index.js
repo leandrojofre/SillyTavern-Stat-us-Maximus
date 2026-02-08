@@ -1,14 +1,34 @@
+import { extension_prompt_roles } from '../../../../script.js';
+import { copyText } from "../../../utils.js";
+
+import { Status } from './source/classes/Status.js';
+
+export {
+    // ST re-exports
+    extension_prompt_roles,
+    copyText,
+    // Native exports
+    getFreeDataUid,
+    log,
+    debug,
+    error,
+    escapeNewlines,
+    unEscapeNewlines,
+    exportObjectToClipboard
+};
+
 // * MARK:Extension variables
 
 const context = () => SillyTavern.getContext();
 
 const {
     extensionSettings: extension_settings,
-    saveSettingsDebounced
+    saveSettingsDebounced,
 } = context();
 
 const extensionFullName = 'SillyTavern-Stat-us-Maximus';
-const extensionName = 'Stat-us-Max';
+const extensionName = 'Stat-us-Maximus';
+const metadataName = extensionName.toLowerCase().replaceAll('-', '_');
 const extensionFolderPath = `scripts/extensions/third-party/${extensionFullName}`;
 const extensionSettings = extension_settings[extensionFullName];
 const defaultSettings = {
@@ -58,7 +78,48 @@ function error(...mess) {
 
 // * MARK:Extension methods
 
-// ...
+/** The function checks for keys from 0 up to a defined safe limit (1,000,000) and returns the first available integer that is not used as a key in the data object.
+ * @param {Object?} [data={}]
+ * @returns {number} The lowest non-negative integer that is not a key in the provided data object. If the data object is empty, it returns 0.
+ */
+function getFreeDataUid(data = {}) {
+    const keys = Object.keys(data);
+
+    if (!keys.length) return 0;
+
+    const used = new Set(keys);
+    const LIMIT = 1_000_000;
+
+    for (let uid = 0; uid < LIMIT; uid++)
+        if (!used.has(String(uid))) return uid;
+}
+
+function escapeNewlines(str) {
+    return str
+        .replace(/\\/g, "\\\\")
+        .replace(/\r\n/g, "\\r\\n")
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r");
+}
+
+function unEscapeNewlines(str) {
+    return str
+        .replace(/\\r\\n/g, "\r\n")
+        .replace(/\\n/g, "\n")
+        .replace(/\\r/g, "\r");
+}
+
+/**
+ * Set user clipboard to a stringified version of an object
+ * @param {object} obj - Object to be sent to the clipboard as text
+ * @returns {Promise<void>}
+ */
+function exportObjectToClipboard(obj = {}) {
+    let stringObj = JSON.stringify(obj);
+    stringObj = escapeNewlines(stringObj);
+
+    return copyText(stringObj);
+}
 
 // * MARK:Extension Settings
 
@@ -159,11 +220,8 @@ async function loadSettingsMenu() {
     $(`#${extensionName.toLowerCase()}-debug`).on('input', settingsBooleanButton);
     $(`#${extensionName.toLowerCase()}-check-configuration`).on('click', displaySettings);
 
-    log('loadSettingsMenu');
-}
-
-/** Init setting values on the menu */
-function setSettings() {
+    log('Settings menu created');
+    
     $(`#${extensionName.toLowerCase()}-auto-detect-participants`).prop('checked', extensionSettings.autoDetectParticipants);
     $(`#${extensionName.toLowerCase()}-always-include-unmuted-members`).prop('checked', extensionSettings.alwaysIncludeUnmutedMembers);
     $(`#${extensionName.toLowerCase()}-auto-save-metadata`).prop('checked', extensionSettings.autoSaveMetadata);
@@ -176,7 +234,23 @@ function setSettings() {
 
     $(`#${extensionName.toLowerCase()}-debug`).prop('checked', extensionSettings.debug).trigger('input');
 
-    log('setSettings', extensionSettings);
+    log('Settings values initialized', extensionSettings);
+}
+
+/** Init extension */
+function initExtension() {
+    SillyTavern[extensionName.toLowerCase()] = {
+        test: () => {
+            const statuses = context().chatMetadata[metadataName];
+
+            debug(statuses);
+
+            if (!statuses) return;
+
+            for (const status of statuses)
+                debug(new Status(status));
+        }
+    };
 }
 
 
@@ -195,5 +269,5 @@ $(async function() {
     }
 
     await loadSettingsMenu();
-    setSettings();
+    initExtension();
 });
