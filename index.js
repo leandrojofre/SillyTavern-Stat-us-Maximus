@@ -24,6 +24,7 @@ const context = () => SillyTavern.getContext();
 const {
     extensionSettings: extension_settings,
     saveSettingsDebounced,
+    characters
 } = context();
 
 const extensionFullName = 'SillyTavern-Stat-us-Maximus';
@@ -79,13 +80,13 @@ function error(...mess) {
 // * MARK:Extension methods
 
 /** The function checks for keys from 0 up to a defined safe limit (1,000,000) and returns the first available integer that is not used as a key in the data object.
- * @param {Object?} [data={}]
+ * @param {Object} data
  * @returns {number} The lowest non-negative integer that is not a key in the provided data object. If the data object is empty, it returns 0.
  */
 function getFreeDataUid(data = {}) {
     const keys = Object.keys(data);
 
-    if (!keys.length) return 0;
+    if (!keys?.length) return 0;
 
     const used = new Set(keys);
     const LIMIT = 1_000_000;
@@ -119,6 +120,61 @@ function exportObjectToClipboard(obj = {}) {
     stringObj = escapeNewlines(stringObj);
 
     return copyText(stringObj);
+}
+
+/**
+ * Renders the status block of the selected character in the last message from the character rendered in the chat log.
+ * @param {Status} status
+ */
+async function renderCharStatus(status) {
+    if (status.last_mes_id < 0) return;
+
+    const character = characters.find(char => char.avatar === status.avatar);
+
+    if (!character) return;
+
+    const statusBlock = (await HTML_TEMPLATES.get('chatStatus')).clone();
+    const statusEntryTemplate = (await HTML_TEMPLATES.get('chatStatusEntry')).clone();
+
+    const htmlSuffix = extensionName.toLowerCase();
+    const lastMess = $(`#chat .mes[mesid="${status.last_mes_id}"]`).first();
+
+    statusBlock.find(`.${htmlSuffix}-chat-title`)
+        .text(character.name);
+
+    statusBlock.find(`.inline-drawer`)
+        .toggleClass(`bg-${status.is_user ? 'user' : 'bot'}`, true);
+
+    lastMess
+        .find('.mes_text')
+        .before(statusBlock);
+}
+
+/**
+ * Init extension
+ */
+function initExtension() {
+    SillyTavern[metadataName] = {
+        getStatuses: function() {
+            let statuses = context().chatMetadata[metadataName];
+
+            if (!statuses) statuses = [];
+
+            statuses = statuses.map(status => new Status(status));
+
+            context().chatMetadata[metadataName] = statuses;
+            debug(statuses);
+
+            return statuses;
+        },
+
+        renderStatus: function(status) {
+            if (typeof status === 'number')
+                status = SillyTavern[metadataName].getStatuses()[status];
+
+            renderCharStatus(status);
+        }
+    };
 }
 
 // * MARK:Extension Settings
@@ -206,7 +262,6 @@ async function loadSettingsMenu() {
 
     $('#extensions_settings2').append(settingsHtml);
 
-    // Event Listeners for the extension HTML
     $(`#${extensionName.toLowerCase()}-auto-detect-participants`).on('input', settingsBooleanButton);
     $(`#${extensionName.toLowerCase()}-always-include-unmuted-members`).on('input', settingsBooleanButton);
     $(`#${extensionName.toLowerCase()}-auto-save-metadata`).on('input', settingsBooleanButton);
@@ -236,23 +291,6 @@ async function loadSettingsMenu() {
 
     log('Settings values initialized', extensionSettings);
 }
-
-/** Init extension */
-function initExtension() {
-    SillyTavern[extensionName.toLowerCase()] = {
-        test: () => {
-            const statuses = context().chatMetadata[metadataName];
-
-            debug(statuses);
-
-            if (!statuses) return;
-
-            for (const status of statuses)
-                debug(new Status(status));
-        }
-    };
-}
-
 
 // * Initialize Extension
 

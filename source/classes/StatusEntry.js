@@ -38,6 +38,13 @@ class StatusEntry {
      * @property {Object.<string, AltValueData>} [values]
      */
 
+    /** @property {boolean} */ enabled
+    /** @property {string} */ key
+    /** @property {string} */ separator
+    /** @property {number} */ value_uid
+    /** @property {number} */ display_position
+    /** @property {Object.<string, AltValueData>} */ values
+
     /**
      * @param {EntryData?} [entry={}] - The status data to initialize the Status object with. If not provided, default values will be used.
      */

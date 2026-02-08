@@ -21,6 +21,9 @@ const statusTemplate = Object.freeze({
     entries: {}
 });
 
+/**
+ * @type {StatusData}
+ */
 class Status {
     /**
      * @typedef {Object} StatusData
@@ -37,6 +40,19 @@ class Status {
      * @property {boolean} [is_collapsed]
      * @property {Object.<string, StatusEntry>} [entries]
      */
+
+    /** @property {string} */ avatar
+    /** @property {number} */ role
+    /** @property {string} */ separator
+    /** @property {string} */ def_entry_separator
+    /** @property {string} */ prefix
+    /** @property {string} */ suffix
+    /** @property {number} */ depth
+    /** @property {string|number} */ forceDepth
+    /** @property {number} */ last_mes_id
+    /** @property {boolean} */ is_user
+    /** @property {boolean} */ is_collapsed
+    /** @property {Object.<string, StatusEntry>} */ entries
 
     /**
      * @param {StatusData?} [status={}] - The status data to initialize the Status object with. If not provided, default values will be used.
