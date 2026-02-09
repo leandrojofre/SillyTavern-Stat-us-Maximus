@@ -1,8 +1,8 @@
 import { eventSource, eventTypes, metadataName, log } from "../../index.js";
 
-// export {
-
-// };
+export {
+    registerEvents
+};
 
 function onChatChanged() {
     log(eventTypes.CHAT_CHANGED);
@@ -10,6 +10,6 @@ function onChatChanged() {
     SillyTavern[metadataName].renderStatus();
 }
 
-export function registerEvents() {
+function registerEvents() {
     eventSource.on(eventTypes.CHAT_CHANGED, onChatChanged);
 }
