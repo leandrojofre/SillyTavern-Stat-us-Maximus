@@ -3,11 +3,14 @@ import { copyText } from "../../../utils.js";
 
 import { Status } from './source/classes/Status.js';
 import { StatusEntry } from './source/classes/StatusEntry.js';
+import { registerEvents } from './source/js/eventListeners.js';
 
 export {
     // ST re-exports
     extension_prompt_roles,
     copyText,
+    eventSource,
+    eventTypes,
     // Native exports
     getFreeDataUid,
     log,
@@ -15,7 +18,8 @@ export {
     error,
     escapeNewlines,
     unEscapeNewlines,
-    exportObjectToClipboard
+    exportObjectToClipboard,
+    metadataName
 };
 
 // * MARK:Extension variables
@@ -27,7 +31,9 @@ const {
     saveSettingsDebounced,
     characters,
     powerUserSettings,
-    saveChat
+    saveChat,
+    eventSource,
+    eventTypes
 } = context();
 
 const {
@@ -152,24 +158,29 @@ async function renderCharStatus(status) {
     const entryBlockTemplate = (await HTML_TEMPLATES.get('chatStatusEntry')).clone();
     const htmlSuffix = extensionName.toLowerCase();
 
-    statusBlock.attr('char-target', status.avatar);
+    statusBlock
+        .attr('char-target', status.avatar);
 
-    statusBlock.find(`.${htmlSuffix}-chat-title`)
+    statusBlock
+        .find(`.${htmlSuffix}-chat-title`)
         .text(character);
 
-    statusBlock.find('.inline-drawer-icon')
+    statusBlock
+        .find('.inline-drawer-icon')
         .toggleClass(`${status.is_collapsed ? 'down' : 'up'}`, true)
         .toggleClass(`${status.is_collapsed ? 'fa-circle-chevron-down' : 'fa-circle-chevron-up'}`, true);
 
-    statusBlock.find(`.inline-drawer`)
+    statusBlock
+        .find(`.inline-drawer`)
         .toggleClass(`bg-${status.is_user ? 'user' : 'bot'}`, true);
 
     statusBlock.find('.inline-drawer-header').on('click', function() {
         const doClose = statusBlock.find('.inline-drawer-icon').hasClass('up');
 
-        status.is_collapsed = doClose;
+        status.set('is_collapsed', doClose);
 
-        statusBlock.find(`.${htmlSuffix}-collapsed`)
+        statusBlock
+            .find(`.${htmlSuffix}-collapsed`)
             .toggleClass('fa-eye-slash', status.is_collapsed)
             .toggleClass('fa-eye', !status.is_collapsed);
 
@@ -189,7 +200,8 @@ async function renderCharStatus(status) {
         $(entryBlock).find('.status-separator').html(separatorClean);
         $(entryBlock).find('.status-description').html(`<span class="d-inline">${valueClean}</span>`);
 
-        statusBlock.find(`.${htmlSuffix}-entries-list`)
+        statusBlock
+            .find(`.${htmlSuffix}-entries-list`)
             .append(entryBlock);
     }
 
@@ -214,10 +226,9 @@ function initExtension() {
 
             if (!statuses) statuses = [];
 
-            statuses = statuses.map(status => new Status(status));
+            statuses = statuses.map(status => status instanceof Status ? status : new Status(status));
 
             context().chatMetadata[metadataName] = statuses;
-            debug(statuses);
 
             return statuses;
         },
@@ -362,4 +373,5 @@ $(async function() {
 
     await loadSettingsMenu();
     initExtension();
+    registerEvents();
 });

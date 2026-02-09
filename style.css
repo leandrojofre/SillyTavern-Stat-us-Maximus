@@ -196,16 +196,6 @@
     .kill-switch.fa-toggle-on {
         color: var(--SmartThemeQuoteColor);
     }
-   
-    /*
-    .inline-drawer.bg-bot .stat-us-maximus-entries-list > :nth-child(even) {
-        background-color: color-mix(in srgb, var(--SmartThemeBotMesBlurTintColor), black 15%);
-    }
-
-    .inline-drawer.bg-user .stat-us-maximus-entries-list > :nth-child(even) {
-        background-color: color-mix(in srgb, var(--SmartThemeUserMesBlurTintColor), black 15%);
-    }
-    */
 
     .stat-us-maximus-entries-list > :first-child {
         padding-top: 5px;

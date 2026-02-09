@@ -87,4 +87,15 @@ class Status {
 
         Object.assign(this, statusTemplate, statusClean);
     }
+
+    /**
+     * @param {string} key
+     * @param {string|number|boolean} value
+     */
+    set(key, value) {
+        if (key === 'entries') return;
+        if (!Object.keys(statusTemplate).includes(key)) return;
+
+        this[key] = value;
+    }
 }
