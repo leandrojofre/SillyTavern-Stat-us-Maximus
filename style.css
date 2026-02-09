@@ -19,6 +19,18 @@
         display: contents;
     }
 
+    .d-inline {
+        display: inline;
+    }
+
+    .d-table {
+        display: table;
+    }
+
+    .break-spaces {
+        white-space: break-spaces;
+    }
+
     .flex-container {
         display: flex;
         align-items: center;
@@ -54,6 +66,10 @@
         flex-grow: 1;
     }
 
+    .gap-0 {
+        gap: 0;
+    }
+
     .gap-5px {
         gap: 5px;
     }
@@ -78,8 +94,26 @@
         padding-bottom: 5px;
     }
 
+    .pe-5px {
+        padding-right: 5px;
+    }
+
+    .px-5px {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+    .px-15px {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
     .m-0 {
         margin: 0;
+    }
+    
+    .ms-5px {
+        margin-top: 5px;
     }
     
     .mb-5px {
@@ -116,8 +150,8 @@
         font-size: calc(var(--mainFontSize) * 0.9);
     }
 
-    .fs-xl {
-        font-size: x-large;
+    .fs-lr {
+        font-size: larger;
     }
 
     .fw-bolder {
@@ -149,6 +183,36 @@
         z-index: 40;
         overflow-y: scroll;
         max-height: 15vh;
+    }
+
+    .inline-drawer.bg-bot .inline-drawer-header {
+        background-color: color-mix(in srgb, var(--SmartThemeBotMesBlurTintColor), var(--black30a));
+    }
+
+    .inline-drawer.bg-user .inline-drawer-header {
+        background-color: color-mix(in srgb, var(--SmartThemeUserMesBlurTintColor), var(--black30a));
+    }
+
+    .kill-switch.fa-toggle-on {
+        color: var(--SmartThemeQuoteColor);
+    }
+   
+    /*
+    .inline-drawer.bg-bot .stat-us-maximus-entries-list > :nth-child(even) {
+        background-color: color-mix(in srgb, var(--SmartThemeBotMesBlurTintColor), black 15%);
+    }
+
+    .inline-drawer.bg-user .stat-us-maximus-entries-list > :nth-child(even) {
+        background-color: color-mix(in srgb, var(--SmartThemeUserMesBlurTintColor), black 15%);
+    }
+    */
+
+    .stat-us-maximus-entries-list > :first-child {
+        padding-top: 5px;
+    }
+
+    .stat-us-maximus-entries-list > :last-child {
+        padding-bottom: 5px;
     }
 
     .bg-bot {

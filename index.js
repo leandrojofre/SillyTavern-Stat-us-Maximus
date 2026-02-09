@@ -2,6 +2,7 @@ import { extension_prompt_roles } from '../../../../script.js';
 import { copyText } from "../../../utils.js";
 
 import { Status } from './source/classes/Status.js';
+import { StatusEntry } from './source/classes/StatusEntry.js';
 
 export {
     // ST re-exports
@@ -24,8 +25,14 @@ const context = () => SillyTavern.getContext();
 const {
     extensionSettings: extension_settings,
     saveSettingsDebounced,
-    characters
+    characters,
+    powerUserSettings,
+    saveChat
 } = context();
+
+const {
+    lodash
+} = SillyTavern.libs;
 
 const extensionFullName = 'SillyTavern-Stat-us-Maximus';
 const extensionName = 'Stat-us-Maximus';
@@ -129,31 +136,78 @@ function exportObjectToClipboard(obj = {}) {
 async function renderCharStatus(status) {
     if (status.last_mes_id < 0) return;
 
-    const character = characters.find(char => char.avatar === status.avatar);
+    const character = status.is_user ?
+        powerUserSettings.personas[status.avatar] :
+        characters.find(char => char.avatar === status.avatar).name;
 
     if (!character) return;
 
-    const statusBlock = (await HTML_TEMPLATES.get('chatStatus')).clone();
-    const statusEntryTemplate = (await HTML_TEMPLATES.get('chatStatusEntry')).clone();
+    $(`#chat .stat-us-maximus-custom-css[char-target="${status.avatar}"]`).remove();
 
+    const lastMess = $(`#chat .mes[mesid="${status.last_mes_id}"][is_user="${status.is_user}"]`).last();
+
+    if (!lastMess?.length) return;
+
+    const statusBlock = (await HTML_TEMPLATES.get('chatStatus')).clone();
+    const entryBlockTemplate = (await HTML_TEMPLATES.get('chatStatusEntry')).clone();
     const htmlSuffix = extensionName.toLowerCase();
-    const lastMess = $(`#chat .mes[mesid="${status.last_mes_id}"]`).first();
+
+    statusBlock.attr('char-target', status.avatar);
 
     statusBlock.find(`.${htmlSuffix}-chat-title`)
-        .text(character.name);
+        .text(character);
+
+    statusBlock.find('.inline-drawer-icon')
+        .toggleClass(`${status.is_collapsed ? 'down' : 'up'}`, true)
+        .toggleClass(`${status.is_collapsed ? 'fa-circle-chevron-down' : 'fa-circle-chevron-up'}`, true);
 
     statusBlock.find(`.inline-drawer`)
         .toggleClass(`bg-${status.is_user ? 'user' : 'bot'}`, true);
 
+    statusBlock.find('.inline-drawer-header').on('click', function() {
+        const doClose = statusBlock.find('.inline-drawer-icon').hasClass('up');
+
+        status.is_collapsed = doClose;
+
+        statusBlock.find(`.${htmlSuffix}-collapsed`)
+            .toggleClass('fa-eye-slash', status.is_collapsed)
+            .toggleClass('fa-eye', !status.is_collapsed);
+
+        saveChat();
+    });
+
+    for (const [uid, entry] of Object.entries(status.entries)) {
+        /** @type {StatusEntry} */
+        const {key, separator, values, value_uid} = entry;
+        const entryBlock = entryBlockTemplate.clone();
+
+        const titleClean = lodash.escape(key);
+        const separatorClean = lodash.escape(separator);
+        const valueClean = lodash.escape(values[value_uid].value);
+
+        $(entryBlock).find('.status-title').html(`<span class="d-inline">${titleClean}</span>`);
+        $(entryBlock).find('.status-separator').html(separatorClean);
+        $(entryBlock).find('.status-description').html(`<span class="d-inline">${valueClean}</span>`);
+
+        statusBlock.find(`.${htmlSuffix}-entries-list`)
+            .append(entryBlock);
+    }
+
     lastMess
         .find('.mes_text')
         .before(statusBlock);
+
+    if (!status.is_collapsed) statusBlock.find('.inline-drawer-content').show();
 }
 
 /**
  * Init extension
  */
 function initExtension() {
+    $('#chat').on('click', '.stat-us-maximus-toolbar', function(e){
+        e.stopPropagation();
+    });
+
     SillyTavern[metadataName] = {
         getStatuses: function() {
             let statuses = context().chatMetadata[metadataName];
@@ -168,11 +222,11 @@ function initExtension() {
             return statuses;
         },
 
-        renderStatus: function(status) {
-            if (typeof status === 'number')
-                status = SillyTavern[metadataName].getStatuses()[status];
+        renderStatus: function() {
+            const statuses = SillyTavern[metadataName].getStatuses();
 
-            renderCharStatus(status);
+            for (const status of statuses)
+                renderCharStatus(status);
         }
     };
 }
