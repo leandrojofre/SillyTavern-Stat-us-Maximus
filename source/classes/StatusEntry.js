@@ -83,4 +83,15 @@ class StatusEntry {
 
         Object.assign(this, structuredClone(entryTemplate), entryClean);
     }
+
+    /**
+     * @param {string} key
+     * @param {string|number|boolean} value
+     */
+    set(key, value) {
+        if (key === 'values') return;
+        if (!Object.keys(entryTemplate).includes(key)) return;
+
+        this[key] = value;
+    }
 }

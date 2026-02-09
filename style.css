@@ -224,4 +224,17 @@
         border-width: 1px 0 0 0;
         border-color: var(--stat-us-border-color) !important;
     }
+
+    .disabled {
+        color: color-mix(in srgb, currentColor, black 25%);
+
+        .stat-us-maximus-entry-paragraph {
+            pointer-events: none;
+        }
+
+        .status-separator,
+        .status-description {
+            display: none;
+        }
+    }
 }

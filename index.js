@@ -43,6 +43,7 @@ const {
 const extensionFullName = 'SillyTavern-Stat-us-Maximus';
 const extensionName = 'Stat-us-Maximus';
 const metadataName = extensionName.toLowerCase().replaceAll('-', '_');
+const htmlSuffix = extensionName.toLowerCase();
 const extensionFolderPath = `scripts/extensions/third-party/${extensionFullName}`;
 const extensionSettings = extension_settings[extensionFullName];
 const defaultSettings = {
@@ -148,6 +149,7 @@ async function renderCharStatus(status) {
 
     if (!character) return;
 
+    // ! Use library morphdom
     $(`#chat .stat-us-maximus-custom-css[char-target="${status.avatar}"]`).remove();
 
     const lastMess = $(`#chat .mes[mesid="${status.last_mes_id}"][is_user="${status.is_user}"]`).last();
@@ -156,7 +158,6 @@ async function renderCharStatus(status) {
 
     const statusBlock = (await HTML_TEMPLATES.get('chatStatus')).clone();
     const entryBlockTemplate = (await HTML_TEMPLATES.get('chatStatusEntry')).clone();
-    const htmlSuffix = extensionName.toLowerCase();
 
     statusBlock
         .attr('char-target', status.avatar);
@@ -174,22 +175,13 @@ async function renderCharStatus(status) {
         .find(`.inline-drawer`)
         .toggleClass(`bg-${status.is_user ? 'user' : 'bot'}`, true);
 
-    statusBlock.find('.inline-drawer-header').on('click', function() {
-        const doClose = statusBlock.find('.inline-drawer-icon').hasClass('up');
-
-        status.set('is_collapsed', doClose);
-
-        statusBlock
-            .find(`.${htmlSuffix}-collapsed`)
-            .toggleClass('fa-eye-slash', status.is_collapsed)
-            .toggleClass('fa-eye', !status.is_collapsed);
-
-        saveChat();
-    });
+    statusBlock
+        .find('.inline-drawer-header')
+        .data({avatar: status.avatar});
 
     for (const [uid, entry] of Object.entries(status.entries)) {
         /** @type {StatusEntry} */
-        const {key, separator, values, value_uid} = entry;
+        const {key, separator, values, value_uid, enabled} = entry;
         const entryBlock = entryBlockTemplate.clone();
 
         const titleClean = lodash.escape(key);
@@ -199,6 +191,14 @@ async function renderCharStatus(status) {
         $(entryBlock).find('.status-title').html(`<span class="d-inline">${titleClean}</span>`);
         $(entryBlock).find('.status-separator').html(separatorClean);
         $(entryBlock).find('.status-description').html(`<span class="d-inline">${valueClean}</span>`);
+
+        $(entryBlock)
+            .find('.kill-switch')
+            .addClass(enabled ? 'fa-toggle-on' : 'fa-toggle-off')
+            .data({avatar: status.avatar, uid, enabled});
+
+        $(entryBlock)
+            .toggleClass('disabled', !enabled);
 
         statusBlock
             .find(`.${htmlSuffix}-entries-list`)
@@ -212,6 +212,49 @@ async function renderCharStatus(status) {
     if (!status.is_collapsed) statusBlock.find('.inline-drawer-content').show();
 }
 
+function onToggleEntry(e) {
+    const entrySwitch = $(e.currentTarget);
+    const { avatar, enabled, uid } = entrySwitch.data();
+    const nextState = !enabled;
+
+    /** @type {Status} */
+    const status = SillyTavern[metadataName].getStatus(avatar);
+
+    if (!status) return;
+
+    /** @type {StatusEntry} */
+    const entry = status.entries[uid];
+
+    if (!entry) return;
+
+    entry.set('enabled', nextState);
+    entrySwitch
+        .data({enabled: nextState})
+        .toggleClass('fa-toggle-on', nextState)
+        .toggleClass('fa-toggle-off', !nextState)
+        .closest('.stat-us-maximus-entry')
+        .toggleClass('disabled', !nextState);
+
+    saveChat();
+}
+
+function onCollapseStatus(e) {
+    const drawerHeader = $(e.currentTarget);
+    const { avatar } = drawerHeader.data();
+
+    /** @type {Status} */
+    const status = SillyTavern[metadataName].getStatus(avatar);
+
+    if (!status) return;
+
+    const doClose = drawerHeader
+        .find('.inline-drawer-icon')
+        .hasClass('up');
+
+    status.set('is_collapsed', doClose);
+    saveChat();
+}
+
 /**
  * Init extension
  */
@@ -219,6 +262,9 @@ function initExtension() {
     $('#chat').on('click', '.stat-us-maximus-toolbar', function(e){
         e.stopPropagation();
     });
+
+    $('#chat').on('click', '.stat-us-maximus-entry .kill-switch', onToggleEntry);
+    $('#chat').on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
 
     SillyTavern[metadataName] = {
         getStatuses: function() {
@@ -231,6 +277,16 @@ function initExtension() {
             context().chatMetadata[metadataName] = statuses;
 
             return statuses;
+        },
+
+        getStatus: function(avatar) {
+            let statuses = context().chatMetadata[metadataName];
+
+            if (!statuses) false;
+
+            const status = statuses.find(s => s.avatar === avatar);
+
+            return status ?? false;
         },
 
         renderStatus: function() {
