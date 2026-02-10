@@ -1,14 +1,19 @@
 import { extension_prompt_roles } from '../../../../script.js';
 import { copyText } from "../../../utils.js";
+import { getGroupMembers } from "../../../group-chats.js";
 
 import { Status } from './source/classes/Status.js';
 import { StatusEntry } from './source/classes/StatusEntry.js';
 import { registerEvents } from './source/js/eventListeners.js';
+import { CUSTOM_MACROS } from './source/js/macros.js';
 
 export {
     // ST re-exports
     extension_prompt_roles,
     copyText,
+    substituteParams,
+    setExtensionPrompt,
+    t,
     eventSource,
     eventTypes,
     // Native exports
@@ -19,19 +24,42 @@ export {
     escapeNewlines,
     unEscapeNewlines,
     exportObjectToClipboard,
+    getActiveParticipants,
+    context,
+    extensionSettings,
     metadataName
 };
 
 // * MARK:Extension variables
 
+/**
+ * @typedef {{name:string; description: string; avatar:string; is_user: boolean}} UserCharacter
+ *
+ * @typedef {Object} ExtensionSettings
+ * @property {boolean} enabled
+ * @property {boolean} editNumbersFromChat
+ * @property {boolean} autoDetectParticipants
+ * @property {boolean} hideInputLabels
+ * @property {string} rangeInputWidth
+ * @property {boolean} showWhiteSpaces
+ * @property {number} minPromptDepth
+ * @property {boolean} alwaysIncludeUnmutedMembers
+ * @property {boolean} altMacroTemplateBehavior
+ * @property {boolean} autoSaveMetadata
+ * @property {boolean} debug
+ */
+
 const context = () => SillyTavern.getContext();
 
 const {
+    t,
+    saveChat,
+    substituteParams,
+    setExtensionPrompt,
     extensionSettings: extension_settings,
     saveSettingsDebounced,
     characters,
     powerUserSettings,
-    saveChat,
     eventSource,
     eventTypes
 } = context();
@@ -45,7 +73,11 @@ const extensionName = 'Stat-us-Maximus';
 const metadataName = extensionName.toLowerCase().replaceAll('-', '_');
 const htmlSuffix = extensionName.toLowerCase();
 const extensionFolderPath = `scripts/extensions/third-party/${extensionFullName}`;
+
+/** @type {ExtensionSettings} */
 const extensionSettings = extension_settings[extensionFullName];
+
+/** @type {ExtensionSettings} */
 const defaultSettings = {
     enabled: true,
     editNumbersFromChat: false,
@@ -137,6 +169,81 @@ function exportObjectToClipboard(obj = {}) {
 }
 
 /**
+ * @param {string?} [value]
+ * @param {string?} [search_key]
+ * @returns {UserCharacter}
+ */
+function getUser(value, search_key = 'avatar') {
+    const { powerUserSettings: power_user } = context();
+
+    if (!value) value = power_user.default_persona;
+    if (!value) return null;
+
+    let avatar = '';
+    const correctSearchKey = ['avatar', 'name'].includes(search_key);
+
+    if (!correctSearchKey) return null;
+
+    if (search_key === 'avatar') avatar = value;
+
+    if (search_key === 'name')
+        avatar = Object
+            .entries(power_user.personas)
+            .map(([avatar, name]) => {return {name, avatar}})
+            .find(per => per.name === value)
+            .avatar;
+
+    if (!avatar || !power_user.personas[avatar]) return null;
+
+    return {
+        name: String(power_user.personas[avatar]),
+        avatar: String(avatar),
+        description: String(power_user.persona_descriptions[avatar].description),
+        is_user: true
+    };
+}
+
+/**
+ *
+ * @param {string[]?} [discard]
+ * @returns {{chars: Character[]; user: UserCharacter}}
+ */
+function getActiveParticipants(discard = []) {
+    const { groupId: group_id, groups, characterId: chid } = context();
+
+    /** @type {Character[]} */
+    const chars = [];
+    const toDiscard = discard;
+    const user = getUser();
+
+    if (group_id) {
+        const members = getGroupMembers();
+        const group = groups.find(g => g.id == group_id);
+        const muted_members = group.disabled_members ?? [];
+
+        toDiscard.push(...muted_members);
+
+        for (const member of members) {
+            if (member) chars.push(member);
+        }
+    }
+
+    if (chid) {
+        const character = characters[chid];
+        const alreadyInList = chars.some(c => c.avatar === character.avatar);
+
+        if (character && !alreadyInList) chars.push(character);
+    }
+
+    const members = {chars, user};
+    const discardUnique = new Set(toDiscard).values().toArray();
+
+    members.chars = members.chars.filter(c => !discardUnique.includes(c.avatar));
+
+    return members;
+}
+
+/**
  * Renders the status block of the selected character in the last message from the character rendered in the chat log.
  * @param {Status} status
  */
@@ -149,7 +256,6 @@ async function renderCharStatus(status) {
 
     if (!character) return;
 
-    // ! Use library morphdom
     $(`#chat .stat-us-maximus-custom-css[char-target="${status.avatar}"]`).remove();
 
     const lastMess = $(`#chat .mes[mesid="${status.last_mes_id}"][is_user="${status.is_user}"]`).last();
@@ -280,13 +386,14 @@ function initExtension() {
         },
 
         getStatus: function(avatar) {
+            /** @type {Status[]} */
             let statuses = context().chatMetadata[metadataName];
 
-            if (!statuses) false;
+            if (!statuses) return false;
 
             const status = statuses.find(s => s.avatar === avatar);
 
-            return status ?? false;
+            return !status ? false : status;
         },
 
         renderStatus: function() {
@@ -397,7 +504,7 @@ async function loadSettingsMenu() {
     $(`#${extensionName.toLowerCase()}-check-configuration`).on('click', displaySettings);
 
     log('Settings menu created');
-    
+
     $(`#${extensionName.toLowerCase()}-auto-detect-participants`).prop('checked', extensionSettings.autoDetectParticipants);
     $(`#${extensionName.toLowerCase()}-always-include-unmuted-members`).prop('checked', extensionSettings.alwaysIncludeUnmutedMembers);
     $(`#${extensionName.toLowerCase()}-auto-save-metadata`).prop('checked', extensionSettings.autoSaveMetadata);

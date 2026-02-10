@@ -22,25 +22,21 @@ const statusTemplate = Object.freeze({
 });
 
 /**
- * @type {StatusData}
+ * @typedef {Object} StatusData
+ * @property {string} [avatar]
+ * @property {number} [role]
+ * @property {string} [separator]
+ * @property {string} [def_entry_separator]
+ * @property {string} [prefix]
+ * @property {string} [suffix]
+ * @property {number} [depth]
+ * @property {string|number} [forceDepth]
+ * @property {number} [last_mes_id]
+ * @property {boolean} [is_user]
+ * @property {boolean} [is_collapsed]
+ * @property {Object.<string, StatusEntry>} [entries]
  */
 class Status {
-    /**
-     * @typedef {Object} StatusData
-     * @property {string} [avatar]
-     * @property {number} [role]
-     * @property {string} [separator]
-     * @property {string} [def_entry_separator]
-     * @property {string} [prefix]
-     * @property {string} [suffix]
-     * @property {number} [depth]
-     * @property {string|number} [forceDepth]
-     * @property {number} [last_mes_id]
-     * @property {boolean} [is_user]
-     * @property {boolean} [is_collapsed]
-     * @property {Object.<string, StatusEntry>} [entries]
-     */
-
     /** @property {string} */ avatar
     /** @property {number} */ role
     /** @property {string} */ separator
