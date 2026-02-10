@@ -65,7 +65,8 @@ function onGenerationAfterCommands() {
             return text;
         });
 
-        const uuid = self.crypto.randomUUID().replaceAll('-', '_');
+        const randUUID = self?.crypto?.randomUUID();
+        const uuid = !randUUID ? new Date().valueOf() : randUUID.replaceAll('-', '_');
         const prompt = status.prefix + entries.join(status.separator) + status.suffix;
 
         setExtensionPrompt(
