@@ -27,7 +27,7 @@ function onMessageRendered() {
     log('onMessageRendered');
 
     /** @type {Function} */
-    const renderer = SillyTavern[metadataName].renderStatusDebounced;
+    const renderer = SillyTavern[metadataName].renderStatusesDebounced;
 
     renderer();
 }
@@ -36,7 +36,7 @@ function onChatChanged() {
     log(eventTypes.CHAT_CHANGED);
 
     /** @type {Function} */
-    const renderer = SillyTavern[metadataName].renderStatusDebounced;
+    const renderer = SillyTavern[metadataName].renderStatusesDebounced;
 
     renderer();
 }

@@ -437,7 +437,7 @@ function onCollapseStatus(e) {
     saveMetadataSTUM();
 }
 
-function renderStatus() {
+function renderStatuses() {
     const statuses = SillyTavern[metadataName].getStatuses();
 
     for (const status of statuses)
@@ -479,9 +479,8 @@ function initExtension() {
             return !status ? false : status;
         },
 
-        renderStatus: renderStatus,
-
-        renderStatusDebounced: lodash.debounce(renderStatus, debounceTimeout.SHORT)
+        renderStatuses,
+        renderStatusesDebounced: lodash.debounce(renderStatuses, debounceTimeout.SHORT)
     };
 }
 
