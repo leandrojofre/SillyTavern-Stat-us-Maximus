@@ -23,10 +23,22 @@ const position = {
     IN_DEPTH: 1
 }
 
+function onMessageRendered() {
+    log(eventTypes.USER_MESSAGE_RENDERED, eventTypes.CHARACTER_MESSAGE_RENDERED);
+
+    /** @type {Function} */
+    const renderer = SillyTavern[metadataName].renderStatusDebounced;
+
+    renderer();
+}
+
 function onChatChanged() {
     log(eventTypes.CHAT_CHANGED);
 
-    SillyTavern[metadataName].renderStatus();
+    /** @type {Function} */
+    const renderer = SillyTavern[metadataName].renderStatusDebounced;
+
+    renderer();
 }
 
 function onGenerationAfterCommands() {
@@ -82,5 +94,12 @@ function onGenerationAfterCommands() {
 
 function registerEvents() {
     eventSource.on(eventTypes.CHAT_CHANGED, onChatChanged);
+
+    eventSource.on(eventTypes.MORE_MESSAGES_LOADED, onMessageRendered);
+    eventSource.on(eventTypes.USER_MESSAGE_RENDERED, onMessageRendered);
+    eventSource.on(eventTypes.CHARACTER_MESSAGE_RENDERED, onMessageRendered);
+    eventSource.on(eventTypes.MESSAGE_UPDATED, onMessageRendered);
+    eventSource.on(eventTypes.MESSAGE_DELETED, onMessageRendered);
+
     eventSource.on(eventTypes.GENERATION_AFTER_COMMANDS, onGenerationAfterCommands);
 }

@@ -365,6 +365,13 @@ function onCollapseStatus(e) {
     saveChat();
 }
 
+function renderStatus() {
+    const statuses = SillyTavern[metadataName].getStatuses();
+
+    for (const status of statuses)
+        renderCharStatus(status);
+}
+
 /**
  * Init extension
  */
@@ -400,12 +407,9 @@ function initExtension() {
             return !status ? false : status;
         },
 
-        renderStatus: function() {
-            const statuses = SillyTavern[metadataName].getStatuses();
+        renderStatus: renderStatus,
 
-            for (const status of statuses)
-                renderCharStatus(status);
-        }
+        renderStatusDebounced: lodash.debounce(renderStatus, 300)
     };
 }
 
