@@ -23,6 +23,10 @@
         display: inline;
     }
 
+    .d-inline-flex {
+        display: inline-flex;
+    }
+
     .d-table {
         display: table;
     }
@@ -111,11 +115,11 @@
     .m-0 {
         margin: 0;
     }
-    
+
     .ms-5px {
         margin-top: 5px;
     }
-    
+
     .mb-5px {
         margin-bottom: 5px;
     }
@@ -135,7 +139,8 @@
     .disabled {
         color: color-mix(in srgb, currentColor 40%, black);
 
-        .text-line {
+        .text-line,
+        .chat-input-editor {
             pointer-events: none;
         }
     }
@@ -225,6 +230,10 @@
         border-color: var(--stat-us-border-color) !important;
     }
 
+    .opacity-60 {
+        opacity: 60%;
+    }
+
     .disabled {
         color: color-mix(in srgb, currentColor, black 25%);
 
@@ -236,5 +245,65 @@
         .status-description {
             display: none;
         }
+    }
+
+    input[data-type="range"].chat-input-editor {
+        display: inline-flex;
+        vertical-align: middle;
+        min-width: 5ch;
+        width: var(--stum-range-input-width);
+        max-width: unset;
+        height: 1ch;
+        border-radius: 5px !important;
+    }
+
+    input[data-type="range"].chat-input-editor:focus {
+        background: var(--SmartThemeQuoteColor);
+    }
+
+    .fake-input {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        opacity: 0;
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+        caret-color: transparent;
+    }
+
+    .fake-selection {
+        background-color: var(--SmartThemeBodyColor);
+        color: var(--SmartThemeBlurTintColor);
+    }
+
+    .fake-caret {
+        display: inline-block;
+        position: absolute;
+        transform: translateY(0.1em);
+        width: 1px;
+        height: 1em;
+        background-color: var(--SmartThemeBodyColor);
+        animation: stumcaretblink 1s steps(1) infinite;
+        opacity: 1;
+    }
+
+    .text-line {
+        display: inline;
+    }
+
+    .text-line.value.show-spaces {
+        background-color: var(--stat-us-show-spaces-color);
+    }
+
+    .text-line.value {
+        white-space: break-spaces;
+    }
+
+    .text-line.value[data-empty]::after {
+        content: "...";
+        color: color-mix(in srgb, var(--SmartThemeQuoteColor) 50%, transparent);
     }
 }

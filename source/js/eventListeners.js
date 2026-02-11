@@ -83,7 +83,7 @@ function onGenerationAfterCommands() {
 
         setExtensionPrompt(
             metadataName + uuid,
-            macro(prompt, char.name, false),
+            macro(prompt, char.name),
             position.IN_DEPTH,
             extensionSettings.minPromptDepth,
             true,
