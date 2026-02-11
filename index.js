@@ -314,6 +314,8 @@ function saveMetadataSTUM() {
  * @param {Status} status
  */
 async function renderCharStatus(status) {
+    $(`#chat .stat-us-maximus-custom-css[char-target="${status.avatar}"]`).remove();
+
     if (status.last_mes_id < 0) return;
 
     /** @type {string} */
@@ -322,8 +324,6 @@ async function renderCharStatus(status) {
         characters.find(char => char.avatar === status.avatar).name;
 
     if (!character) return;
-
-    $(`#chat .stat-us-maximus-custom-css[char-target="${status.avatar}"]`).remove();
 
     status.refreshPosition();
 
