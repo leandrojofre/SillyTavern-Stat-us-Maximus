@@ -7,6 +7,20 @@ export {
 
 const detectNestedMacro = /\{\{(text|number|boolean|range)(::[\s\S]*)?\}\}/g;
 
+/**
+ * @readonly
+ * @enum {string}
+ */
+const DefMacroValue = Object.freeze({
+    STRING: '',
+    TRUE: 'true',
+    FALSE: 'false',
+    NUMBER: '0',
+    RANGE_MIN: '0',
+    RANGE_MAX: '100',
+    RANGE_STEP: '1'
+});
+
 const CUSTOM_MACROS = {
     /**
      * @param {string} text
@@ -37,9 +51,8 @@ const CUSTOM_MACROS = {
                 },
                 unnamedArgs: [{
                     name: 'value',
-                    defaultValue: '',
-                    optional: true,
-                    type: MacroValueType.STRING
+                    defaultValue: DefMacroValue.STRING,
+                    optional: true
                 }],
                 delayArgResolution: true
             },
@@ -51,18 +64,18 @@ const CUSTOM_MACROS = {
 
                     if (hasNestedMacro) {
                         toastr.error(`${t`You can't nest input macros - macro:`} {{number}}`, 'Stat-Us Maximus');
-                        return number;
+                        return DefMacroValue.NUMBER;
                     }
 
                     const numberClean = Number(resolve(number));
 
-                    if (isNaN(numberClean)) return '0';
+                    if (isNaN(numberClean)) return DefMacroValue.NUMBER;
 
                     return number;
                 },
                 unnamedArgs: [{
                     name: 'value',
-                    defaultValue: '0',
+                    defaultValue: DefMacroValue.NUMBER,
                     optional: true
                 }],
                 delayArgResolution: true
@@ -71,27 +84,27 @@ const CUSTOM_MACROS = {
                 handler: function({args: [value, trueText, falseText], rawOriginal, resolve}) {
                     if (!replaceInputs) return rawOriginal;
 
-                    const result = value === 'true' ? trueText : falseText;
+                    const result = resolve(value) === 'true' ? trueText : falseText;
                     const hasNestedMacro = result.match(detectNestedMacro)?.length > 0;
 
                     if (hasNestedMacro) {
                         toastr.error(`${t`You can't nest input macros - macro:`} {{boolean}}`, 'Stat-Us Maximus');
-                        return String(value === 'true');
+                        return DefMacroValue.FALSE;
                     }
 
                     return resolve(result);
                 },
                 unnamedArgs: [{
                     name: 'value',
-                    defaultValue: 'true',
+                    defaultValue: DefMacroValue.TRUE,
                     optional: true
                 }, {
                     name: 'truetext',
-                    defaultValue: 'true',
+                    defaultValue: DefMacroValue.TRUE,
                     optional: true
                 }, {
                     name: 'falsetext',
-                    defaultValue: 'false',
+                    defaultValue: DefMacroValue.FALSE,
                     optional: true
                 }],
                 delayArgResolution: true
@@ -110,7 +123,7 @@ const CUSTOM_MACROS = {
 
                     if (hasNestedMacro) {
                         toastr.error(`${t`You can't nest input macros - macro:`} {{range}}`, 'Stat-Us Maximus');
-                        return value;
+                        return DefMacroValue.RANGE_MAX;
                     }
 
                     const minClean = Number(resolve(min));
@@ -119,7 +132,7 @@ const CUSTOM_MACROS = {
                     const valueClean = Number(resolve(value));
 
                     if (isNaN(minClean) || isNaN(maxClean) || isNaN(stepClean) || isNaN(valueClean))
-                        return value;
+                        return DefMacroValue.RANGE_MAX;
 
                     const filteredMax = Math.min(valueClean, maxClean);
                     const valueFiltered = Math.max(filteredMax, minClean);
@@ -128,19 +141,19 @@ const CUSTOM_MACROS = {
                 },
                 unnamedArgs: [{
                     name: 'min',
-                    defaultValue: '0',
+                    defaultValue: DefMacroValue.RANGE_MIN,
                     optional: true
                 }, {
                     name: 'max',
-                    defaultValue: '100',
+                    defaultValue: DefMacroValue.RANGE_MAX,
                     optional: true
                 }, {
                     name: 'step',
-                    defaultValue: '1',
+                    defaultValue: DefMacroValue.RANGE_STEP,
                     optional: true
                 }, {
                     name: 'value',
-                    defaultValue: '100',
+                    defaultValue: DefMacroValue.RANGE_MAX,
                     optional: true
                 }],
                 delayArgResolution: true
