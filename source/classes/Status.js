@@ -87,11 +87,14 @@ class Status {
     /**
      * @param {string} key
      * @param {string|number|boolean} value
+     * @returns {Status}
      */
     set(key, value) {
         if (key === 'entries') return;
         if (!Object.keys(statusTemplate).includes(key)) return;
 
         this[key] = value;
+
+        return this;
     }
 }

@@ -27,7 +27,7 @@ export {
     getActiveParticipants,
     context,
     createElement,
-    saveChatDebounced,
+    saveMetadataSTUM,
     extensionSettings,
     metadataName,
     extensionName
@@ -82,7 +82,7 @@ const extensionName = 'Stat-us-Maximus';
 const metadataName = extensionName.toLowerCase().replaceAll('-', '_');
 const htmlSuffix = extensionName.toLowerCase();
 const extensionFolderPath = `scripts/extensions/third-party/${extensionFullName}`;
-const saveChatDebounced = lodash.debounce(saveChat, debounceTimeout.SHORT);
+const saveChatDebounced = lodash.debounce(saveChat, debounceTimeout.MED);
 
 /** @type {ExtensionSettings} */
 const extensionSettings = extension_settings[extensionFullName];
@@ -278,6 +278,54 @@ function createElement(elem, options = {}) {
     return element;
 }
 
+function saveMetadataSTUM() {
+    saveChatDebounced.cancel();
+    saveChatDebounced();
+}
+
+/**
+ * @param {Status} status
+ * @returns {Status}
+ */
+function refreshStatusDepth(status) {
+    const { chat, characters } = context();
+    const { avatar, is_user } = status;
+
+    let character = characters.find(c => c.avatar === avatar);
+
+    const lastID = chat.findLastIndex(m => {
+        const { force_avatar, original_avatar, name, is_user: mess_is_user } = m;
+
+        if (is_user !== mess_is_user) return false;
+
+        const url = new URL(force_avatar, window.location.origin);
+		const urlFile = url?.searchParams.get('file') ?? '';
+
+        if (avatar === urlFile) return true;
+        if (avatar === original_avatar) return true;
+
+        if (!character) return false;
+
+        if (character.name === name) return true;
+
+        return false;
+    });
+
+    if (lastID < 0) return status;
+
+    const chatLength = chat.length - 1;
+
+    if (chatLength < 0) return status
+        .set('last_mes_id', 0)
+        .set('depth', 0);
+
+    status
+        .set('last_mes_id', lastID)
+        .set('depth', chatLength - lastID);
+
+    return status;
+}
+
 /**
  * Renders the status block of the selected character in the last message from the character rendered in the chat log.
  * @param {Status} status
@@ -293,6 +341,8 @@ async function renderCharStatus(status) {
     if (!character) return;
 
     $(`#chat .stat-us-maximus-custom-css[char-target="${status.avatar}"]`).remove();
+
+    refreshStatusDepth(status);
 
     const lastMess = $(`#chat .mes[mesid="${status.last_mes_id}"][is_user="${status.is_user}"]`).last();
 
@@ -384,7 +434,7 @@ function onToggleEntry(e) {
         .closest('.stat-us-maximus-entry')
         .toggleClass('disabled', !nextState);
 
-    saveChatDebounced();
+    saveMetadataSTUM();
 }
 
 function onCollapseStatus(e) {
@@ -401,7 +451,7 @@ function onCollapseStatus(e) {
         .hasClass('up');
 
     status.set('is_collapsed', doClose);
-    saveChatDebounced();
+    saveMetadataSTUM();
 }
 
 function renderStatus() {
