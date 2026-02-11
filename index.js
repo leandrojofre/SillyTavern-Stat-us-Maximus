@@ -498,32 +498,32 @@ async function loadSettingsMenu() {
 
     $('#extensions_settings2').append(settingsHtml);
 
-    $(`#${extensionName.toLowerCase()}-auto-detect-participants`).on('input', settingsBooleanButton);
-    $(`#${extensionName.toLowerCase()}-always-include-unmuted-members`).on('input', settingsBooleanButton);
-    $(`#${extensionName.toLowerCase()}-auto-save-metadata`).on('input', settingsBooleanButton);
-    $(`#${extensionName.toLowerCase()}-alt-macro-template-behavior`).on('input', settingsBooleanButton);
-    $(`#${extensionName.toLowerCase()}-show-input-macros`).on('input', settingsBooleanButton);
-    $(`#${extensionName.toLowerCase()}-hide-input-labels`).on('input', settingsBooleanButton);
-    $(`#${extensionName.toLowerCase()}-show-white-spaces`).on('input', settingsBooleanButton);
-    $(`#${extensionName.toLowerCase()}-range-input-width`).on('input', settingsTextButton);
-    $(`#${extensionName.toLowerCase()}-min-prompt-depth`).on('input', settingsNumberButton);
+    $(`#${htmlSuffix}-auto-detect-participants`).on('input', settingsBooleanButton);
+    $(`#${htmlSuffix}-always-include-unmuted-members`).on('input', settingsBooleanButton);
+    $(`#${htmlSuffix}-auto-save-metadata`).on('input', settingsBooleanButton);
+    $(`#${htmlSuffix}-alt-macro-template-behavior`).on('input', settingsBooleanButton);
+    $(`#${htmlSuffix}-show-input-macros`).on('input', settingsBooleanButton);
+    $(`#${htmlSuffix}-hide-input-labels`).on('input', settingsBooleanButton);
+    $(`#${htmlSuffix}-show-white-spaces`).on('input', settingsBooleanButton);
+    $(`#${htmlSuffix}-range-input-width`).on('input', settingsTextButton);
+    $(`#${htmlSuffix}-min-prompt-depth`).on('input', settingsNumberButton);
 
-    $(`#${extensionName.toLowerCase()}-debug`).on('input', settingsBooleanButton);
-    $(`#${extensionName.toLowerCase()}-check-configuration`).on('click', displaySettings);
+    $(`#${htmlSuffix}-debug`).on('input', settingsBooleanButton);
+    $(`#${htmlSuffix}-check-configuration`).on('click', displaySettings);
 
     log('Settings menu created');
 
-    $(`#${extensionName.toLowerCase()}-auto-detect-participants`).prop('checked', extensionSettings.autoDetectParticipants);
-    $(`#${extensionName.toLowerCase()}-always-include-unmuted-members`).prop('checked', extensionSettings.alwaysIncludeUnmutedMembers);
-    $(`#${extensionName.toLowerCase()}-auto-save-metadata`).prop('checked', extensionSettings.autoSaveMetadata);
-    $(`#${extensionName.toLowerCase()}-alt-macro-template-behavior`).prop('checked', extensionSettings.altMacroTemplateBehavior);
-    $(`#${extensionName.toLowerCase()}-show-input-macros`).prop('checked', extensionSettings.editNumbersFromChat);
-    $(`#${extensionName.toLowerCase()}-show-white-spaces`).prop('checked', extensionSettings.showWhiteSpaces);
-    $(`#${extensionName.toLowerCase()}-hide-input-labels`).prop('checked', extensionSettings.hideInputLabels).trigger('input');
-    $(`#${extensionName.toLowerCase()}-range-input-width`).val(extensionSettings.rangeInputWidth).trigger('input');
-    $(`#${extensionName.toLowerCase()}-min-prompt-depth`).val(extensionSettings.minPromptDepth);
+    $(`#${htmlSuffix}-auto-detect-participants`).prop('checked', extensionSettings.autoDetectParticipants);
+    $(`#${htmlSuffix}-always-include-unmuted-members`).prop('checked', extensionSettings.alwaysIncludeUnmutedMembers);
+    $(`#${htmlSuffix}-auto-save-metadata`).prop('checked', extensionSettings.autoSaveMetadata);
+    $(`#${htmlSuffix}-alt-macro-template-behavior`).prop('checked', extensionSettings.altMacroTemplateBehavior);
+    $(`#${htmlSuffix}-show-input-macros`).prop('checked', extensionSettings.editNumbersFromChat);
+    $(`#${htmlSuffix}-show-white-spaces`).prop('checked', extensionSettings.showWhiteSpaces);
+    $(`#${htmlSuffix}-hide-input-labels`).prop('checked', extensionSettings.hideInputLabels).trigger('input');
+    $(`#${htmlSuffix}-range-input-width`).val(extensionSettings.rangeInputWidth).trigger('input');
+    $(`#${htmlSuffix}-min-prompt-depth`).val(extensionSettings.minPromptDepth);
 
-    $(`#${extensionName.toLowerCase()}-debug`).prop('checked', extensionSettings.debug).trigger('input');
+    $(`#${htmlSuffix}-debug`).prop('checked', extensionSettings.debug).trigger('input');
 
     log('Settings values initialized', extensionSettings);
 }

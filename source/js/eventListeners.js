@@ -24,7 +24,7 @@ const position = {
 }
 
 function onMessageRendered() {
-    log(eventTypes.USER_MESSAGE_RENDERED, eventTypes.CHARACTER_MESSAGE_RENDERED);
+    log('onMessageRendered');
 
     /** @type {Function} */
     const renderer = SillyTavern[metadataName].renderStatusDebounced;
