@@ -21,23 +21,22 @@ const altEntryTemplate = Object.freeze({
     value: ''
 });
 
+/**
+ * @typedef {Object} AltValueData
+ * @property {string} [title]
+ * @property {string} [value]
+ */
+
+/**
+ * @typedef {Object} EntryData
+ * @property {boolean} [enabled]
+ * @property {string} [key]
+ * @property {string} [separator]
+ * @property {number} [value_uid]
+ * @property {number} [display_position]
+ * @property {Object.<string, AltValueData>} [values]
+ */
 class StatusEntry {
-    /**
-     * @typedef {Object} AltValueData
-     * @property {string} [title]
-     * @property {string} [value]
-     */
-
-    /**
-     * @typedef {Object} EntryData
-     * @property {boolean} [enabled]
-     * @property {string} [key]
-     * @property {string} [separator]
-     * @property {number} [value_uid]
-     * @property {number} [display_position]
-     * @property {Object.<string, AltValueData>} [values]
-     */
-
     /** @property {boolean} */ enabled
     /** @property {string} */ key
     /** @property {string} */ separator
