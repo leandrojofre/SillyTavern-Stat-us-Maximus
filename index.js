@@ -434,7 +434,7 @@ const settingsCallbacks = {
 function settingsBooleanButton(event) {
     const target = event.target;
     const value = Boolean($(target).prop('checked'));
-    const setting = target.getAttribute(`${extensionName.toLowerCase()}-setting`);
+    const setting = target.getAttribute(`${htmlSuffix}-setting`);
     const callback = settingsCallbacks[setting];
 
     extensionSettings[setting] = value;
@@ -450,14 +450,14 @@ function settingsTextButton(event) {
     const target = event.target;
     const value = String($(target).val());
 
-    const setting = target.getAttribute("stat-us-max-setting");
+    const setting = target.getAttribute(`${htmlSuffix}-setting`);
     const callback = settingsCallbacks[setting];
 
     extensionSettings[setting] = value;
 
     if (callback) callback();
 
-    log("toggleSetting " + setting, value);
+    log('toggleSetting ' + setting, value);
     saveSettingsDebounced();
 }
 
@@ -465,38 +465,38 @@ function settingsTextButton(event) {
 function settingsNumberButton(event) {
     const target = /** @type {HTMLInputElement} */ (event.target);
     const raw_value = isNaN(target.valueAsNumber) ? 0 : target.valueAsNumber;
-    const insideMinBoundary = (target.min !== "") ? (Number(target.min) <= raw_value) : true;
-    const insideMaxBoundary = (target.max !== "") ? (Number(target.max) >= raw_value) : true;
+    const insideMinBoundary = (target.min !== '') ? (Number(target.min) <= raw_value) : true;
+    const insideMaxBoundary = (target.max !== '') ? (Number(target.max) >= raw_value) : true;
 
     let value = raw_value;
 
     if (!insideMinBoundary) value = Number(target.min);
     if (!insideMaxBoundary) value = Number(target.max);
 
-    const setting = target.getAttribute("stat-us-max-setting");
+    const setting = target.getAttribute(`${htmlSuffix}-setting`);
     const callback = settingsCallbacks[setting];
 
     extensionSettings[setting] = value;
 
     if (callback) callback();
 
-    log("toggleSetting " + setting, value);
+    log('toggleSetting ' + setting, value);
     saveSettingsDebounced();
 }
 
 /**	Logs setting's values. */
 function displaySettings() {
-    debug(`Auto detect participants is ${extensionSettings.autoDetectParticipants ? "active" : "not active"}`);
-    debug(`Always include unmuted group members is ${extensionSettings.alwaysIncludeUnmutedMembers ? "active" : "not active"}`);
-    debug(`Auto save metadata is ${extensionSettings.autoSaveMetadata ? "active" : "not active"}`);
-    debug(`Alternative behavior for macro template buttons is ${extensionSettings.altMacroTemplateBehavior ? "active" : "not active"}`);
-    debug(`Show input macros in chat is ${extensionSettings.editNumbersFromChat ? "active" : "not active"}`);
-    debug(`Hide input labels is ${extensionSettings.hideInputLabels ? "active" : "not active"}`);
-    debug(`Show whitespaces is ${extensionSettings.showWhiteSpaces ? "active" : "not active"}`);
+    debug(`Auto detect participants is ${extensionSettings.autoDetectParticipants ? 'active' : 'not active'}`);
+    debug(`Always include unmuted group members is ${extensionSettings.alwaysIncludeUnmutedMembers ? 'active' : 'not active'}`);
+    debug(`Auto save metadata is ${extensionSettings.autoSaveMetadata ? 'active' : 'not active'}`);
+    debug(`Alternative behavior for macro template buttons is ${extensionSettings.altMacroTemplateBehavior ? 'active' : 'not active'}`);
+    debug(`Show input macros in chat is ${extensionSettings.editNumbersFromChat ? 'active' : 'not active'}`);
+    debug(`Hide input labels is ${extensionSettings.hideInputLabels ? 'active' : 'not active'}`);
+    debug(`Show whitespaces is ${extensionSettings.showWhiteSpaces ? 'active' : 'not active'}`);
     debug(`Range input width is set to ${String(extensionSettings.rangeInputWidth)}`);
     debug(`Min prompt depth is set to ${String(extensionSettings.minPromptDepth)}`);
 
-    debug(`Debug mode is ${extensionSettings.debug ? "active" : "not active"}`);
+    debug(`Debug mode is ${extensionSettings.debug ? 'active' : 'not active'}`);
     debug(structuredClone(extensionSettings));
 }
 
