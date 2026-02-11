@@ -26,6 +26,7 @@ export {
     exportObjectToClipboard,
     getActiveParticipants,
     context,
+    saveChatDebounced,
     extensionSettings,
     metadataName
 };
@@ -68,11 +69,18 @@ const {
     lodash
 } = SillyTavern.libs;
 
+const debounceTimeout = {
+    SHORT: 300,
+    MED: 500,
+    LONG: 700
+};
+
 const extensionFullName = 'SillyTavern-Stat-us-Maximus';
 const extensionName = 'Stat-us-Maximus';
 const metadataName = extensionName.toLowerCase().replaceAll('-', '_');
 const htmlSuffix = extensionName.toLowerCase();
 const extensionFolderPath = `scripts/extensions/third-party/${extensionFullName}`;
+const saveChatDebounced = lodash.debounce(saveChat, debounceTimeout.SHORT);
 
 /** @type {ExtensionSettings} */
 const extensionSettings = extension_settings[extensionFullName];
@@ -345,7 +353,7 @@ function onToggleEntry(e) {
         .closest('.stat-us-maximus-entry')
         .toggleClass('disabled', !nextState);
 
-    saveChat();
+    saveChatDebounced();
 }
 
 function onCollapseStatus(e) {
@@ -362,7 +370,7 @@ function onCollapseStatus(e) {
         .hasClass('up');
 
     status.set('is_collapsed', doClose);
-    saveChat();
+    saveChatDebounced();
 }
 
 function renderStatus() {
@@ -409,7 +417,7 @@ function initExtension() {
 
         renderStatus: renderStatus,
 
-        renderStatusDebounced: lodash.debounce(renderStatus, 300)
+        renderStatusDebounced: lodash.debounce(renderStatus, debounceTimeout.SHORT)
     };
 }
 
