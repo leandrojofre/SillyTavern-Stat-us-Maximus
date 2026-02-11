@@ -285,7 +285,11 @@ async function renderCharStatus(status) {
         .find('.inline-drawer-header')
         .data({avatar: status.avatar});
 
-    for (const [uid, entry] of Object.entries(status.entries)) {
+    const entries = Object
+        .entries(status.entries)
+        .sort(([uidA, entryA], [uidB, entryB]) => entryA.display_position - entryB.display_position);
+
+    for (const [uid, entry] of entries) {
         /** @type {StatusEntry} */
         const {key, separator, values, value_uid, enabled} = entry;
         const entryBlock = entryBlockTemplate.clone();
