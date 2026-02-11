@@ -258,6 +258,7 @@ function getActiveParticipants(discard = []) {
 async function renderCharStatus(status) {
     if (status.last_mes_id < 0) return;
 
+    /** @type {string} */
     const character = status.is_user ?
         powerUserSettings.personas[status.avatar] :
         characters.find(char => char.avatar === status.avatar).name;
@@ -302,9 +303,10 @@ async function renderCharStatus(status) {
         const {key, separator, values, value_uid, enabled} = entry;
         const entryBlock = entryBlockTemplate.clone();
 
-        const titleClean = lodash.escape(key);
-        const separatorClean = lodash.escape(separator);
-        const valueClean = lodash.escape(values[value_uid].value);
+        const macro = CUSTOM_MACROS.getValues;
+        const titleClean = lodash.escape(macro(key, character));
+        const separatorClean = lodash.escape(substituteParams(separator));
+        const valueClean = lodash.escape(macro(values[value_uid].value, character));
 
         $(entryBlock).find('.status-title').html(`<span class="d-inline">${titleClean}</span>`);
         $(entryBlock).find('.status-separator').html(separatorClean);

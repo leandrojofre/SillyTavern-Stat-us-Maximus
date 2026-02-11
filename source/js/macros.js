@@ -1,4 +1,5 @@
-import { substituteParams, t } from "../../index.js";
+import { substituteParams, error, t } from "../../index.js";
+import { MacroValueType } from "/scripts/macros/macro-system.js";
 
 export {
     CUSTOM_MACROS
@@ -23,6 +24,7 @@ const CUSTOM_MACROS = {
             'text': {
                 handler: function({args: [text], rawOriginal, resolve}) {
                     if (!replaceInputs) return rawOriginal;
+                    if (!text) return '';
 
                     const hasNestedMacro = text.match(detectNestedMacro)?.length > 0;
 
@@ -35,7 +37,9 @@ const CUSTOM_MACROS = {
                 },
                 unnamedArgs: [{
                     name: 'value',
-                    defaultValue: ''
+                    defaultValue: '',
+                    optional: true,
+                    type: MacroValueType.STRING
                 }],
                 delayArgResolution: true
             },
@@ -58,7 +62,8 @@ const CUSTOM_MACROS = {
                 },
                 unnamedArgs: [{
                     name: 'value',
-                    defaultValue: '0'
+                    defaultValue: '0',
+                    optional: true
                 }],
                 delayArgResolution: true
             },
@@ -78,13 +83,16 @@ const CUSTOM_MACROS = {
                 },
                 unnamedArgs: [{
                     name: 'value',
-                    defaultValue: 'true'
+                    defaultValue: 'true',
+                    optional: true
                 }, {
                     name: 'truetext',
-                    defaultValue: 'true'
+                    defaultValue: 'true',
+                    optional: true
                 }, {
                     name: 'falsetext',
-                    defaultValue: 'false'
+                    defaultValue: 'false',
+                    optional: true
                 }],
                 delayArgResolution: true
             },
@@ -120,16 +128,20 @@ const CUSTOM_MACROS = {
                 },
                 unnamedArgs: [{
                     name: 'min',
-                    defaultValue: '0'
+                    defaultValue: '0',
+                    optional: true
                 }, {
                     name: 'max',
-                    defaultValue: '100'
+                    defaultValue: '100',
+                    optional: true
                 }, {
                     name: 'step',
-                    defaultValue: '1'
+                    defaultValue: '1',
+                    optional: true
                 }, {
                     name: 'value',
-                    defaultValue: '100'
+                    defaultValue: '100',
+                    optional: true
                 }],
                 delayArgResolution: true
             }
