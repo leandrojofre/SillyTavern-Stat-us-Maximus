@@ -28,7 +28,8 @@ export {
     context,
     saveChatDebounced,
     extensionSettings,
-    metadataName
+    metadataName,
+    extensionName
 };
 
 // * MARK:Extension variables

@@ -1,4 +1,4 @@
-import { substituteParams, error, t } from "../../index.js";
+import { substituteParams, extensionName, error, t } from "../../index.js";
 import { MacroValueType } from "/scripts/macros/macro-system.js";
 
 export {
@@ -43,7 +43,7 @@ const CUSTOM_MACROS = {
                     const hasNestedMacro = text.match(detectNestedMacro)?.length > 0;
 
                     if (hasNestedMacro) {
-                        toastr.error(`${t`You can't nest input macros - macro:`} {{text}}`, 'Stat-Us Maximus');
+                        toastr.error(`${t`You can't nest input macros - macro:`} {{text}}`, extensionName);
                         return text;
                     }
 
@@ -63,7 +63,7 @@ const CUSTOM_MACROS = {
                     const hasNestedMacro = number.match(detectNestedMacro)?.length > 0;
 
                     if (hasNestedMacro) {
-                        toastr.error(`${t`You can't nest input macros - macro:`} {{number}}`, 'Stat-Us Maximus');
+                        toastr.error(`${t`You can't nest input macros - macro:`} {{number}}`, extensionName);
                         return DefMacroValue.NUMBER;
                     }
 
@@ -88,7 +88,7 @@ const CUSTOM_MACROS = {
                     const hasNestedMacro = result.match(detectNestedMacro)?.length > 0;
 
                     if (hasNestedMacro) {
-                        toastr.error(`${t`You can't nest input macros - macro:`} {{boolean}}`, 'Stat-Us Maximus');
+                        toastr.error(`${t`You can't nest input macros - macro:`} {{boolean}}`, extensionName);
                         return DefMacroValue.FALSE;
                     }
 
@@ -122,7 +122,7 @@ const CUSTOM_MACROS = {
                     }
 
                     if (hasNestedMacro) {
-                        toastr.error(`${t`You can't nest input macros - macro:`} {{range}}`, 'Stat-Us Maximus');
+                        toastr.error(`${t`You can't nest input macros - macro:`} {{range}}`, extensionName);
                         return DefMacroValue.RANGE_MAX;
                     }
 
