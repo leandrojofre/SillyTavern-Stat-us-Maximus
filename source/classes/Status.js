@@ -1,4 +1,4 @@
-import { extension_prompt_roles, getFreeDataUid, messageBelongsToChar, context } from '../../index.js';
+import { extension_prompt_roles, getFreeDataUid, messageBelongsToChar, getUser, log, context } from '../../index.js';
 import { StatusEntry, entryTemplate } from './StatusEntry.js';
 
 export {
@@ -99,13 +99,25 @@ class Status {
     }
 
     /**
+     * @returns {Character|import('../../index.js').UserCharacter}
+     */
+    getCharacter() {
+        const { avatar, is_user } = this;
+        const { characters } = context();
+
+        return is_user ?
+            getUser(avatar) :
+            characters.find(c => c.avatar === avatar);
+    }
+
+    /**
      * @returns {Status}
      */
     refreshPosition() {
-        const { chat, characters } = context();
-        const { avatar, is_user } = this;
+        const { chat } = context();
+        const { is_user } = this;
 
-        const character = characters.find(c => c.avatar === avatar);
+        const character = this.getCharacter();
         const lastID = chat.findLastIndex(m => messageBelongsToChar(m, character, is_user));
 
         if (lastID < 0) return this.set('last_mes_id', -1);
@@ -120,10 +132,10 @@ class Status {
      * @returns {Status}
      */
     refreshDepth() {
-        const { chat, characters } = context();
-        const { avatar, is_user } = this;
+        const { chat } = context();
+        const { is_user } = this;
 
-        const character = characters.find(c => c.avatar === avatar);
+        const character = this.getCharacter();
         const lastID = chat
             .filter(m => !m.is_system)
             .findLastIndex(m => messageBelongsToChar(m, character, is_user));

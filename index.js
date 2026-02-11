@@ -29,6 +29,7 @@ export {
     createElement,
     saveMetadataSTUM,
     messageBelongsToChar,
+    getUser,
     extensionSettings,
     metadataName,
     extensionName
