@@ -1,4 +1,4 @@
-import { extension_prompt_roles, getFreeDataUid } from '../../index.js';
+import { extension_prompt_roles, getFreeDataUid, messageBelongsToChar, context } from '../../index.js';
 import { StatusEntry, entryTemplate } from './StatusEntry.js';
 
 export {
@@ -96,5 +96,43 @@ class Status {
         this[key] = value;
 
         return this;
+    }
+
+    /**
+     * @returns {Status}
+     */
+    refreshPosition() {
+        const { chat, characters } = context();
+        const { avatar, is_user } = this;
+
+        const character = characters.find(c => c.avatar === avatar);
+        const lastID = chat.findLastIndex(m => messageBelongsToChar(m, character, is_user));
+
+        if (lastID < 0) return this.set('last_mes_id', -1);
+
+        const chatLength = chat.length - 1;
+        const chatEmpty = chatLength < 0;
+
+        return this.set('last_mes_id', chatEmpty ? 0 : lastID);
+    }
+
+    /**
+     * @returns {Status}
+     */
+    refreshDepth() {
+        const { chat, characters } = context();
+        const { avatar, is_user } = this;
+
+        const character = characters.find(c => c.avatar === avatar);
+        const lastID = chat
+            .filter(m => !m.is_system)
+            .findLastIndex(m => messageBelongsToChar(m, character, is_user));
+
+        if (lastID < 0) this.set('depth', -1);
+
+        const chatLength = chat.length - 1;
+        const chatEmpty = chatLength < 0;
+
+        return this.set('depth', chatEmpty ? 0 : (chatLength - lastID));
     }
 }

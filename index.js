@@ -28,6 +28,7 @@ export {
     context,
     createElement,
     saveMetadataSTUM,
+    messageBelongsToChar,
     extensionSettings,
     metadataName,
     extensionName
@@ -278,52 +279,34 @@ function createElement(elem, options = {}) {
     return element;
 }
 
+/**
+ * @param {ChatMessage} mes
+ * @param {Character|Object?} [char]
+ * @param {boolean?} [is_user]
+ * @returns {boolean}
+ */
+function messageBelongsToChar(mes, char = {}, is_user = false) {
+    const { force_avatar, original_avatar, name, is_user: mess_is_user } = mes;
+    const { avatar, name: charName } = char;
+
+    if (is_user !== mess_is_user) return false;
+
+    const url = new URL(force_avatar, window.location.origin);
+    const urlFile = url?.searchParams.get('file') ?? '';
+
+    if (avatar === urlFile) return true;
+    if (avatar === original_avatar) return true;
+
+    if (!char) return false;
+
+    if (charName === name) return true;
+
+    return false;
+}
+
 function saveMetadataSTUM() {
     saveChatDebounced.cancel();
     saveChatDebounced();
-}
-
-/**
- * @param {Status} status
- * @returns {Status}
- */
-function refreshStatusDepth(status) {
-    const { chat, characters } = context();
-    const { avatar, is_user } = status;
-
-    let character = characters.find(c => c.avatar === avatar);
-
-    const lastID = chat.findLastIndex(m => {
-        const { force_avatar, original_avatar, name, is_user: mess_is_user } = m;
-
-        if (is_user !== mess_is_user) return false;
-
-        const url = new URL(force_avatar, window.location.origin);
-		const urlFile = url?.searchParams.get('file') ?? '';
-
-        if (avatar === urlFile) return true;
-        if (avatar === original_avatar) return true;
-
-        if (!character) return false;
-
-        if (character.name === name) return true;
-
-        return false;
-    });
-
-    if (lastID < 0) return status;
-
-    const chatLength = chat.length - 1;
-
-    if (chatLength < 0) return status
-        .set('last_mes_id', 0)
-        .set('depth', 0);
-
-    status
-        .set('last_mes_id', lastID)
-        .set('depth', chatLength - lastID);
-
-    return status;
 }
 
 /**
@@ -342,7 +325,7 @@ async function renderCharStatus(status) {
 
     $(`#chat .stat-us-maximus-custom-css[char-target="${status.avatar}"]`).remove();
 
-    refreshStatusDepth(status);
+    status.refreshPosition();
 
     const lastMess = $(`#chat .mes[mesid="${status.last_mes_id}"][is_user="${status.is_user}"]`).last();
 
