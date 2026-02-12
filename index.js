@@ -476,6 +476,9 @@ async function renderCharStatus(status) {
     if (!status.is_collapsed) statusBlock.find('.inline-drawer-content').show();
 }
 
+/**
+ * @param {Event} e
+ */
 function onToggleEntry(e) {
     const entrySwitch = $(e.currentTarget);
     const { avatar, enabled, uid } = entrySwitch.data();
@@ -502,6 +505,9 @@ function onToggleEntry(e) {
     saveMetadataSafe();
 }
 
+/**
+ * @param {Event} e
+ */
 function onCollapseStatus(e) {
     const drawerHeader = $(e.currentTarget);
     const { avatar } = drawerHeader.data();
@@ -519,6 +525,9 @@ function onCollapseStatus(e) {
     saveMetadataSafe();
 }
 
+/**
+ * @param {Event} e
+ */
 function onSelectChatInputFinish(e) {
     /** @type {HTMLElement} */
     const spanInput = e.data.spanInput;
@@ -535,6 +544,9 @@ function onSelectChatInputFinish(e) {
     input.focus();
 }
 
+/**
+ * @param {Event} e
+ */
 function onSelectChatInput(e) {
     const spanInput = e.currentTarget;
 
