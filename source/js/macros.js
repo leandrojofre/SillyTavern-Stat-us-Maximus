@@ -177,20 +177,21 @@ const CUSTOM_MACROS = {
                     }
 
                     const spanAttr = {};
-                    const inputID = generateUUID();
+                    const inputId = generateUUID();
+
+                    if (!text) spanAttr['data-empty'] = '';
+
                     const textarea = createElement('textarea', {
                         class: 'fake-input chat-input-editor mw-unset',
-                        attr: { autocomplete: 'off', tabindex: '-1', id: inputID },
+                        attr: { autocomplete: 'off', tabindex: '-1', id: inputId },
                         data: { type: 'text' },
                         innerHTML: text
                     });
 
-                    if (!text) spanAttr['data-empty'] = '';
-
                     const span = createElement('span', {
                         class: `value fake-input-span text-line text-quote ${extensionSettings.showWhiteSpaces ? 'show-spaces' : ''}`,
                         attr: { ...spanAttr },
-                        data: { inputID },
+                        data: { inputId },
                         innerHTML: text
                     });
 
@@ -213,15 +214,15 @@ const CUSTOM_MACROS = {
                     }
 
                     let numberClean = Number(number);
-                    const inputID = generateUUID();
+                    const inputId = generateUUID();
 
                     if (isNaN(numberClean)) numberClean = Number(DefMacroValue.NUMBER);
 
                     const numberInput = createElement('input', {
                         class: 'fake-input chat-input-editor',
-                        attr: { type: 'text', value: numberClean, inputmode: 'decimal', autocomplete: 'off', id: inputID },
+                        attr: { type: 'text', value: numberClean, inputmode: 'decimal', autocomplete: 'off', id: inputId },
                         data: { type: 'number', pattern: '^-?\\d+\\.?\\d*$' }
-                    })
+                    });
 
                     const arrowDec = createElement('span', {
                         class: 'fa-solid fa-caret-left m-0 chat-input-icon select-none opacity-60',
@@ -235,12 +236,13 @@ const CUSTOM_MACROS = {
 
                     const buttonsHolder = createElement('span', {
                         class: 'text-line d-inline-flex gap-0 text-body cursor-pointer input-arrows fs-normal',
+                        data: { inputId },
                         innerHTML: `${arrowDec.outerHTML}${arrowInc.outerHTML}`
                     });
 
                     const span = createElement('span', {
                         class: 'text-line text-quote value fake-input-span font-monospace cursor-pointer',
-                        data: { inputID },
+                        data: { inputId },
                         innerHTML: String(numberClean)
                     });
 
@@ -275,18 +277,19 @@ const CUSTOM_MACROS = {
                     const falseValue = resolve(falseText);
                     const result = checked ? trueValue : falseValue;
                     const checkboxAttr = {};
+                    const inputId = generateUUID();
 
                     if (checked) checkboxAttr.checked = '';
 
                     const checkbox = createElement('input', {
                         class: 'd-inline-flex flex-center chat-input-editor m-0',
-                        attr: { type: 'checkbox', ...checkboxAttr },
+                        attr: { type: 'checkbox', ...checkboxAttr, id: inputId },
                         data: { type: 'boolean' }
                     })
 
                     const span = createElement('span', {
                         class: 'text-line text-quote value font-monospace',
-                        data: { true: trueValue, false: falseValue },
+                        data: { true: trueValue, false: falseValue, inputId },
                         innerHTML: result
                     });
 
@@ -337,11 +340,18 @@ const CUSTOM_MACROS = {
 
                     const filteredMax = Math.min(valueClean, maxClean);
                     const valueFiltered = Math.max(filteredMax, minClean);
+                    const inputId = generateUUID();
 
                     const range = createElement('input', {
                         class: 'chat-input-editor',
                         attr: { type: 'range', min: minClean, max: maxClean, step: stepClean, value: valueFiltered },
-                        data: { type: 'range' }
+                        data: { type: 'range', inputId }
+                    });
+
+                    const numberInput = createElement('input', {
+                        class: 'fake-input chat-input-editor',
+                        attr: { type: 'text', min: minClean, max: maxClean, step: stepClean, value: valueFiltered, inputmode: 'decimal', autocomplete: 'off', id: inputId },
+                        data: { type: 'range', pattern: '^-?\\d+\\.?\\d*$' }
                     });
 
                     const arrowDec = createElement('span', {
@@ -356,15 +366,17 @@ const CUSTOM_MACROS = {
 
                     const buttonsHolder = createElement('span', {
                         class: 'text-line d-inline-flex gap-0 text-body cursor-pointer input-arrows fs-normal',
+                        data: { inputId },
                         innerHTML: `${arrowDec.outerHTML}${arrowInc.outerHTML}`
                     });
 
                     const span = createElement('span', {
-                        class: 'text-line text-quote value font-monospace cursor-pointer',
+                        class: 'text-line text-quote value fake-input-span font-monospace cursor-pointer',
+                        data: { inputId },
                         innerHTML: String(valueFiltered)
                     });
 
-                    return `${range.outerHTML} ${buttonsHolder.outerHTML} ${span.outerHTML}`;
+                    return `${numberInput.outerHTML}${range.outerHTML} ${buttonsHolder.outerHTML} ${span.outerHTML}`;
                 },
                 unnamedArgs: [{
                     name: 'min',

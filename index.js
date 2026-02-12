@@ -33,7 +33,11 @@ export {
     generateUUID,
     extensionSettings,
     metadataName,
-    extensionName
+    extensionName,
+    // HTML Related
+    updateCaretDisplaySafe,
+    getSelectedTextInElem,
+    renderCaret
 };
 
 // * MARK:Extension variables
@@ -74,11 +78,16 @@ const {
     lodash
 } = SillyTavern.libs;
 
-const debounceTimeout = {
+/**
+ * @readonly
+ * @enum {number}
+ */
+const debounceTimeout = Object.freeze({
+    MICRO: 50,
     SHORT: 300,
     MED: 500,
     LONG: 700
-};
+});
 
 const extensionFullName = 'SillyTavern-Stat-us-Maximus';
 const extensionName = 'Stat-us-Maximus';
@@ -371,6 +380,15 @@ function updateCaretDisplay(input, span) {
 }
 
 /**
+ * @param {HTMLInputElement} input
+ * @param {HTMLSpanElement} span
+ */
+function updateCaretDisplaySafe(input, span) {
+    updateCaretDisplayDebounced.cancel();
+    updateCaretDisplayDebounced(input, span);
+}
+
+/**
  * @param {string?} [extraSuffix]
  * @returns {string} UUID
  */
@@ -476,85 +494,6 @@ async function renderCharStatus(status) {
     if (!status.is_collapsed) statusBlock.find('.inline-drawer-content').show();
 }
 
-/**
- * @param {Event} e
- */
-function onToggleEntry(e) {
-    const entrySwitch = $(e.currentTarget);
-    const { avatar, enabled, uid } = entrySwitch.data();
-    const nextState = !enabled;
-
-    /** @type {Status} */
-    const status = SillyTavern[metadataName].getStatus(avatar);
-
-    if (!status) return;
-
-    /** @type {StatusEntry} */
-    const entry = status.entries[uid];
-
-    if (!entry) return;
-
-    entry.set('enabled', nextState);
-    entrySwitch
-        .data({enabled: nextState})
-        .toggleClass('fa-toggle-on', nextState)
-        .toggleClass('fa-toggle-off', !nextState)
-        .closest('.stat-us-maximus-entry')
-        .toggleClass('disabled', !nextState);
-
-    saveMetadataSafe();
-}
-
-/**
- * @param {Event} e
- */
-function onCollapseStatus(e) {
-    const drawerHeader = $(e.currentTarget);
-    const { avatar } = drawerHeader.data();
-
-    /** @type {Status} */
-    const status = SillyTavern[metadataName].getStatus(avatar);
-
-    if (!status) return;
-
-    const doClose = drawerHeader
-        .find('.inline-drawer-icon')
-        .hasClass('up');
-
-    status.set('is_collapsed', doClose);
-    saveMetadataSafe();
-}
-
-/**
- * @param {Event} e
- */
-function onSelectChatInputFinish(e) {
-    /** @type {HTMLElement} */
-    const spanInput = e.data.spanInput;
-
-    if (!spanInput) return;
-
-    const input = document.getElementById(spanInput.dataset.inputID);
-    const selection = getSelectedTextInElem(spanInput);
-
-    $(input).one('blur', () => renderCaret(spanInput, spanInput.textContent, -1));
-    $(input).one('focus', () => updateCaretDisplay(input, spanInput));
-
-    input.setSelectionRange(selection.start, selection.end);
-    input.focus();
-}
-
-/**
- * @param {Event} e
- */
-function onSelectChatInput(e) {
-    const spanInput = e.currentTarget;
-
-    if (!spanInput) return;
-
-    $(document).one('pointerup', { spanInput }, onSelectChatInputFinish);
-}
-
 function renderStatuses() {
     const statuses = SillyTavern[metadataName].getStatuses();
 
@@ -564,20 +503,12 @@ function renderStatuses() {
 
 const saveChatDebounced = lodash.debounce(saveChat, debounceTimeout.MED);
 const renderStatusesDebounced = lodash.debounce(renderStatuses, debounceTimeout.MED);
+const updateCaretDisplayDebounced = lodash.debounce(updateCaretDisplay, debounceTimeout.MICRO);
 
 /**
  * Init extension
  */
 function initExtension() {
-    $('#chat').on('click', '.stat-us-maximus-toolbar', function(e){
-        e.stopPropagation();
-    });
-
-    $('#chat').on('click', '.stat-us-maximus-entry .kill-switch', onToggleEntry);
-    $('#chat').on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
-    $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-input-span', onSelectChatInput);
-    $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-selection', (e) => e.stopPropagation());
-
     SillyTavern[metadataName] = {
         getStatuses: function() {
             let statuses = context().chatMetadata[metadataName];

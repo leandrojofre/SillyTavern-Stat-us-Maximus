@@ -8,7 +8,12 @@ import {
     context,
     extensionSettings,
     generateUUID,
-    log
+    log,
+    saveMetadataSafe,
+    // HTML Related
+    updateCaretDisplaySafe,
+    getSelectedTextInElem,
+    renderCaret
 } from "../../index.js";
 
 import { Status } from "../classes/Status.js";
@@ -19,10 +24,179 @@ export {
     registerEvents
 };
 
-const position = {
+/**
+ * @readonly
+ * @enum {number}
+ */
+const position = Object.freeze({
     AFTER_PROMPT: 0,
     IN_DEPTH: 1
+});
+
+/**
+ * @readonly
+ * @enum {string}
+ */
+const allowedNumericKeys = Object.freeze({
+    UP: 'ArrowUp',
+    DOWN: 'ArrowDown'
+});
+
+/**
+ * @readonly
+ * @enum {string}
+ */
+const allowedNumericInputs = Object.freeze({
+    RANGE: 'range',
+    NUMBER: 'number'
+});
+
+// * MARK:DOM Listeners
+
+/**
+ * @param {Event} e
+ */
+function onToggleEntry(e) {
+    const entrySwitch = $(e.currentTarget);
+    const { avatar, enabled, uid } = entrySwitch.data();
+    const nextState = !enabled;
+
+    /** @type {Status} */
+    const status = SillyTavern[metadataName].getStatus(avatar);
+
+    if (!status) return;
+
+    /** @type {StatusEntry} */
+    const entry = status.entries[uid];
+
+    if (!entry) return;
+
+    entry.set('enabled', nextState);
+    entrySwitch
+        .data({enabled: nextState})
+        .toggleClass('fa-toggle-on', nextState)
+        .toggleClass('fa-toggle-off', !nextState)
+        .closest('.stat-us-maximus-entry')
+        .toggleClass('disabled', !nextState);
+
+    saveMetadataSafe();
 }
+
+/**
+ * @param {Event} e
+ */
+function onCollapseStatus(e) {
+    const drawerHeader = $(e.currentTarget);
+    const { avatar } = drawerHeader.data();
+
+    /** @type {Status} */
+    const status = SillyTavern[metadataName].getStatus(avatar);
+
+    if (!status) return;
+
+    const doClose = drawerHeader
+        .find('.inline-drawer-icon')
+        .hasClass('up');
+
+    status.set('is_collapsed', doClose);
+    saveMetadataSafe();
+}
+
+/**
+ * @param {Event} e
+ */
+function onSelectChatInputFinish(e) {
+    /** @type {HTMLSpanElement} */
+    const spanInput = e.data.spanInput;
+
+    if (!spanInput) return;
+
+    /** @type {HTMLInputElement|HTMLTextAreaElement} */
+    const input = document.getElementById(spanInput.dataset.inputId);
+    const $input = $(input);
+    const selection = getSelectedTextInElem(spanInput);
+
+    $input.data('lastValue', $input.val());
+    $input.one('focus', () => updateCaretDisplaySafe(input, spanInput));
+
+    $input.one('blur', function() {
+        $input.off('keydown');
+        $input.off('input');
+        renderCaret(spanInput, spanInput.textContent, -1);
+    });
+
+    $input.on('input', function() {
+        const { pattern = '', lastValue } = $input.data();
+        const value = $input.val();
+
+        if (!pattern) return updateCaretDisplaySafe(input, spanInput);
+
+        const regex = new RegExp(pattern);
+
+        regex.test(value) ?
+            $input.data('lastValue', value) :
+            $input.val(lastValue);
+
+        updateCaretDisplaySafe(input, spanInput);
+    });
+
+    $input.on('keydown', function(e) {
+        // ! Writing the value without arrows allows prohibited values
+
+        e.stopPropagation();
+
+        const { type } = $input.data();
+        const { key } = e;
+
+        const validNumericKey = Object.values(allowedNumericKeys).includes(key);
+        const validNumericInput = Object.values(allowedNumericInputs).includes(type);
+
+        if (!validNumericInput) return updateCaretDisplaySafe(input, spanInput);;
+
+        const inputID = $input.attr('id');
+        let newValue = Number($input.val());
+
+        if (validNumericKey) {
+            const step = $input.attr('step') ?? 1;
+            const direction = key === allowedNumericKeys.UP ? 1 : -1;
+            const nextStep = Number(step) * direction;
+
+            newValue += nextStep;
+        }
+
+        if (type === allowedNumericInputs.NUMBER)
+            $input.val(newValue);
+
+        if (type === allowedNumericInputs.RANGE) {
+            const min = Number($input.attr('min'));
+            const max = Number($input.attr('max'));
+            const normalizedFloor = Math.max(newValue, min);
+            const normalizedValue = Math.min(normalizedFloor, max);
+
+            $input.val(normalizedValue);
+
+            $(`input[data-input-id="${inputID}"].chat-input-editor`).val(normalizedValue);
+        }
+
+        updateCaretDisplaySafe(input, spanInput);
+    });
+
+    input.setSelectionRange(selection.start, selection.end);
+    input.focus();
+}
+
+/**
+ * @param {Event} e
+ */
+function onSelectChatInput(e) {
+    const spanInput = e.currentTarget;
+
+    if (!spanInput) return;
+
+    $(document).one('pointerup', { spanInput }, onSelectChatInputFinish);
+}
+
+// * MARK:ST Listeners
 
 function onMessageRendered() {
     log('onMessageRendered');
@@ -92,7 +266,21 @@ function onGenerationAfterCommands() {
     }
 }
 
+// * MARK:Init Listeners
+
 function registerEvents() {
+    $('#chat').on('click', '.stat-us-maximus-toolbar', function(e){
+        e.stopPropagation();
+    });
+
+    $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-selection', function(e){
+        e.stopPropagation();
+    });
+
+    $('#chat').on('click', '.stat-us-maximus-entry .kill-switch', onToggleEntry);
+    $('#chat').on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
+    $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-input-span', onSelectChatInput);
+
     eventSource.on(eventTypes.CHAT_CHANGED, onChatChanged);
 
     eventSource.on(eventTypes.MORE_MESSAGES_LOADED, onMessageRendered);
