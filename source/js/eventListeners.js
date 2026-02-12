@@ -7,6 +7,7 @@ import {
     setExtensionPrompt,
     context,
     extensionSettings,
+    generateUUID,
     log
 } from "../../index.js";
 
@@ -77,12 +78,11 @@ function onGenerationAfterCommands() {
             return text;
         });
 
-        const randUUID = self?.crypto?.randomUUID();
-        const uuid = !randUUID ? new Date().valueOf() : randUUID.replaceAll('-', '_');
+        const uuid = generateUUID();
         const prompt = status.prefix + entries.join(status.separator) + status.suffix;
 
         setExtensionPrompt(
-            metadataName + uuid,
+            uuid,
             macro(prompt, char.name),
             position.IN_DEPTH,
             extensionSettings.minPromptDepth,

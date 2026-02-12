@@ -1,4 +1,4 @@
-import { substituteParams, extensionName, extensionSettings, createElement, log, error, t } from "../../index.js";
+import { substituteParams, extensionName, extensionSettings, createElement, generateUUID, log, error, t } from "../../index.js";
 import { MacroValueType } from "/scripts/macros/macro-system.js";
 
 export {
@@ -176,20 +176,21 @@ const CUSTOM_MACROS = {
                         text = DefMacroValue.STRING;
                     }
 
+                    const spanAttr = {};
+                    const inputID = generateUUID();
                     const textarea = createElement('textarea', {
                         class: 'fake-input chat-input-editor mw-unset',
-                        attr: { autocomplete: 'off', tabindex: '-1' },
+                        attr: { autocomplete: 'off', tabindex: '-1', id: inputID },
                         data: { type: 'text' },
                         innerHTML: text
                     });
 
-                    const spanAttr = {};
-
                     if (!text) spanAttr['data-empty'] = '';
 
                     const span = createElement('span', {
-                        class: `value text-line text-quote ${extensionSettings.showWhiteSpaces ? 'show-spaces' : ''}`,
+                        class: `value fake-input-span text-line text-quote ${extensionSettings.showWhiteSpaces ? 'show-spaces' : ''}`,
                         attr: { ...spanAttr },
+                        data: { inputID },
                         innerHTML: text
                     });
 
@@ -212,12 +213,13 @@ const CUSTOM_MACROS = {
                     }
 
                     let numberClean = Number(number);
+                    const inputID = generateUUID();
 
                     if (isNaN(numberClean)) numberClean = Number(DefMacroValue.NUMBER);
 
                     const numberInput = createElement('input', {
                         class: 'fake-input chat-input-editor',
-                        attr: { type: 'text', value: numberClean, inputmode: 'decimal', autocomplete: 'off' },
+                        attr: { type: 'text', value: numberClean, inputmode: 'decimal', autocomplete: 'off', id: inputID },
                         data: { type: 'number', pattern: '^-?\\d+\\.?\\d*$' }
                     })
 
@@ -237,7 +239,8 @@ const CUSTOM_MACROS = {
                     });
 
                     const span = createElement('span', {
-                        class: 'text-line text-quote value font-monospace cursor-pointer',
+                        class: 'text-line text-quote value fake-input-span font-monospace cursor-pointer',
+                        data: { inputID },
                         innerHTML: String(numberClean)
                     });
 

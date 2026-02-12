@@ -4,6 +4,12 @@
     --stum-save-state-color: transparent;
 }
 
+@keyframes stumcaretblink {
+    0% { opacity: 1; }
+    50% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
 .stat-us-maximus-custom-css {
     --stat-us-border-color: var(--SmartThemeBorderColor);
     --stat-us-avatar-height: var(--avatar-base-height);

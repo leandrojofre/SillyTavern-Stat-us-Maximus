@@ -30,6 +30,7 @@ export {
     saveMetadataSafe,
     messageBelongsToChar,
     getUser,
+    generateUUID,
     extensionSettings,
     metadataName,
     extensionName
@@ -304,6 +305,82 @@ function messageBelongsToChar(mes, char = {}, is_user = false) {
     return false;
 }
 
+/**
+    @param {HTMLElement} elem
+    @returns {{start:number; end:number;}}
+*/
+function getSelectedTextInElem(elem) {
+    const selection = window.getSelection();
+
+    if (!selection?.rangeCount) return {start: -1, end: -1};
+
+    const range = selection.getRangeAt(0);
+
+    if (elem.contains(range.startContainer) && elem.contains(range.endContainer))
+        return {start: range.startOffset, end: range.endOffset};
+
+    else if (elem.contains(range.startContainer))
+        return {start: range.startOffset, end: elem.textContent.length};
+
+    else if (elem.contains(range.endContainer))
+        return {start: 0, end: range.endOffset};
+
+    else return {start: -1, end: -1};
+}
+
+/**
+    @param {HTMLSpanElement} span
+    @param {string} text
+    @param {number} caretPos
+    @param {number} selectEnd
+ */
+function renderCaret(span, text, caretPos, selectEnd = caretPos) {
+    const esc = s => lodash.escape(s);
+    const $span = $(span);
+
+    $span.empty();
+
+    if (!text) $span.attr('data-empty', '');
+    else $span.removeAttr('data-empty');
+
+    if (caretPos < 0) return $span.text(text);
+
+    const chunks = {
+        start: text.slice(0, caretPos),
+        selected: caretPos !== selectEnd ? text.slice(caretPos, selectEnd) : false,
+        end: text.slice(selectEnd)
+    };
+
+    for (const [k, v] of Object.entries(chunks))
+        chunks[k] = typeof v === 'boolean' ? v : esc(v);
+
+    !chunks.selected ?
+        $span.html(`${chunks.start}<span class="fake-caret"></span>${chunks.end}`) :
+        $span.html(`${chunks.start}<span class="fake-selection">${chunks.selected}</span>${chunks.end}`);
+}
+
+/**
+ * @param {HTMLInputElement} input
+ * @param {HTMLSpanElement} span
+ */
+function updateCaretDisplay(input, span) {
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+
+    renderCaret(span, input.value, start, end);
+}
+
+/**
+ * @param {string?} [extraSuffix]
+ * @returns {string} UUID
+ */
+function generateUUID(extraSuffix) {
+    const randUUID = self?.crypto?.randomUUID();
+    const uuid = !randUUID ? new Date().valueOf().toString() : randUUID.replaceAll('-', '_');
+
+    return `${extraSuffix ?? metadataName}_${uuid}`;
+}
+
 function saveMetadataSafe() {
     saveChatDebounced.cancel();
     saveChatDebounced();
@@ -442,6 +519,30 @@ function onCollapseStatus(e) {
     saveMetadataSafe();
 }
 
+function onSelectChatInputFinish(e) {
+    /** @type {HTMLElement} */
+    const spanInput = e.data.spanInput;
+
+    if (!spanInput) return;
+
+    const input = document.getElementById(spanInput.dataset.inputID);
+    const selection = getSelectedTextInElem(spanInput);
+
+    $(input).one('blur', () => renderCaret(spanInput, spanInput.textContent, -1));
+    $(input).one('focus', () => updateCaretDisplay(input, spanInput));
+
+    input.setSelectionRange(selection.start, selection.end);
+    input.focus();
+}
+
+function onSelectChatInput(e) {
+    const spanInput = e.currentTarget;
+
+    if (!spanInput) return;
+
+    $(document).one('pointerup', { spanInput }, onSelectChatInputFinish);
+}
+
 function renderStatuses() {
     const statuses = SillyTavern[metadataName].getStatuses();
 
@@ -462,6 +563,8 @@ function initExtension() {
 
     $('#chat').on('click', '.stat-us-maximus-entry .kill-switch', onToggleEntry);
     $('#chat').on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
+    $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-input-span', onSelectChatInput);
+    $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-selection', (e) => e.stopPropagation());
 
     SillyTavern[metadataName] = {
         getStatuses: function() {
