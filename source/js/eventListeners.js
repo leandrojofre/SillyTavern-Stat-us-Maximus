@@ -197,6 +197,21 @@ function onSelectChatInput(e) {
     $(document).one('pointerup', { spanInput }, onSelectChatInputFinish);
 }
 
+/**
+ * @param {Event} e
+ */
+function onRangeSliderMoved(e) {
+    e.stopPropagation();
+
+    /** @type {HTMLInputElement} */
+    const range = e.currentTarget;
+    const $input = $(`#${range.dataset.inputId}`);
+    const $span = $(`.fake-input-span[data-input-id="${range.dataset.inputId}"]`);
+
+    $input.val(range.value);
+    $span.empty().html(String(range.value));
+}
+
 // * MARK:ST Listeners
 
 function onMessageRendered() {
@@ -281,6 +296,7 @@ function registerEvents() {
     $('#chat').on('click', '.stat-us-maximus-entry .kill-switch', onToggleEntry);
     $('#chat').on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
     $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-input-span', onSelectChatInput);
+    $('#chat').on('input', '.stat-us-maximus-entry .chat-input-editor[type="range"]', onRangeSliderMoved);
 
     eventSource.on(eventTypes.CHAT_CHANGED, onChatChanged);
 
