@@ -115,76 +115,71 @@ function onSelectChatInputFinish(e) {
     const input = document.getElementById(spanInput.dataset.inputId);
     const $input = $(input);
     const selection = getSelectedTextInElem(spanInput);
+    let lastKeyPressed = '';
 
     $input.data('lastValue', $input.val());
     $input.one('focus', () => updateCaretDisplaySafe(input, spanInput));
     $input.one('blur', function() {
+        $input.off('input');
         $input.off('keydown');
-        $input.off('input:finish');
         renderCaret(spanInput, spanInput.textContent, -1);
-    });
-
-    $input.on('input:finish', function() {
-        const { pattern = '', lastValue, type } = $input.data();
-        const value = $input.val();
-
-        if (!pattern) return updateCaretDisplaySafe(input, spanInput);
-
-        const regex = new RegExp(pattern);
-        const inputID = $input.attr('id');
-
-        regex.test(value) ?
-            $input.data('lastValue', value) :
-            $input.val(lastValue);
-
-        if (type === allowedNumericInputs.RANGE) {
-            window.requestAnimationFrame(() => {
-                $(`input[data-input-id="${inputID}"].chat-input-editor`).val($input.val())
-            });
-        }
-
-        updateCaretDisplaySafe(input, spanInput);
     });
 
     $input.on('keydown', function(e) {
         e.stopPropagation();
+        updateCaretDisplaySafe(input, spanInput);
 
-        const { type } = $input.data();
-        const { key } = e;
+        lastKeyPressed = e.key;
 
-        const validNumericKey = Object.values(allowedNumericKeys).includes(key);
+        const validNumericKey = Object.values(allowedNumericKeys).includes(lastKeyPressed);
+
+        if (validNumericKey) $input.trigger('input');
+    });
+
+    $input.on('input', function(e) {
+        e.stopPropagation();
+
+        const { pattern = '', lastValue, type } = $input.data();
+
+        const validNumericKey = Object.values(allowedNumericKeys).includes(lastKeyPressed);
         const validNumericInput = Object.values(allowedNumericInputs).includes(type);
 
-        if (!validNumericInput) return $input.trigger('input:finish');
+        if (!validNumericInput) return updateCaretDisplaySafe(input, spanInput);
 
         const inputID = $input.attr('id');
-        let newValue = Number($input.val());
+        const regex = new RegExp(pattern);
+        const currentValue = $input.val();
+        let newValue = regex.test(currentValue) ? Number(currentValue) : Number(lastValue);
+
+        log(newValue, currentValue, lastValue, regex.test(currentValue));
 
         if (validNumericKey) {
             const step = $input.attr('step') ?? 1;
-            const direction = key === allowedNumericKeys.UP ? 1 : -1;
+            const direction = lastKeyPressed === allowedNumericKeys.UP ? 1 : -1;
             const nextStep = Number(step) * direction;
 
             newValue += nextStep;
         }
 
-        if (type === allowedNumericInputs.NUMBER)
-            $input.val(newValue);
-
         if (type === allowedNumericInputs.RANGE) {
             const min = Number($input.attr('min'));
             const max = Number($input.attr('max'));
+            const step = Number($input.attr('step'));
             const normalizedFloor = Math.max(newValue, min);
-            const normalizedValue = Math.min(normalizedFloor, max);
+            const normalizedRoof = Math.min(normalizedFloor, max);
+            const normalizedValue = normalizedRoof - (normalizedRoof % step);
 
-            $input.val(normalizedValue);
+            newValue = normalizedValue;
 
             window.requestAnimationFrame(() => {
+                $input.val(normalizedValue);
                 $(`input[data-input-id="${inputID}"].chat-input-editor`).val(normalizedValue);
             });
         }
 
-        $input.trigger('input:finish');
+        $input.val(newValue);
+        $input.data('lastValue', newValue);
+        updateCaretDisplaySafe(input, spanInput);
     });
 
     input.setSelectionRange(selection.start, selection.end);
