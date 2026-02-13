@@ -118,31 +118,35 @@ function onSelectChatInputFinish(e) {
 
     $input.data('lastValue', $input.val());
     $input.one('focus', () => updateCaretDisplaySafe(input, spanInput));
-
     $input.one('blur', function() {
         $input.off('keydown');
-        $input.off('input');
+        $input.off('input:finish');
         renderCaret(spanInput, spanInput.textContent, -1);
     });
 
-    $input.on('input', function() {
-        const { pattern = '', lastValue } = $input.data();
+    $input.on('input:finish', function() {
+        const { pattern = '', lastValue, type } = $input.data();
         const value = $input.val();
 
         if (!pattern) return updateCaretDisplaySafe(input, spanInput);
 
         const regex = new RegExp(pattern);
+        const inputID = $input.attr('id');
 
         regex.test(value) ?
             $input.data('lastValue', value) :
             $input.val(lastValue);
 
+        if (type === allowedNumericInputs.RANGE) {
+            window.requestAnimationFrame(() => {
+                $(`input[data-input-id="${inputID}"].chat-input-editor`).val($input.val())
+            });
+        }
+
         updateCaretDisplaySafe(input, spanInput);
     });
 
     $input.on('keydown', function(e) {
-        // ! Writing the value without arrows allows prohibited values
-
         e.stopPropagation();
 
         const { type } = $input.data();
@@ -151,7 +155,7 @@ function onSelectChatInputFinish(e) {
         const validNumericKey = Object.values(allowedNumericKeys).includes(key);
         const validNumericInput = Object.values(allowedNumericInputs).includes(type);
 
-        if (!validNumericInput) return updateCaretDisplaySafe(input, spanInput);;
+        if (!validNumericInput) return $input.trigger('input:finish');
 
         const inputID = $input.attr('id');
         let newValue = Number($input.val());
@@ -175,10 +179,12 @@ function onSelectChatInputFinish(e) {
 
             $input.val(normalizedValue);
 
-            $(`input[data-input-id="${inputID}"].chat-input-editor`).val(normalizedValue);
+            window.requestAnimationFrame(() => {
+                $(`input[data-input-id="${inputID}"].chat-input-editor`).val(normalizedValue);
+            });
         }
 
-        updateCaretDisplaySafe(input, spanInput);
+        $input.trigger('input:finish');
     });
 
     input.setSelectionRange(selection.start, selection.end);
