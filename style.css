@@ -10,6 +10,10 @@
     100% { opacity: 1; }
 }
 
+.mes[is_user="true"] .stat-us-maximus-custom-css {
+    --stat-us-show-spaces-color: color-mix(in srgb, var(--SmartThemeUserMesBlurTintColor), var(--SmartThemeQuoteColor) 12%);
+}
+
 .stat-us-maximus-custom-css {
     --stat-us-border-color: var(--SmartThemeBorderColor);
     --stat-us-avatar-height: var(--avatar-base-height);
