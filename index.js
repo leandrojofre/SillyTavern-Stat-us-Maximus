@@ -104,7 +104,7 @@ const defaultSettings = {
     editNumbersFromChat: false,
     autoDetectParticipants: true,
     hideInputLabels: false,
-    rangeInputWidth: "auto",
+    rangeInputWidth: 'auto',
     showWhiteSpaces: false,
     minPromptDepth: 0,
     alwaysIncludeUnmutedMembers: false,
@@ -115,7 +115,7 @@ const defaultSettings = {
 
 const HTML_TEMPLATES = {
 	/** @returns {Promise<JQuery<HTMLElement>>} */
-    get: async function(fileName = "settings") {
+    get: async function(fileName = 'settings') {
 		const file = HTML_TEMPLATES[fileName] ?? await $.get(`${extensionFolderPath}/source/templates/${fileName}.html`);
 
 		if (!HTML_TEMPLATES[fileName]) HTML_TEMPLATES[fileName] = file;
@@ -164,17 +164,17 @@ function getFreeDataUid(data = {}) {
 
 function escapeNewlines(str) {
     return str
-        .replace(/\\/g, "\\\\")
-        .replace(/\r\n/g, "\\r\\n")
-        .replace(/\n/g, "\\n")
-        .replace(/\r/g, "\\r");
+        .replace(/\\/g, '\\\\')
+        .replace(/\r\n/g, '\\r\\n')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r');
 }
 
 function unEscapeNewlines(str) {
     return str
-        .replace(/\\r\\n/g, "\r\n")
-        .replace(/\\n/g, "\n")
-        .replace(/\\r/g, "\r");
+        .replace(/\\r\\n/g, '\r\n')
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '\r');
 }
 
 /**
