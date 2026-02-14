@@ -28,7 +28,7 @@ export {
  * @readonly
  * @enum {number}
  */
-const position = Object.freeze({
+const Position = Object.freeze({
     AFTER_PROMPT: 0,
     IN_DEPTH: 1
 });
@@ -37,7 +37,7 @@ const position = Object.freeze({
  * @readonly
  * @enum {string}
  */
-const allowedNumericKeys = Object.freeze({
+const AllowedNumericKeys = Object.freeze({
     UP: 'ArrowUp',
     DOWN: 'ArrowDown'
 });
@@ -46,12 +46,90 @@ const allowedNumericKeys = Object.freeze({
  * @readonly
  * @enum {string}
  */
-const allowedNumericInputs = Object.freeze({
-    RANGE: 'range',
-    NUMBER: 'number'
+const InputTypes = Object.freeze({
+    TEXT: 'text',
+    NUMBER: 'number',
+    BOOLEAN: 'boolean',
+    RANGE: 'range'
+});
+
+/**
+ * @readonly
+ * @enum {string}
+ */
+const AllowedNumericInputs = Object.freeze({
+    NUMBER: InputTypes.NUMBER,
+    RANGE: InputTypes.RANGE
 });
 
 // * MARK:DOM Listeners
+
+/**
+ * @param {HTMLInputElement|HTMLTextAreaElement} inputTrigger
+ */
+function updateEntryFromInput(inputTrigger) {
+    const $container = $(inputTrigger).closest('span.fake-inputs-container[data-field]').first();
+
+    if (!$container.length) return;
+
+    const { avatar, uid, value_uid, field } = $container.data();
+
+    if (!avatar || isNaN(uid)) return;
+
+    /** @type {Status} */
+    const status = SillyTavern[metadataName].getStatus(avatar);
+    const $inputs = $container.find('.input-value-source');
+
+    if (!status) return;
+
+    /** @type {StatusEntry} */
+    const entry = status.entries[uid];
+
+    if (!entry || !entry.values[value_uid]) return;
+
+    const entryValue = field === 'value' ? entry.values[value_uid].value : entry[field];
+    let parsedValue = CUSTOM_MACROS.getIndexes(entryValue);
+
+    $inputs.each(function(i, input) {
+        const $input = $(input);
+
+        const { type } = $input.data();
+
+        const inputIndex = `{{${String(type).toUpperCase()}}}`;
+        let newMacro = '';
+
+        if (type === InputTypes.TEXT || type === InputTypes.NUMBER) {
+            const value = $input.val() ?? '';
+            const separator = !value ? '' : '::';
+
+            newMacro = `{{${type}${separator + value}}}`;
+        }
+
+        if (type === InputTypes.BOOLEAN) {
+            const value = $input.prop('checked') ?? true;
+            const inputId = $input.attr('id');
+            const $span = $(`.fake-input-span[data-input-id="${inputId}"]`);
+
+            const { trueValue, falseValue } = $span.data();
+
+            newMacro = `{{${type}::${value}::${trueValue}::${falseValue}}}`;
+        }
+
+        if (type === InputTypes.RANGE) {
+            const value = $input.val() ?? 100;
+            const min = $input.attr('min') ?? 0;
+            const max = $input.attr('max') ?? 100;
+            const step = $input.attr('step') ?? 1;
+
+            newMacro = `{{${type}::${min}::${max}::${step}::${value}}}`;
+        }
+
+        parsedValue = parsedValue.replace(inputIndex, newMacro);
+    });
+
+    entry.setValue(field, parsedValue, value_uid);
+    saveMetadataSafe();
+}
 
 /**
  * @param {Event} e
@@ -123,6 +201,7 @@ function onSelectChatInputFinish(e) {
         $input.off('input');
         $input.off('keydown');
         renderCaret(spanInput, spanInput.textContent, -1);
+        updateEntryFromInput($input);
     });
 
     $input.on('keydown', function(e) {
@@ -131,7 +210,7 @@ function onSelectChatInputFinish(e) {
 
         lastKeyPressed = e.key;
 
-        const validNumericKey = Object.values(allowedNumericKeys).includes(lastKeyPressed);
+        const validNumericKey = Object.values(AllowedNumericKeys).includes(lastKeyPressed);
 
         if (validNumericKey) $input.trigger('input');
     });
@@ -141,8 +220,8 @@ function onSelectChatInputFinish(e) {
 
         const { pattern = '', lastValue, type } = $input.data();
 
-        const validNumericKey = Object.values(allowedNumericKeys).includes(lastKeyPressed);
-        const validNumericInput = Object.values(allowedNumericInputs).includes(type);
+        const validNumericKey = Object.values(AllowedNumericKeys).includes(lastKeyPressed);
+        const validNumericInput = Object.values(AllowedNumericInputs).includes(type);
 
         if (!validNumericInput) return updateCaretDisplaySafe(input, spanInput);
 
@@ -151,17 +230,15 @@ function onSelectChatInputFinish(e) {
         const currentValue = $input.val();
         let newValue = regex.test(currentValue) ? Number(currentValue) : Number(lastValue);
 
-        log(newValue, currentValue, lastValue, regex.test(currentValue));
-
         if (validNumericKey) {
             const step = $input.attr('step') ?? 1;
-            const direction = lastKeyPressed === allowedNumericKeys.UP ? 1 : -1;
+            const direction = lastKeyPressed === AllowedNumericKeys.UP ? 1 : -1;
             const nextStep = Number(step) * direction;
 
             newValue += nextStep;
         }
 
-        if (type === allowedNumericInputs.RANGE) {
+        if (type === AllowedNumericInputs.RANGE) {
             const min = Number($input.attr('min'));
             const max = Number($input.attr('max'));
             const step = Number($input.attr('step'));
@@ -210,6 +287,7 @@ function onRangeSliderMoved(e) {
 
     $input.val(range.value);
     $span.empty().html(String(range.value));
+    updateEntryFromInput($input);
 }
 
 /**
@@ -230,21 +308,21 @@ function onClickInputArrow(e) {
 
     const { type } = $input.data();
 
-    const validNumericInput = Object.values(allowedNumericInputs).includes(type);
+    const validNumericInput = Object.values(AllowedNumericInputs).includes(type);
 
     if (!validNumericInput) return;
 
     const currentValue = Number($input.val());
     let newValue;
 
-    if (type === allowedNumericInputs.NUMBER) {
+    if (type === AllowedNumericInputs.NUMBER) {
         const step = $input.attr('step') ?? 1;
         const nextStep = Number(step) * direction;
 
         newValue = currentValue + nextStep;
     }
 
-    if (type === allowedNumericInputs.RANGE) {
+    if (type === AllowedNumericInputs.RANGE) {
         const min = Number($input.attr('min'));
         const max = Number($input.attr('max'));
         const step = Number($input.attr('step'));
@@ -261,6 +339,7 @@ function onClickInputArrow(e) {
     }
 
     $input.val(newValue);
+    updateEntryFromInput($input);
 
     $(`.fake-input-span[data-input-id="${inputId}"]`).text(newValue);
 }
@@ -279,6 +358,7 @@ function onCheckboxToggle(e) {
     const { trueValue, falseValue } = $span.data();
 
     $span.text(inputValue ? trueValue : falseValue);
+    updateEntryFromInput($input);
 }
 
 // * MARK:ST Listeners
@@ -343,7 +423,7 @@ function onGenerationAfterCommands() {
         setExtensionPrompt(
             uuid,
             macro(prompt, char.name),
-            position.IN_DEPTH,
+            Position.IN_DEPTH,
             extensionSettings.minPromptDepth,
             true,
             status.role

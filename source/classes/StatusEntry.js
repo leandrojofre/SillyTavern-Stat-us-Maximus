@@ -34,7 +34,7 @@ const altEntryTemplate = Object.freeze({
  * @property {string} [separator]
  * @property {number} [value_uid]
  * @property {number} [display_position]
- * @property {Object.<string, AltValueData>} [values]
+ * @property {Object<string, AltValueData>} [values]
  */
 class StatusEntry {
     /** @property {boolean} */ enabled
@@ -42,7 +42,7 @@ class StatusEntry {
     /** @property {string} */ separator
     /** @property {number} */ value_uid
     /** @property {number} */ display_position
-    /** @property {Object.<string, AltValueData>} */ values
+    /** @property {Object<string, AltValueData>} */ values
 
     /**
      * @param {EntryData?} [entry={}] - The status data to initialize the Status object with. If not provided, default values will be used.
@@ -86,11 +86,28 @@ class StatusEntry {
     /**
      * @param {string} key
      * @param {string|number|boolean} value
+     * @returns {StatusEntry}
      */
     set(key, value) {
         if (key === 'values') return;
-        if (!Object.keys(entryTemplate).includes(key)) return;
+        if (!Object.keys(entryTemplate).includes(key)) return this;
 
         this[key] = value;
+
+        return this;
+    }
+
+    /**
+     * @param {string} key
+     * @param {string} value
+     * @param {number} uid
+     * @returns {StatusEntry}
+     */
+    setValue(key, value, uid) {
+        if (!Object.keys(altEntryTemplate).includes(key)) return this;
+
+        this.values[uid][key] = value;
+
+        return this;
     }
 }

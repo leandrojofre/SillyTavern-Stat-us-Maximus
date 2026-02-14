@@ -482,6 +482,10 @@ async function renderCharStatus(status) {
         $(entryBlock)
             .toggleClass('disabled', !enabled);
 
+        $(entryBlock)
+            .find('.fake-inputs-container')
+            .data({avatar: status.avatar, uid, value_uid});
+
         statusBlock
             .find(`.${htmlSuffix}-entries-list`)
             .append(entryBlock);

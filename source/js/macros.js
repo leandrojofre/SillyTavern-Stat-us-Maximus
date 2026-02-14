@@ -166,7 +166,7 @@ const CUSTOM_MACROS = {
                 }
             },
             'text': {
-                handler: function({args: [text]}) {
+                handler: function({args: [text], rawOriginal}) {
                     if (!text) text = DefMacroValue.STRING;
 
                     const hasNestedMacro = text.match(detectNestedMacro)?.length > 0;
@@ -182,9 +182,9 @@ const CUSTOM_MACROS = {
                     if (!text) spanAttr['data-empty'] = '';
 
                     const textarea = createElement('textarea', {
-                        class: 'fake-input chat-input-editor mw-unset',
+                        class: 'fake-input chat-input-editor mw-unset input-value-source',
                         attr: { autocomplete: 'off', tabindex: '-1', id: inputId },
-                        data: { type: 'text' },
+                        data: { type: 'text', original: rawOriginal },
                         innerHTML: text
                     });
 
@@ -205,7 +205,7 @@ const CUSTOM_MACROS = {
                 delayArgResolution: true
             },
             'number': {
-                handler: function({args: [number]}) {
+                handler: function({args: [number], rawOriginal, resolve}) {
                     const hasNestedMacro = number.match(detectNestedMacro)?.length > 0;
 
                     if (hasNestedMacro) {
@@ -213,15 +213,15 @@ const CUSTOM_MACROS = {
                         number = DefMacroValue.NUMBER;
                     }
 
-                    let numberClean = Number(number);
+                    let numberClean = Number(resolve(number));
                     const inputId = generateUUID();
 
                     if (isNaN(numberClean)) numberClean = Number(DefMacroValue.NUMBER);
 
                     const numberInput = createElement('input', {
-                        class: 'fake-input chat-input-editor',
+                        class: 'fake-input chat-input-editor input-value-source',
                         attr: { type: 'text', value: numberClean, inputmode: 'decimal', autocomplete: 'off', id: inputId },
-                        data: { type: 'number', pattern: '^-?\\d+\\.?\\d*$' }
+                        data: { type: 'number', pattern: '^-?\\d+\\.?\\d*$', original: rawOriginal }
                     });
 
                     const arrowDec = createElement('span', {
@@ -256,7 +256,7 @@ const CUSTOM_MACROS = {
                 delayArgResolution: true
             },
             'boolean': {
-                handler: function({args: [value, trueText, falseText], resolve}) {
+                handler: function({args: [value, trueText, falseText], rawOriginal, resolve}) {
                     let hasNestedMacro = false;
 
                     for (const arg of [value, trueText, falseText]) {
@@ -282,9 +282,9 @@ const CUSTOM_MACROS = {
                     if (checked) checkboxAttr.checked = '';
 
                     const checkbox = createElement('input', {
-                        class: 'd-inline-flex flex-center chat-input-editor m-0',
+                        class: 'd-inline-flex flex-center chat-input-editor m-0 input-value-source',
                         attr: { type: 'checkbox', id: inputId, ...checkboxAttr },
-                        data: { type: 'boolean' }
+                        data: { type: 'boolean', original: rawOriginal }
                     });
 
                     const span = createElement('span', {
@@ -311,7 +311,7 @@ const CUSTOM_MACROS = {
                 delayArgResolution: true
             },
             'range': {
-                handler: function({args: [min, max, step, value], resolve}) {
+                handler: function({args: [min, max, step, value], rawOriginal, resolve}) {
                     let hasNestedMacro = false;
 
                     for (const arg of [min, max, step, value]) {
@@ -349,9 +349,9 @@ const CUSTOM_MACROS = {
                     });
 
                     const numberInput = createElement('input', {
-                        class: 'fake-input chat-input-editor',
+                        class: 'fake-input chat-input-editor input-value-source',
                         attr: { type: 'text', min: minClean, max: maxClean, step: stepClean, value: valueFiltered, inputmode: 'decimal', autocomplete: 'off', id: inputId },
-                        data: { type: 'range', pattern: '^-?\\d+\\.?\\d*$' }
+                        data: { type: 'range', pattern: '^-?\\d+\\.?\\d*$', original: rawOriginal }
                     });
 
                     const arrowDec = createElement('span', {
@@ -377,6 +377,79 @@ const CUSTOM_MACROS = {
                     });
 
                     return `${numberInput.outerHTML}${range.outerHTML} ${buttonsHolder.outerHTML} ${span.outerHTML}`;
+                },
+                unnamedArgs: [{
+                    name: 'min',
+                    defaultValue: DefMacroValue.RANGE_MIN,
+                    optional: true
+                }, {
+                    name: 'max',
+                    defaultValue: DefMacroValue.RANGE_MAX,
+                    optional: true
+                }, {
+                    name: 'step',
+                    defaultValue: DefMacroValue.RANGE_STEP,
+                    optional: true
+                }, {
+                    name: 'value',
+                    defaultValue: DefMacroValue.RANGE_MAX,
+                    optional: true
+                }],
+                delayArgResolution: true
+            }
+        }
+    }),
+
+    /**
+     * @param {string} text
+     * @returns {string}
+     */
+    getIndexes: (text) => substituteParams(text, {
+        dynamicMacros: {
+            'text': {
+                handler: function() {
+                    return '{{TEXT}}';
+                },
+                unnamedArgs: [{
+                    name: 'value',
+                    defaultValue: DefMacroValue.STRING,
+                    optional: true
+                }],
+                delayArgResolution: true
+            },
+            'number': {
+                handler: function() {
+                    return '{{NUMBER}}';
+                },
+                unnamedArgs: [{
+                    name: 'value',
+                    defaultValue: DefMacroValue.NUMBER,
+                    optional: true
+                }],
+                delayArgResolution: true
+            },
+            'boolean': {
+                handler: function() {
+                    return '{{BOOLEAN}}';
+                },
+                unnamedArgs: [{
+                    name: 'value',
+                    defaultValue: DefMacroValue.TRUE,
+                    optional: true
+                }, {
+                    name: 'truetext',
+                    defaultValue: DefMacroValue.TRUE,
+                    optional: true
+                }, {
+                    name: 'falsetext',
+                    defaultValue: DefMacroValue.FALSE,
+                    optional: true
+                }],
+                delayArgResolution: true
+            },
+            'range': {
+                handler: function() {
+                    return '{{RANGE}}';
                 },
                 unnamedArgs: [{
                     name: 'min',
