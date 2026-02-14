@@ -235,7 +235,7 @@ const CUSTOM_MACROS = {
                     });
 
                     const buttonsHolder = createElement('span', {
-                        class: 'text-line d-inline-flex gap-0 text-body cursor-pointer input-arrows fs-normal',
+                        class: 'text-line d-inline-flex gap-0 text-body cursor-pointer fake-input-arrows fs-normal no-select',
                         data: { inputId },
                         innerHTML: `${arrowDec.outerHTML}${arrowInc.outerHTML}`
                     });
@@ -365,7 +365,7 @@ const CUSTOM_MACROS = {
                     });
 
                     const buttonsHolder = createElement('span', {
-                        class: 'text-line d-inline-flex gap-0 text-body cursor-pointer input-arrows fs-normal',
+                        class: 'text-line d-inline-flex gap-0 text-body cursor-pointer fake-input-arrows fs-normal no-select',
                         data: { inputId },
                         innerHTML: `${arrowDec.outerHTML}${arrowInc.outerHTML}`
                     });

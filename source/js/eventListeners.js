@@ -212,6 +212,59 @@ function onRangeSliderMoved(e) {
     $span.empty().html(String(range.value));
 }
 
+/**
+ * @param {Event} e
+ */
+function onClickInputArrow(e) {
+    e.stopPropagation();
+
+    const $arrowContainer = $(e.currentTarget);
+    const $arrow = $(e.target);
+
+    const { inputId } = $arrowContainer.data();
+    const { direction } = $arrow.data();
+
+    if (!direction) return;
+
+    const $input = $(`#${inputId}`);
+
+    const { type } = $input.data();
+
+    const validNumericInput = Object.values(allowedNumericInputs).includes(type);
+
+    if (!validNumericInput) return;
+
+    const currentValue = Number($input.val());
+    let newValue;
+
+    if (type === allowedNumericInputs.NUMBER) {
+        const step = $input.attr('step') ?? 1;
+        const nextStep = Number(step) * direction;
+
+        newValue = currentValue + nextStep;
+    }
+
+    if (type === allowedNumericInputs.RANGE) {
+        const min = Number($input.attr('min'));
+        const max = Number($input.attr('max'));
+        const step = Number($input.attr('step'));
+
+        newValue = currentValue + (Number(step) * direction);
+
+        const normalizedFloor = Math.max(newValue, min);
+        const normalizedRoof = Math.min(normalizedFloor, max);;
+
+        newValue = normalizedRoof;
+        window.requestAnimationFrame(() => {
+            $(`input[data-input-id="${inputId}"].chat-input-editor`).val(normalizedRoof);
+        });
+    }
+
+    $input.val(newValue);
+
+    $(`.fake-input-span[data-input-id="${inputId}"]`).text(newValue);
+}
+
 // * MARK:ST Listeners
 
 function onMessageRendered() {
@@ -295,6 +348,7 @@ function registerEvents() {
 
     $('#chat').on('click', '.stat-us-maximus-entry .kill-switch', onToggleEntry);
     $('#chat').on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
+    $('#chat').on('click', '.stat-us-maximus-chat-drawer .fake-input-arrows', onClickInputArrow);
     $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-input-span', onSelectChatInput);
     $('#chat').on('input', '.stat-us-maximus-entry .chat-input-editor[type="range"]', onRangeSliderMoved);
 

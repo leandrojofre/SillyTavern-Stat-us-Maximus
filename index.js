@@ -316,12 +316,12 @@ function messageBelongsToChar(mes, char = {}, is_user = false) {
 
 /**
     @param {HTMLElement} elem
-    @returns {{start:number; end:number;}}
+    @returns {{start:number; end:number; unselected?: boolean}}
 */
 function getSelectedTextInElem(elem) {
     const selection = window.getSelection();
 
-    if (!selection?.rangeCount) return {start: -1, end: -1};
+    if (!selection?.rangeCount) return {start: -1, end: -1, unselected: true};
 
     const range = selection.getRangeAt(0);
 
@@ -334,7 +334,7 @@ function getSelectedTextInElem(elem) {
     else if (elem.contains(range.endContainer))
         return {start: 0, end: range.endOffset};
 
-    else return {start: -1, end: -1};
+    else return {start: -1, end: -1, unselected: true};
 }
 
 /**
