@@ -265,6 +265,22 @@ function onClickInputArrow(e) {
     $(`.fake-input-span[data-input-id="${inputId}"]`).text(newValue);
 }
 
+/**
+ * @param {Event} e
+ */
+function onCheckboxToggle(e) {
+    e.stopPropagation();
+
+    const $input = $(e.currentTarget);
+    const inputId = $input.attr('id');
+    const inputValue = $input.prop('checked');
+    const $span = $(`.fake-input-span[data-input-id="${inputId}"]`);
+
+    const { trueValue, falseValue } = $span.data();
+
+    $span.text(inputValue ? trueValue : falseValue);
+}
+
 // * MARK:ST Listeners
 
 function onMessageRendered() {
@@ -349,6 +365,7 @@ function registerEvents() {
     $('#chat').on('click', '.stat-us-maximus-entry .kill-switch', onToggleEntry);
     $('#chat').on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
     $('#chat').on('click', '.stat-us-maximus-chat-drawer .fake-input-arrows', onClickInputArrow);
+    $('#chat').on('input', '.stat-us-maximus-chat-drawer .chat-input-editor[type="checkbox"]', onCheckboxToggle);
     $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-input-span', onSelectChatInput);
     $('#chat').on('input', '.stat-us-maximus-entry .chat-input-editor[type="range"]', onRangeSliderMoved);
 

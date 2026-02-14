@@ -283,13 +283,13 @@ const CUSTOM_MACROS = {
 
                     const checkbox = createElement('input', {
                         class: 'd-inline-flex flex-center chat-input-editor m-0',
-                        attr: { type: 'checkbox', ...checkboxAttr, id: inputId },
+                        attr: { type: 'checkbox', id: inputId, ...checkboxAttr },
                         data: { type: 'boolean' }
-                    })
+                    });
 
                     const span = createElement('span', {
-                        class: 'text-line text-quote value font-monospace',
-                        data: { true: trueValue, false: falseValue, inputId },
+                        class: 'text-line text-quote value fake-input-span font-monospace',
+                        data: { trueValue, falseValue, inputId },
                         innerHTML: result
                     });
 
