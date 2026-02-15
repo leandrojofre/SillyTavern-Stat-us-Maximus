@@ -129,21 +129,26 @@ class Status {
     }
 
     /**
+     * @typedef {Object} RefreshDepthOptions
+     * @property {boolean?} [isGenerating]
+     *
+     * @param {RefreshDepthOptions?} [options]
      * @returns {Status}
      */
-    refreshDepth() {
+    refreshDepth({ isGenerating = false } = {}) {
         const { chat } = context();
         const { is_user } = this;
 
+        if (isGenerating) return this.set('depth', 0);
+
         const character = this.getCharacter();
-        const lastID = chat
-            .filter(m => !m.is_system)
-            .findLastIndex(m => messageBelongsToChar(m, character, is_user));
+        const chatShown = chat.filter(m => !m.is_system);
+        const lastID = chatShown.findLastIndex(m => messageBelongsToChar(m, character, is_user));
 
         if (lastID < 0) this.set('depth', -1);
 
-        const chatLength = chat.length - 1;
-        const chatEmpty = chatLength < 0;
+        const chatLength = chatShown.length;
+        const chatEmpty = chatLength < 1;
 
         return this.set('depth', chatEmpty ? 0 : (chatLength - lastID));
     }

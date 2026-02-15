@@ -37,7 +37,7 @@ const Position = Object.freeze({
 
 /**
  * @readonly
- * @enum {string}
+ * @enum {Object.<string, string>}
  */
 const AllowedNumericKeys = Object.freeze({
     UP: 'ArrowUp',
@@ -46,7 +46,7 @@ const AllowedNumericKeys = Object.freeze({
 
 /**
  * @readonly
- * @enum {string}
+ * @enum {Object.<string, string>}
  */
 const InputTypes = Object.freeze({
     TEXT: 'text',
@@ -57,7 +57,7 @@ const InputTypes = Object.freeze({
 
 /**
  * @readonly
- * @enum {string}
+ * @enum {Object.<string, string>}
  */
 const AllowedNumericInputs = Object.freeze({
     NUMBER: InputTypes.NUMBER,
@@ -398,10 +398,11 @@ async function onChatChanged(...args) {
     scrollChatToBottom();
 }
 
-function onGenerationAfterCommands() {
-    log(eventTypes.GENERATION_AFTER_COMMANDS);
+function onGenerationAfterCommands(...args) {
+    log(eventTypes.GENERATION_AFTER_COMMANDS, args);
 
-    const { extensionPrompts: extension_prompts } = context();
+    const [ genType ] = args;
+    const { extensionPrompts: extension_prompts, characterId: chid, characters: allCharacters } = context();
 
     for (const key of Object.keys(extension_prompts)) {
         if (key.includes(metadataName)) delete extension_prompts[key];
@@ -436,12 +437,27 @@ function onGenerationAfterCommands() {
 
         const uuid = generateUUID();
         const prompt = status.prefix + entries.join(status.separator) + status.suffix;
+        let isCharGenerating = false;
+
+        if (genType === 'impersonate' && status.is_user)
+            isCharGenerating = true;
+
+        else if (typeof chid === 'string' && allCharacters[chid].avatar === status.avatar)
+            isCharGenerating = true;
+
+        log(genType, chid, allCharacters[chid]?.avatar, status.avatar, isCharGenerating);
+
+        const depth = (typeof status.forceDepth === 'number' && status.forceDepth >= 0) ?
+            status.forceDepth :
+            status.refreshDepth({ isGenerating: isCharGenerating }).depth;
+
+        const depthNormalized = Math.max(depth, extensionSettings.minPromptDepth);
 
         setExtensionPrompt(
             uuid,
             macro(prompt, char.name),
             Position.IN_DEPTH,
-            extensionSettings.minPromptDepth,
+            depthNormalized,
             true,
             status.role
         );
@@ -474,5 +490,5 @@ function registerEvents() {
     eventSource.on(eventTypes.USER_MESSAGE_RENDERED, onNewMessageRendered);
     eventSource.on(eventTypes.CHARACTER_MESSAGE_RENDERED, onNewMessageRendered);
 
-    eventSource.on(eventTypes.GENERATION_AFTER_COMMANDS, onGenerationAfterCommands);
+    eventSource.makeLast(eventTypes.GENERATION_AFTER_COMMANDS, onGenerationAfterCommands);
 }
