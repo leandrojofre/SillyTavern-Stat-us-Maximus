@@ -86,10 +86,15 @@ class StatusEntry {
     /**
      * @param {string} key
      * @param {string|number|boolean} value
+     * @param {number?} [uid]
      * @returns {StatusEntry}
      */
-    set(key, value) {
-        if (key === 'values') return;
+    set(key, value, uid) {
+        if (key === 'value' || key === 'title')
+            return this.setValue(key, value, uid);
+
+        if (key === 'values') return this;
+
         if (!Object.keys(entryTemplate).includes(key)) return this;
 
         this[key] = value;

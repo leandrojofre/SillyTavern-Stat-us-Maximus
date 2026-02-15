@@ -127,7 +127,7 @@ function updateEntryFromInput(inputTrigger) {
         parsedValue = parsedValue.replace(inputIndex, newMacro);
     });
 
-    entry.setValue(field, parsedValue, value_uid);
+    entry.set(field, parsedValue, value_uid);
     saveMetadataSafe();
 }
 
