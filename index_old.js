@@ -5,7 +5,7 @@ import { t } from "../../../i18n.js";
 import { createCharStatus, getCharAltValue, getCharStatus, updateCharEntry } from "./source/js/statusControls.js";
 import { power_user } from "../../../power-user.js";
 import { registerSlashCommands } from "./source/js/slashCommands.js";
-import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups.js";
+import { popupStatusMultiChar, popupStatusSingleChar } from "./source/js/popups_old.js";
 import { startListeners } from "./source/js/eventListeners_old.js";
 import { lodash, Popper } from "../../../../lib.js";
 
