@@ -107,8 +107,15 @@ function updateEntryFromInput(inputTrigger) {
         if (type === InputTypes.TEXT || type === InputTypes.NUMBER) {
             const value = $input.val() ?? '';
             const separator = !value ? '' : '::';
+            let parsedValue = value;
 
-            newMacro = `{{${type}${separator + value}}}`;
+            if (type === InputTypes.TEXT) {
+                parsedValue = String(parsedValue)
+                    .replaceAll(/^ +/g, '{{noop}}$&')
+                    .replaceAll(/ +$/g, '$&{{noop}}');
+            }
+
+            newMacro = `{{${type}${separator + parsedValue}}}`;
         }
 
         if (type === InputTypes.BOOLEAN) {

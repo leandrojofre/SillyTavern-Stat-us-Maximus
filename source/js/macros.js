@@ -1,4 +1,13 @@
-import { substituteParams, extensionName, extensionSettings, createElement, generateUUID, log, error, t } from "../../index.js";
+import {
+    substituteParams,
+    extensionName,
+    extensionSettings,
+    createElement,
+    generateUUID,
+    log,
+    error,
+    t
+} from "../../index.js";
 import { MacroValueType } from "/scripts/macros/macro-system.js";
 
 export {
@@ -185,14 +194,14 @@ const CUSTOM_MACROS = {
                         class: 'fake-input chat-input-editor mw-unset input-value-source',
                         attr: { autocomplete: 'off', tabindex: '-1', id: inputId },
                         data: { type: 'text', original: rawOriginal },
-                        innerHTML: text
+                        innerText: text.replaceAll('{{noop}}', '')
                     });
 
                     const span = createElement('span', {
                         class: `value fake-input-span text-line text-quote ${extensionSettings.showWhiteSpaces ? 'show-spaces' : ''}`,
                         attr: { ...spanAttr },
                         data: { inputId },
-                        innerHTML: text
+                        innerText: text.replaceAll('{{noop}}', '')
                     });
 
                     return `${textarea.outerHTML}${span.outerHTML}`;
@@ -243,7 +252,7 @@ const CUSTOM_MACROS = {
                     const span = createElement('span', {
                         class: 'text-line text-quote value fake-input-span font-monospace cursor-pointer',
                         data: { inputId },
-                        innerHTML: String(numberClean)
+                        innerText: String(numberClean)
                     });
 
                     return `${numberInput.outerHTML}${span.outerHTML} ${buttonsHolder.outerHTML}`;
@@ -290,7 +299,7 @@ const CUSTOM_MACROS = {
                     const span = createElement('span', {
                         class: 'text-line text-quote value fake-input-span font-monospace',
                         data: { trueValue, falseValue, inputId },
-                        innerHTML: result
+                        innerText: result
                     });
 
                     return `${checkbox.outerHTML} ${span.outerHTML}`;
@@ -373,7 +382,7 @@ const CUSTOM_MACROS = {
                     const span = createElement('span', {
                         class: 'text-line text-quote value fake-input-span font-monospace cursor-pointer',
                         data: { inputId },
-                        innerHTML: String(valueFiltered)
+                        innerText: String(valueFiltered)
                     });
 
                     return `${numberInput.outerHTML}${range.outerHTML} ${buttonsHolder.outerHTML} ${span.outerHTML}`;
