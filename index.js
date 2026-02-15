@@ -14,6 +14,8 @@ export {
     substituteParams,
     setExtensionPrompt,
     t,
+    scrollChatToBottom,
+    powerUserSettings,
     eventSource,
     eventTypes,
     // Native exports
@@ -66,6 +68,7 @@ const {
     saveChat,
     substituteParams,
     setExtensionPrompt,
+    scrollChatToBottom,
     extensionSettings: extension_settings,
     saveSettingsDebounced,
     characters,
@@ -498,11 +501,11 @@ async function renderCharStatus(status) {
     if (!status.is_collapsed) statusBlock.find('.inline-drawer-content').show();
 }
 
-function renderStatuses() {
+async function renderStatuses() {
     const statuses = SillyTavern[metadataName].getStatuses();
 
     for (const status of statuses)
-        renderCharStatus(status);
+        await renderCharStatus(status);
 }
 
 const saveChatDebounced = lodash.debounce(saveChat, debounceTimeout.MED);

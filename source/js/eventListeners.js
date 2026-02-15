@@ -10,6 +10,8 @@ import {
     generateUUID,
     log,
     saveMetadataSafe,
+    scrollChatToBottom,
+    powerUserSettings,
     // HTML Related
     updateCaretDisplaySafe,
     getSelectedTextInElem,
@@ -372,13 +374,28 @@ function onMessageRendered() {
     renderer();
 }
 
-function onChatChanged() {
-    log(eventTypes.CHAT_CHANGED);
+async function onNewMessageRendered() {
+    log('onMessageRendered');
 
     /** @type {Function} */
-    const renderer = SillyTavern[metadataName].renderStatusesSafe;
+    const renderer = SillyTavern[metadataName].renderStatuses;
 
-    renderer();
+    await renderer();
+    if (powerUserSettings.auto_scroll_chat_to_bottom) scrollChatToBottom();
+}
+
+async function onChatChanged(...args) {
+    const [ chat_id ] = args;
+
+    log(eventTypes.CHAT_CHANGED, chat_id);
+
+    if (!chat_id) return;
+
+    /** @type {Function} */
+    const renderer = SillyTavern[metadataName].renderStatuses;
+
+    await renderer();
+    scrollChatToBottom();
 }
 
 function onGenerationAfterCommands() {
@@ -449,13 +466,13 @@ function registerEvents() {
     $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-input-span', onSelectChatInput);
     $('#chat').on('input', '.stat-us-maximus-entry .chat-input-editor[type="range"]', onRangeSliderMoved);
 
-    eventSource.on(eventTypes.CHAT_CHANGED, onChatChanged);
+    eventSource.makeLast(eventTypes.CHAT_CHANGED, onChatChanged);
 
     eventSource.on(eventTypes.MORE_MESSAGES_LOADED, onMessageRendered);
-    eventSource.on(eventTypes.USER_MESSAGE_RENDERED, onMessageRendered);
-    eventSource.on(eventTypes.CHARACTER_MESSAGE_RENDERED, onMessageRendered);
     eventSource.on(eventTypes.MESSAGE_UPDATED, onMessageRendered);
     eventSource.on(eventTypes.MESSAGE_DELETED, onMessageRendered);
+    eventSource.on(eventTypes.USER_MESSAGE_RENDERED, onNewMessageRendered);
+    eventSource.on(eventTypes.CHARACTER_MESSAGE_RENDERED, onNewMessageRendered);
 
     eventSource.on(eventTypes.GENERATION_AFTER_COMMANDS, onGenerationAfterCommands);
 }
