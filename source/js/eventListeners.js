@@ -64,6 +64,10 @@ const AllowedNumericInputs = Object.freeze({
     RANGE: InputTypes.RANGE
 });
 
+/**
+ * @typedef {Event & {data: Object}} EventData
+ */
+
 // * MARK:DOM Listeners
 
 /**
@@ -183,7 +187,7 @@ function onCollapseStatus(e) {
 }
 
 /**
- * @param {Event} e
+ * @param {EventData} e
  */
 function onSelectChatInputFinish(e) {
     /** @type {HTMLSpanElement} */
@@ -191,8 +195,7 @@ function onSelectChatInputFinish(e) {
 
     if (!spanInput) return;
 
-    /** @type {HTMLInputElement|HTMLTextAreaElement} */
-    const input = document.getElementById(spanInput.dataset.inputId);
+    const input = /** @type {HTMLInputElement|HTMLTextAreaElement} */(document.getElementById(spanInput.dataset.inputId));
     const $input = $(input);
     const selection = getSelectedTextInElem(spanInput);
     let lastKeyPressed = '';
@@ -203,7 +206,7 @@ function onSelectChatInputFinish(e) {
         $input.off('input');
         $input.off('keydown');
         renderCaret(spanInput, spanInput.textContent, -1);
-        updateEntryFromInput($input);
+        updateEntryFromInput($input[0]);
     });
 
     $input.on('keydown', function(e) {
@@ -266,7 +269,7 @@ function onSelectChatInputFinish(e) {
 }
 
 /**
- * @param {Event} e
+ * @param {EventData} e
  */
 function onSelectChatInput(e) {
     const spanInput = e.currentTarget;
@@ -277,23 +280,23 @@ function onSelectChatInput(e) {
 }
 
 /**
- * @param {Event} e
+ * @param {EventData} e
  */
 function onRangeSliderMoved(e) {
     e.stopPropagation();
 
-    /** @type {HTMLInputElement} */
-    const range = e.currentTarget;
+    const range = /** @type {HTMLInputElement} */(e.currentTarget);
+    /** @type {JQuery<HTMLInputElement | HTMLTextAreaElement>} */
     const $input = $(`#${range.dataset.inputId}`);
     const $span = $(`.fake-input-span[data-input-id="${range.dataset.inputId}"]`);
 
     $input.val(range.value);
     $span.empty().html(String(range.value));
-    updateEntryFromInput($input);
+    updateEntryFromInput($input[0]);
 }
 
 /**
- * @param {Event} e
+ * @param {EventData} e
  */
 function onClickInputArrow(e) {
     e.stopPropagation();
@@ -306,6 +309,7 @@ function onClickInputArrow(e) {
 
     if (!direction) return;
 
+    /** @type {JQuery<HTMLInputElement | HTMLTextAreaElement>} */
     const $input = $(`#${inputId}`);
 
     const { type } = $input.data();
@@ -341,18 +345,18 @@ function onClickInputArrow(e) {
     }
 
     $input.val(newValue);
-    updateEntryFromInput($input);
+    updateEntryFromInput($input[0]);
 
     $(`.fake-input-span[data-input-id="${inputId}"]`).text(newValue);
 }
 
 /**
- * @param {Event} e
+ * @param {EventData} e
  */
 function onCheckboxToggle(e) {
     e.stopPropagation();
 
-    const $input = $(e.currentTarget);
+    const $input = /** @type {JQuery<HTMLInputElement | HTMLTextAreaElement>} */($(e.currentTarget));
     const inputId = $input.attr('id');
     const inputValue = $input.prop('checked');
     const $span = $(`.fake-input-span[data-input-id="${inputId}"]`);
@@ -360,7 +364,7 @@ function onCheckboxToggle(e) {
     const { trueValue, falseValue } = $span.data();
 
     $span.text(inputValue ? trueValue : falseValue);
-    updateEntryFromInput($input);
+    updateEntryFromInput($input[0]);
 }
 
 // * MARK:ST Listeners
