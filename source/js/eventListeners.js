@@ -28,7 +28,7 @@ export {
 
 /**
  * @readonly
- * @enum {number}
+ * @type {Object.<string, number>}
  */
 const Position = Object.freeze({
     AFTER_PROMPT: 0,
@@ -37,7 +37,7 @@ const Position = Object.freeze({
 
 /**
  * @readonly
- * @enum {Object.<string, string>}
+ * @type {Object.<string, string>}
  */
 const AllowedNumericKeys = Object.freeze({
     UP: 'ArrowUp',
@@ -46,7 +46,7 @@ const AllowedNumericKeys = Object.freeze({
 
 /**
  * @readonly
- * @enum {Object.<string, string>}
+ * @type {Object.<string, string>}
  */
 const InputTypes = Object.freeze({
     TEXT: 'text',
@@ -57,7 +57,7 @@ const InputTypes = Object.freeze({
 
 /**
  * @readonly
- * @enum {Object.<string, string>}
+ * @type {Object.<string, string>}
  */
 const AllowedNumericInputs = Object.freeze({
     NUMBER: InputTypes.NUMBER,
