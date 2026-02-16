@@ -97,7 +97,8 @@
     }
 
     .gap-5px {
-        gap: 5px;
+        --gap-size: 5px;
+        gap: var(--gap-size) !important;
     }
 
     .gap-15px {
@@ -110,6 +111,10 @@
 
     .mw-fit {
         max-width: fit-content;
+    }
+
+    .p-0 {
+        padding: 0;
     }
 
     .p-5px {

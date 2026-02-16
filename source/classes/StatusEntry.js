@@ -90,7 +90,7 @@ class StatusEntry {
      * @returns {StatusEntry}
      */
     set(key, value, uid) {
-        if (key === 'value' || key === 'title')
+        if ((key === 'value' || key === 'title') && typeof value === 'string')
             return this.setValue(key, value, uid);
 
         if (key === 'values') return this;
