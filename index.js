@@ -297,8 +297,9 @@ function createElement(elem, options = {}) {
     const classes = options.class ?? '';
 
     element.classList.add(...(classes.split(' ')));
-    element.innerHTML = options.innerHTML ?? '';
-    element.innerText = options.innerText ?? '';
+
+    if (options.innerHTML) element.innerHTML = options.innerHTML ?? '';
+    if (options.innerText) element.innerText = options.innerText ?? '';
 
     return element;
 }
