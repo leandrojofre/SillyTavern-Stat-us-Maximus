@@ -1,4 +1,4 @@
-import { extension_prompt_roles, getFreeDataUid, messageBelongsToChar, getUser, log, context } from '../../index.js';
+import { extension_prompt_roles, getFreeDataUid, messageBelongsToChar, getUser, getThumbnailUrl, log, context } from '../../index.js';
 import { StatusEntry, entryTemplate } from './StatusEntry.js';
 
 export {
@@ -111,6 +111,13 @@ class Status {
         return is_user ?
             getUser(avatar) :
             characters.find(c => c.avatar === avatar);
+    }
+
+    /**
+     * @returns {string}
+     */
+    getThumbnail() {
+        return getThumbnailUrl(this.is_user ? "persona" : "avatar", this.avatar);
     }
 
     /**

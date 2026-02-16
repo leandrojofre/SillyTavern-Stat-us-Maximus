@@ -5,6 +5,7 @@ import { getGroupMembers } from "../../../group-chats.js";
 import { Status } from './source/classes/Status.js';
 import { StatusEntry } from './source/classes/StatusEntry.js';
 import { registerEvents } from './source/js/eventListeners.js';
+import { initPopupTriggers } from './source/js/popups.js';
 import { CUSTOM_MACROS } from './source/js/macros.js';
 
 export {
@@ -15,6 +16,9 @@ export {
     setExtensionPrompt,
     t,
     scrollChatToBottom,
+    callGenericPopup,
+    getThumbnailUrl,
+    POPUP_TYPE,
     powerUserSettings,
     eventSource,
     eventTypes,
@@ -40,7 +44,8 @@ export {
     // HTML Related
     updateCaretDisplaySafe,
     getSelectedTextInElem,
-    renderCaret
+    renderCaret,
+    HTML_TEMPLATES
 };
 
 // * MARK:Extension variables
@@ -70,6 +75,9 @@ const {
     substituteParams,
     setExtensionPrompt,
     scrollChatToBottom,
+    callGenericPopup,
+    getThumbnailUrl,
+    POPUP_TYPE,
     extensionSettings: extension_settings,
     saveSettingsDebounced,
     characters,
@@ -532,7 +540,7 @@ function initExtension() {
 
         getStatus: function(avatar) {
             /** @type {Status[]} */
-            let statuses = context().chatMetadata[metadataName];
+            let statuses = SillyTavern[metadataName].getStatuses();
 
             if (!statuses) return false;
 
@@ -678,4 +686,5 @@ $(async function() {
     await loadSettingsMenu();
     initExtension();
     registerEvents();
+    initPopupTriggers();
 });
