@@ -65,7 +65,8 @@ const AllowedNumericInputs = Object.freeze({
 });
 
 /**
- * @typedef {Event & {data: Object}} EventData
+ * @template T
+ * @typedef {Event & {data: Object; currentTarget: T;}} EventData
  */
 
 // * MARK:DOM Listeners
@@ -194,10 +195,9 @@ function onCollapseStatus(e) {
 }
 
 /**
- * @param {EventData} e
+ * @param {EventData<HTMLSpanElement>} e
  */
 function onSelectChatInputFinish(e) {
-    /** @type {HTMLSpanElement} */
     const spanInput = e.data.spanInput;
 
     if (!spanInput) return;
@@ -276,23 +276,25 @@ function onSelectChatInputFinish(e) {
 }
 
 /**
- * @param {EventData} e
+ * @param {EventData<HTMLSpanElement>} e
  */
 function onSelectChatInput(e) {
     const spanInput = e.currentTarget;
 
     if (!spanInput) return;
 
+    // @ts-ignore
     $(document).one('pointerup', { spanInput }, onSelectChatInputFinish);
 }
 
 /**
- * @param {EventData} e
+ * @param {EventData<HTMLInputElement>} e
  */
 function onRangeSliderMoved(e) {
     e.stopPropagation();
 
-    const range = /** @type {HTMLInputElement} */(e.currentTarget);
+    const range = e.currentTarget;
+
     /** @type {JQuery<HTMLInputElement | HTMLTextAreaElement>} */
     const $input = $(`#${range.dataset.inputId}`);
     const $span = $(`.fake-input-span[data-input-id="${range.dataset.inputId}"]`);
@@ -303,7 +305,7 @@ function onRangeSliderMoved(e) {
 }
 
 /**
- * @param {EventData} e
+ * @param {EventData<HTMLSpanElement>} e
  */
 function onClickInputArrow(e) {
     e.stopPropagation();
@@ -358,12 +360,12 @@ function onClickInputArrow(e) {
 }
 
 /**
- * @param {EventData} e
+ * @param {EventData<HTMLInputElement|HTMLTextAreaElement>} e
  */
 function onCheckboxToggle(e) {
     e.stopPropagation();
 
-    const $input = /** @type {JQuery<HTMLInputElement | HTMLTextAreaElement>} */($(e.currentTarget));
+    const $input = $(e.currentTarget);
     const inputId = $input.attr('id');
     const inputValue = $input.prop('checked');
     const $span = $(`.fake-input-span[data-input-id="${inputId}"]`);
@@ -486,11 +488,17 @@ function registerEvents() {
         e.stopPropagation();
     });
 
+    // @ts-ignore
     $('#chat').on('click', '.stat-us-maximus-entry .kill-switch', onToggleEntry);
+    // @ts-ignore
     $('#chat').on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
+    // @ts-ignore
     $('#chat').on('click', '.stat-us-maximus-chat-drawer .fake-input-arrows', onClickInputArrow);
+    // @ts-ignore
     $('#chat').on('input', '.stat-us-maximus-chat-drawer .chat-input-editor[type="checkbox"]', onCheckboxToggle);
+    // @ts-ignore
     $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-input-span', onSelectChatInput);
+    // @ts-ignore
     $('#chat').on('input', '.stat-us-maximus-entry .chat-input-editor[type="range"]', onRangeSliderMoved);
 
     eventSource.makeLast(eventTypes.CHAT_CHANGED, onChatChanged);
