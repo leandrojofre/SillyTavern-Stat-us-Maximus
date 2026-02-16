@@ -480,26 +480,28 @@ function onGenerationAfterCommands(...args) {
 // * MARK:Init Listeners
 
 function registerEvents() {
-    $('#chat').on('click', '.stat-us-maximus-toolbar', function(e){
+    const $chat = $('#chat').first();
+
+    $chat.on('click', '.stat-us-maximus-toolbar', function(e){
         e.stopPropagation();
     });
 
-    $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-selection', function(e){
+    $chat.on('pointerdown', '.stat-us-maximus-chat-drawer .fake-selection', function(e){
         e.stopPropagation();
     });
 
     // @ts-ignore
-    $('#chat').on('click', '.stat-us-maximus-entry .kill-switch', onToggleEntry);
+    $chat.on('click', '.stat-us-maximus-entry .kill-switch', onToggleEntry);
     // @ts-ignore
-    $('#chat').on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
+    $chat.on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
     // @ts-ignore
-    $('#chat').on('click', '.stat-us-maximus-chat-drawer .fake-input-arrows', onClickInputArrow);
+    $chat.on('click', '.stat-us-maximus-chat-drawer .fake-input-arrows', onClickInputArrow);
     // @ts-ignore
-    $('#chat').on('input', '.stat-us-maximus-chat-drawer .chat-input-editor[type="checkbox"]', onCheckboxToggle);
+    $chat.on('input', '.stat-us-maximus-chat-drawer .chat-input-editor[type="checkbox"]', onCheckboxToggle);
     // @ts-ignore
-    $('#chat').on('pointerdown', '.stat-us-maximus-chat-drawer .fake-input-span', onSelectChatInput);
+    $chat.on('pointerdown', '.stat-us-maximus-chat-drawer .fake-input-span', onSelectChatInput);
     // @ts-ignore
-    $('#chat').on('input', '.stat-us-maximus-entry .chat-input-editor[type="range"]', onRangeSliderMoved);
+    $chat.on('input', '.stat-us-maximus-entry .chat-input-editor[type="range"]', onRangeSliderMoved);
 
     eventSource.makeLast(eventTypes.CHAT_CHANGED, onChatChanged);
 
