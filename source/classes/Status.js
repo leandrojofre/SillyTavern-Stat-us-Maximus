@@ -14,7 +14,7 @@ const statusTemplate = Object.freeze({
     prefix: '',
     suffix: '',
     depth: -1,
-    forceDepth: '',
+    force_depth: '',
     last_mes_id: -1,
     is_user: false,
     is_collapsed: false,
@@ -30,7 +30,7 @@ const statusTemplate = Object.freeze({
  * @property {string} [prefix]
  * @property {string} [suffix]
  * @property {number} [depth]
- * @property {string|number} [forceDepth]
+ * @property {string|number} [force_depth]
  * @property {number} [last_mes_id]
  * @property {boolean} [is_user]
  * @property {boolean} [is_collapsed]
@@ -44,7 +44,7 @@ class Status {
     /** @property {string} */ prefix
     /** @property {string} */ suffix
     /** @property {number} */ depth
-    /** @property {string|number} */ forceDepth
+    /** @property {string|number} */ force_depth
     /** @property {number} */ last_mes_id
     /** @property {boolean} */ is_user
     /** @property {boolean} */ is_collapsed
@@ -67,6 +67,9 @@ class Status {
                 return acc;
             }, {});
         }
+
+        // @ts-ignore
+        if (status?.forceDepth) status.force_depth = status.forceDepth;
 
         for (const [uid, entry] of Object.entries(status.entries ?? {})) {
             status.entries[uid] = new StatusEntry(entry);

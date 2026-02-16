@@ -458,8 +458,8 @@ function onGenerationAfterCommands(...args) {
 
         log(genType, chid, allCharacters[chid]?.avatar, status.avatar, isCharGenerating);
 
-        const depth = (typeof status.forceDepth === 'number' && status.forceDepth >= 0) ?
-            status.forceDepth :
+        const depth = (typeof status.force_depth === 'number' && status.force_depth >= 0) ?
+            status.force_depth :
             status.refreshDepth({ isGenerating: isCharGenerating }).depth;
 
         const depthNormalized = Math.max(depth, extensionSettings.minPromptDepth);
