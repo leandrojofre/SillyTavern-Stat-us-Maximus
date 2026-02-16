@@ -186,7 +186,8 @@ function unEscapeNewlines(str) {
     return str
         .replace(/\\r\\n/g, '\r\n')
         .replace(/\\n/g, '\n')
-        .replace(/\\r/g, '\r');
+        .replace(/\\r/g, '\r')
+        .replaceAll('<br>', '\n');
 }
 
 /**
@@ -426,6 +427,7 @@ function renderStatusesSafe() {
  * Renders the status block of the selected character in the last message from the character rendered in the chat log.
  * @param {Status} status
  */
+// MARK:Render Char Status
 async function renderCharStatus(status) {
     $(`#chat .stat-us-maximus-custom-css[char-target="${status.avatar}"]`).remove();
 
@@ -480,7 +482,9 @@ async function renderCharStatus(status) {
 
         const titleClean = macro(key, character);
         const separatorClean = lodash.escape(substituteParams(separator));
-        const valueClean = macro(values[value_uid].value, character);
+        let valueClean = macro(values[value_uid].value, character);
+
+        if (extensionSettings.editNumbersFromChat) valueClean = valueClean.replaceAll("<br>", "\n");
 
         $(entryBlock).find('.status-title').html(`<span class="d-inline">${titleClean}</span>`);
         $(entryBlock).find('.status-separator').html(separatorClean);
