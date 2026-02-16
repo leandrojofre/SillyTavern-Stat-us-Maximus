@@ -1,10 +1,12 @@
 import {
     // ST imports
+    extension_prompt_roles,
     callGenericPopup,
     POPUP_TYPE,
     t,
     // Normal imports
     metadataName,
+    escapeNewlines,
     // HTML related
     HTML_TEMPLATES
 } from '../../index.js';
@@ -40,6 +42,27 @@ async function getStatusPopupBlock(avatar) {
         .find('.stat-us-maximus-avatar')
         .attr('src', status.getThumbnail())
         .attr('title', status.avatar);
+
+    const $selectRoles = $statusBlock.find('select[name="role"]');
+
+    for (const [text, value] of Object.entries(extension_prompt_roles)) {
+        $('<option>', { text, value }).appendTo($selectRoles);
+    }
+
+    $selectRoles.trigger('change');
+
+    $statusBlock
+        .find('.status-fields :input.text_pole')
+        .each(function(i, input) {
+            const $input = $(input);
+            const field = $input.attr('name');
+            const value = status[field];
+            const isString = typeof value === 'string';
+
+            $input
+                .val(isString ? escapeNewlines(value) : value)
+                .trigger('change');
+        });
 
     return $statusBlock;
 }
