@@ -30,6 +30,41 @@ export {
 // * MARK:Popup Creation
 
 /**
+ * @param {StatusEntry} entry
+ * @param {string|number} uid
+ * @param {string} avatar
+ * @param {string} statusId
+ * @returns {Promise<JQuery<HTMLDivElement>>}
+ */
+async function createEntryBlock(entry, uid, avatar, statusId) {
+    const $entryBlock = $(await HTML_TEMPLATES.get('popupStatusEntry')).clone();
+    const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
+    const altValues = Object.entries(entry.values);
+
+    for (const [valUid, altValue] of altValues) {
+        $('<option>', { text: altValue.title || `UID: ${valUid}`, value: valUid }).appendTo($valuesSelect);
+    }
+
+    $valuesSelect.trigger('change');
+    $entryBlock
+        .find(':input.text_pole')
+        .each(function(i, input) {
+            const $input = $(input);
+            const field = $input.attr('name');
+            const isValueField = field === 'title' || field === 'value';
+            const value = isValueField ? entry.values[entry.value_uid][field] : entry[field];
+            const doEscapeNewlines = typeof value === 'string' && !$input.is('textarea');
+
+            $input
+                .data({uid, avatar, statusId})
+                .val(doEscapeNewlines ? escapeNewlines(value) : value)
+                .trigger('change');
+        });
+
+    return $entryBlock;
+}
+
+/**
  * @param {string} avatar
  * @returns {Promise<JQuery<HTMLElement>>}
  */
@@ -62,6 +97,10 @@ async function getStatusPopupBlock(avatar) {
         .attr('src', status.getThumbnail())
         .attr('title', status.avatar);
 
+    $statusBlock
+        .find('.menu_button.fa-plus')
+        .data({avatar, statusId});
+
     for (const [text, value] of Object.entries(extension_prompt_roles)) {
         $('<option>', { text, value }).appendTo($selectRoles);
     }
@@ -82,30 +121,7 @@ async function getStatusPopupBlock(avatar) {
         });
 
     for (const [uid, entry] of entries) {
-        const $entryBlock = $(await HTML_TEMPLATES.get('popupStatusEntry')).clone();
-        const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
-        const altValues = Object.entries(entry.values);
-
-        for (const [valUid, altValue] of altValues) {
-            $('<option>', { text: altValue.title || `UID: ${valUid}`, value: valUid }).appendTo($valuesSelect);
-        }
-
-        $valuesSelect.trigger('change');
-        $entryBlock
-            .find(':input.text_pole')
-            .each(function(i, input) {
-                const $input = $(input);
-                const field = $input.attr('name');
-                const isValueField = field === 'title' || field === 'value';
-                const value = isValueField ? entry.values[entry.value_uid][field] : entry[field];
-                const doEscapeNewlines = typeof value === 'string' && !$input.is('textarea');
-
-                $input
-                    .data({uid, avatar, statusId})
-                    .val(doEscapeNewlines ? escapeNewlines(value) : value)
-                    .trigger('change');
-            });
-
+        const $entryBlock = await createEntryBlock(entry, uid, avatar, statusId);
         $entriesContainer.append($entryBlock);
     }
 
@@ -214,12 +230,34 @@ function onEntryValueSwap(e) {
     $container.find(':input[name="title"]').val(altValue.title);
 }
 
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onCreateEntryClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, statusId } = $button.data();
+
+    /** @type {Status} */
+    const status = SillyTavern[metadataName].getStatus(avatar);
+
+    if (!status) return;
+
+    const uid = status.addEntry();
+    const entry = status.entries[uid];
+    const $entryBlock = await createEntryBlock(entry, uid, avatar, statusId);
+    const $container = $(`#${statusId}`).find('.status-entries');
+
+    $container.append($entryBlock);
+}
+
 // * MARK:Init Triggers
 
 function initPopupTriggers() {
     // @ts-ignore
     $('#rm_group_members').on('click', '.avatar img', onGroupMemberListClick);
 
+    // @ts-ignore
+    $(document).on('click', '.stat-us-maximus-popup .menu_button.fa-plus', onCreateEntryClick);
     // @ts-ignore
     $(document).on('input', '.stat-us-maximus-popup .stat-us-maximus-popup-row .text_pole', onEntryInput);
     // @ts-ignore

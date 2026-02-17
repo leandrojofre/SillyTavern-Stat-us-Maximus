@@ -12,7 +12,12 @@ const entryTemplate = Object.freeze({
     separator: '',
     display_position: 0,
     value_uid: 0,
-    values: {}
+    values: {
+        '0': {
+            title: '',
+            value: ''
+        }
+    }
 });
 
 /** @type {AltValueData} */

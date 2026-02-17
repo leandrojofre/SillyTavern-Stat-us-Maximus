@@ -35,6 +35,9 @@ const statusTemplate = Object.freeze({
  * @property {boolean} [is_user]
  * @property {boolean} [is_collapsed]
  * @property {Object.<string, StatusEntry>} [entries]
+ *
+ * @typedef {import('./StatusEntry.js').EntryData} EntryData
+ * @typedef {import('../../index.js').UserCharacter} UserCharacter
  */
 class Status {
     /** @property {string} */ avatar
@@ -102,7 +105,41 @@ class Status {
     }
 
     /**
-     * @returns {Character|import('../../index.js').UserCharacter}
+     * @param {EntryData?} [data]
+     * @returns {string}
+     */
+    addEntry(data = {}) {
+        const rawEntry = new StatusEntry(data);
+        const newUid = getFreeDataUid(this.entries);
+
+        rawEntry.separator = this.def_entry_separator;
+        rawEntry.display_position = this.getMaxDisplayPosition();
+
+        this.entries[newUid] = rawEntry;
+
+        return newUid;
+    }
+
+    /**
+     * @returns {number}
+     */
+    getMaxDisplayPosition() {
+        /** @type {StatusEntry[]} */
+        const entries = Object.values(this.entries);
+
+        if (!entries.length) return 0;
+
+        let maxPosition = 0;
+
+        for (const entry of entries) {
+            if (entry.display_position > maxPosition) maxPosition = entry.display_position;
+        }
+
+        return maxPosition + 1;
+    }
+
+    /**
+     * @returns {Character|UserCharacter}
      */
     getCharacter() {
         const { avatar, is_user } = this;
