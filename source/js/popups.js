@@ -150,6 +150,8 @@ async function onGroupMemberListClick(e) {
     await openSingleStatusPopup(avatar);
 }
 
+// * MARK:Input Listeners
+
 /**
  * @param {EventData<HTMLInputElement|HTMLTextAreaElement>} e
  */
@@ -189,14 +191,39 @@ function onEntryInput(e) {
     $(`#${statusId}`).data({doSave: true});
 }
 
-// * MARK:Init Popup Triggers
+/**
+ * @param {EventData<HTMLSelectElement>} e
+ */
+function onEntryValueSwap(e) {
+    const $select = $(e.currentTarget);
+    const selectedAltValue = $select.val();
+    const { uid, avatar } = $select.data();
+
+    /** @type {Status} */
+    const status = SillyTavern[metadataName].getStatus(avatar);
+
+    if (!status) return;
+
+    /** @type {StatusEntry} */
+    const entry = status.entries[uid];
+    const altValue = entry.values[selectedAltValue];
+
+    const $container = $select.closest('.inline-drawer-content');
+
+    $container.find(':input[name="value"]').val(altValue.value);
+    $container.find(':input[name="title"]').val(altValue.title);
+}
+
+// * MARK:Init Triggers
 
 function initPopupTriggers() {
     // @ts-ignore
     $('#rm_group_members').on('click', '.avatar img', onGroupMemberListClick);
 
     // @ts-ignore
-    $(document).on('input', '.stat-us-maximus-popup .stat-us-maximus-popup-row .text_pole:not(select)', onEntryInput);
+    $(document).on('input', '.stat-us-maximus-popup .stat-us-maximus-popup-row .text_pole', onEntryInput);
     // @ts-ignore
-    $(document).on('input', '.stat-us-maximus-popup .status-fields .text_pole:not(select)', onStatusInput);
+    $(document).on('input', '.stat-us-maximus-popup .stat-us-maximus-popup-row select[name="value_uid"]', onEntryValueSwap);
+    // @ts-ignore
+    $(document).on('input', '.stat-us-maximus-popup .status-fields .text_pole', onStatusInput);
 }
