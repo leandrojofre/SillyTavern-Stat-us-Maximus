@@ -26,6 +26,10 @@
     }
 }
 
+.stat-us-maximus-popup {
+    background-color: var(--SmartThemeBotMesBlurTintColor);
+}
+
 .stat-us-maximus-popup[is_user="true"] {
     background-color: var(--SmartThemeUserMesBlurTintColor);
 
