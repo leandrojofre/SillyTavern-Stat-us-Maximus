@@ -3,12 +3,15 @@ import {
     extension_prompt_roles,
     callGenericPopup,
     POPUP_TYPE,
+    Popup,
     t,
     // Normal imports
+    extensionName,
     metadataName,
     escapeNewlines,
     generateUUID,
     saveMetadataSafe,
+    error,
     log,
     // HTML related
     HTML_TEMPLATES
@@ -30,11 +33,28 @@ export {
 // * MARK:Popup Creation
 
 /**
+ * @param {string} actionLabel - Are you sure want to...
+ * @returns {Promise<boolean>}
+ */
+async function popupConfirmAction(actionLabel = 'continue') {
+    const result = await Popup.show.confirm(
+        t`WARNING`,
+        t`Are you sure want to ${actionLabel}?`,
+        {
+            okButton: t`Confirm`,
+            cancelButton: t`Cancel`
+        }
+    );
+
+    return result === 1;
+};
+
+/**
  * @param {StatusEntry} entry
  * @param {string|number} uid
  * @param {string} avatar
  * @param {string} statusId
- * @returns {Promise<JQuery<HTMLDivElement>>}
+ * @returns {Promise<JQuery<HTMLElement>>}
  */
 async function createEntryBlock(entry, uid, avatar, statusId) {
     const $entryBlock = $(await HTML_TEMPLATES.get('popupStatusEntry')).clone();
@@ -46,6 +66,10 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
     }
 
     $valuesSelect.trigger('change');
+    $entryBlock
+        .find('.delete-row')
+        .data({uid, avatar, statusId});
+
     $entryBlock
         .find(':input.text_pole')
         .each(function(i, input) {
@@ -212,7 +236,7 @@ function onEntryInput(e) {
  */
 function onEntryValueSwap(e) {
     const $select = $(e.currentTarget);
-    const selectedAltValue = $select.val();
+    const selectedAltValue = String($select.val());
     const { uid, avatar } = $select.data();
 
     /** @type {Status} */
@@ -245,9 +269,40 @@ async function onCreateEntryClick(e) {
     const uid = status.addEntry();
     const entry = status.entries[uid];
     const $entryBlock = await createEntryBlock(entry, uid, avatar, statusId);
-    const $container = $(`#${statusId}`).find('.status-entries');
+    const $statusBlock = $(`#${statusId}`);
+    const $container = $statusBlock.find('.status-entries').first();
 
     $container.append($entryBlock);
+    $statusBlock.data({doSave: true});
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onDeleteEntryClick(e) {
+    const $button = $(e.currentTarget);
+    const { uid, avatar, statusId } = $button.data();
+
+    /** @type {Status} */
+    const status = SillyTavern[metadataName].getStatus(avatar);
+
+    if (!status) return;
+
+    try {
+        const accepted = await popupConfirmAction('delete this entry');
+
+        if (!accepted) return toastr.info(t`Entry deletion cancelled`, extensionName);
+
+        delete status.entries[uid];
+
+        const $statusBlock = $(`#${statusId}`);
+        const $container = $statusBlock.find('.stat-us-maximus-popup-row').first();
+
+        $container.remove();
+        $statusBlock.data({doSave: true});
+    } catch (err) {
+        error(err);
+    }
 }
 
 // * MARK:Init Triggers
@@ -258,6 +313,8 @@ function initPopupTriggers() {
 
     // @ts-ignore
     $(document).on('click', '.stat-us-maximus-popup .menu_button.fa-plus', onCreateEntryClick);
+    // @ts-ignore
+    $(document).on('click', '.stat-us-maximus-popup .stat-us-maximus-popup-row .delete-row', onDeleteEntryClick);
     // @ts-ignore
     $(document).on('input', '.stat-us-maximus-popup .stat-us-maximus-popup-row .text_pole', onEntryInput);
     // @ts-ignore

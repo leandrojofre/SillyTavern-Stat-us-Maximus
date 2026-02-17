@@ -106,7 +106,7 @@ class Status {
 
     /**
      * @param {EntryData?} [data]
-     * @returns {string}
+     * @returns {number}
      */
     addEntry(data = {}) {
         const rawEntry = new StatusEntry(data);
