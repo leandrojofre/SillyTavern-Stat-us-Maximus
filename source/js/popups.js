@@ -8,6 +8,8 @@ import {
     metadataName,
     escapeNewlines,
     generateUUID,
+    saveMetadataSafe,
+    log,
     // HTML related
     HTML_TEMPLATES
 } from '../../index.js';
@@ -48,13 +50,16 @@ async function getStatusPopupBlock(avatar) {
     const $statusBlock = $(await HTML_TEMPLATES.get('popupStatus')).clone();
     const $selectRoles = $statusBlock.find('select[name="role"]');
     const $entriesContainer = $statusBlock.find('.status-entries');
+    const statusId = `${generateUUID()}_stat_block`;
 
     /** @type {[string, StatusEntry][]} */
     const entries = Object
         .entries(status.entries)
         .sort(([uidA, entryA], [uidB, entryB]) => entryA.display_position - entryB.display_position);
 
-    if (status.is_user) $statusBlock.attr('is_user', true);
+    if (status.is_user) $statusBlock.attr('is_user', 'true');
+
+    $statusBlock.attr('id', statusId);
 
     $statusBlock
         .find('.stat-us-maximus-name')
@@ -87,7 +92,6 @@ async function getStatusPopupBlock(avatar) {
     for (const [uid, entry] of entries) {
         const $entryBlock = await getStatusEntryPopupBlock(entry);
         const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
-        const blockId = `${generateUUID()}_${uid}_entry`;
         const altValues = Object.entries(entry.values);
 
         for (const [valUid, altValue] of altValues) {
@@ -95,7 +99,6 @@ async function getStatusPopupBlock(avatar) {
         }
 
         $valuesSelect.trigger('change');
-        $entryBlock.attr('id', blockId);
         $entryBlock
             .find(':input.text_pole')
             .each(function(i, input) {
@@ -106,7 +109,7 @@ async function getStatusPopupBlock(avatar) {
                 const doEscapeNewlines = typeof value === 'string' && !$input.is('textarea');
 
                 $input
-                    .data({uid})
+                    .data({uid, avatar, statusId})
                     .val(doEscapeNewlines ? escapeNewlines(value) : value)
                     .trigger('change');
             });
@@ -121,18 +124,24 @@ async function getStatusPopupBlock(avatar) {
  * @param {string} avatar
  */
 async function openSingleStatusPopup(avatar) {
-    const statusBlock = await getStatusPopupBlock(avatar);
+    const $statusBlock = await getStatusPopupBlock(avatar);
 
-    if (!statusBlock) return;
+    if (!$statusBlock) return;
 
-    await callGenericPopup(statusBlock, POPUP_TYPE.TEXT, "", {
+    await callGenericPopup($statusBlock, POPUP_TYPE.TEXT, "", {
         okButton: t`Close Status`,
         allowVerticalScrolling: true,
         wide: true,
-        onClose: async () => {
-            statusBlock.remove();
+        onClose: () => {
+            const doSave = $statusBlock.data().doSave;
+
+            if (doSave) saveMetadataSafe();
+
+            $statusBlock.remove();
         }
     });
+
+    SillyTavern[metadataName].renderStatusesSafe();
 }
 
 /**
@@ -147,7 +156,31 @@ async function onGroupMemberListClick(e) {
     await openSingleStatusPopup(avatar);
 }
 
+/**
+ * @param {EventData<HTMLInputElement|HTMLTextAreaElement>} e
+ */
+function onEntryInput(e) {
+    const $input = $(e.currentTarget);
+    const newValue = $input.val();
+    const field = $input.attr('name');
+    const { uid, avatar, statusId } = $input.data();
+
+    /** @type {Status} */
+    const status = SillyTavern[metadataName].getStatus(avatar);
+
+    if (!status) return;
+
+    /** @type {StatusEntry} */
+    const entry = status.entries[uid];
+
+    entry.set(field, newValue, entry.value_uid);
+    $(`#${statusId}`).data({doSave: true});
+}
+
 function initPopupTriggers() {
     // @ts-ignore
     $('#rm_group_members').on('click', '.avatar img', onGroupMemberListClick);
+
+    // @ts-ignore
+    $(document).on('input', '.popup .stat-us-maximus-popup-row .text_pole:not(select)', onEntryInput);
 }

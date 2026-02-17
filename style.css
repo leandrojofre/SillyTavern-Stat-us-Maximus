@@ -26,6 +26,10 @@
     }
 }
 
+#rm_group_members .avatar img {
+    cursor: pointer;
+}
+
 .stat-us-maximus-popup {
     background-color: var(--SmartThemeBotMesBlurTintColor);
 }

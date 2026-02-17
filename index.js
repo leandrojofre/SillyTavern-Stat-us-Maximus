@@ -470,6 +470,10 @@ async function renderCharStatus(status) {
         .find('.inline-drawer-header')
         .data({avatar: status.avatar});
 
+    statusBlock
+        .find('.stat-us-maximus-toolbar .menu_button.fa-pen')
+        .data({avatar: status.avatar});
+
     const entries = Object
         .entries(status.entries)
         .sort(([uidA, entryA], [uidB, entryB]) => entryA.display_position - entryB.display_position);

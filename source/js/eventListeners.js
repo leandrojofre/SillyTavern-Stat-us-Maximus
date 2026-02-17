@@ -16,11 +16,12 @@ import {
     updateCaretDisplaySafe,
     getSelectedTextInElem,
     renderCaret
-} from "../../index.js";
+} from '../../index.js';
 
-import { Status } from "../classes/Status.js";
-import { StatusEntry } from "../classes/StatusEntry.js";
-import { CUSTOM_MACROS } from "./macros.js";
+import { Status } from '../classes/Status.js';
+import { StatusEntry } from '../classes/StatusEntry.js';
+import { CUSTOM_MACROS } from './macros.js';
+import { openSingleStatusPopup } from './popups.js';
 
 export {
     registerEvents
@@ -376,6 +377,17 @@ function onCheckboxToggle(e) {
     updateEntryFromInput($input[0]);
 }
 
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onClickEditStatus(e) {
+    const $button = $(e.currentTarget);
+
+    const { avatar } = $button.data();
+
+    if (avatar) openSingleStatusPopup(avatar);
+}
+
 // * MARK:ST Listeners
 
 function onMessageRendered() {
@@ -496,6 +508,8 @@ function registerEvents() {
     $chat.on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
     // @ts-ignore
     $chat.on('click', '.stat-us-maximus-chat-drawer .fake-input-arrows', onClickInputArrow);
+    // @ts-ignore
+    $chat.on('click', '.stat-us-maximus-toolbar .menu_button.fa-pen', onClickEditStatus);
     // @ts-ignore
     $chat.on('input', '.stat-us-maximus-chat-drawer .chat-input-editor[type="checkbox"]', onCheckboxToggle);
     // @ts-ignore
