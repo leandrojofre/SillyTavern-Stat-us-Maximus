@@ -27,6 +27,8 @@
 }
 
 .stat-us-maximus-popup[is_user="true"] {
+    background-color: var(--SmartThemeUserMesBlurTintColor);
+
     .stat-us-maximus-popup-row {
         background-color: color-mix(in srgb, var(--SmartThemeUserMesBlurTintColor), var(--black30a));
     }

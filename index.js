@@ -5,7 +5,7 @@ import { getGroupMembers } from "../../../group-chats.js";
 import { Status } from './source/classes/Status.js';
 import { StatusEntry } from './source/classes/StatusEntry.js';
 import { registerEvents } from './source/js/eventListeners.js';
-import { initPopupTriggers } from './source/js/popups.js';
+import { initPopupTriggers, openSingleStatusPopup } from './source/js/popups.js';
 import { CUSTOM_MACROS } from './source/js/macros.js';
 
 export {
@@ -554,6 +554,7 @@ function initExtension() {
             return !status ? false : status;
         },
 
+        openPopupSingle: openSingleStatusPopup,
         renderStatuses,
         renderStatusesSafe
     };

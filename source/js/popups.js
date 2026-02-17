@@ -16,7 +16,8 @@ import {Status} from '../classes/Status.js';
 import {StatusEntry} from '../classes/StatusEntry.js';
 
 export {
-    initPopupTriggers
+    initPopupTriggers,
+    openSingleStatusPopup
 };
 
 /**
@@ -117,14 +118,9 @@ async function getStatusPopupBlock(avatar) {
 }
 
 /**
- * @param {EventData<HTMLImageElement>} e
+ * @param {string} avatar
  */
-async function openSingleStatusPopup(e) {
-    const img = e.currentTarget;
-    const avatar = img.title;
-
-    if (!avatar) return;
-
+async function openSingleStatusPopup(avatar) {
     const statusBlock = await getStatusPopupBlock(avatar);
 
     if (!statusBlock) return;
@@ -139,7 +135,19 @@ async function openSingleStatusPopup(e) {
     });
 }
 
+/**
+ * @param {EventData<HTMLImageElement>} e
+ */
+async function onGroupMemberListClick(e) {
+    const img = e.currentTarget;
+    const avatar = img.title;
+
+    if (!avatar) return;
+
+    await openSingleStatusPopup(avatar);
+}
+
 function initPopupTriggers() {
     // @ts-ignore
-    $('#rm_group_members').on('click', '.avatar img', openSingleStatusPopup);
+    $('#rm_group_members').on('click', '.avatar img', onGroupMemberListClick);
 }
