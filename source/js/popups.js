@@ -27,15 +27,7 @@ export {
  * @typedef {import('./eventListeners.js').EventData<T>} EventData
  */
 
-/**
- * @param {StatusEntry} entry
- * @returns {Promise<JQuery<HTMLElement>>}
- */
-async function getStatusEntryPopupBlock(entry) {
-    const $statusBlock = $(await HTML_TEMPLATES.get('popupStatusEntry')).clone();
-
-    return $statusBlock;
-}
+// * MARK:Popup Creation
 
 /**
  * @param {string} avatar
@@ -84,13 +76,13 @@ async function getStatusPopupBlock(avatar) {
             const isString = typeof value === 'string';
 
             $input
-                .data({avatar})
+                .data({avatar, statusId})
                 .val(isString ? escapeNewlines(value) : value)
                 .trigger('change');
         });
 
     for (const [uid, entry] of entries) {
-        const $entryBlock = await getStatusEntryPopupBlock(entry);
+        const $entryBlock = $(await HTML_TEMPLATES.get('popupStatusEntry')).clone();
         const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
         const altValues = Object.entries(entry.values);
 
@@ -144,6 +136,8 @@ async function openSingleStatusPopup(avatar) {
     SillyTavern[metadataName].renderStatusesSafe();
 }
 
+// * MARK:Shortcuts
+
 /**
  * @param {EventData<HTMLImageElement>} e
  */
@@ -154,6 +148,24 @@ async function onGroupMemberListClick(e) {
     if (!avatar) return;
 
     await openSingleStatusPopup(avatar);
+}
+
+/**
+ * @param {EventData<HTMLInputElement|HTMLTextAreaElement>} e
+ */
+function onStatusInput(e) {
+    const $input = $(e.currentTarget);
+    const newValue = $input.val();
+    const field = $input.attr('name');
+    const { avatar, statusId } = $input.data();
+
+    /** @type {Status} */
+    const status = SillyTavern[metadataName].getStatus(avatar);
+
+    if (!status) return;
+
+    status.set(field, newValue);
+    $(`#${statusId}`).data({doSave: true});
 }
 
 /**
@@ -177,10 +189,14 @@ function onEntryInput(e) {
     $(`#${statusId}`).data({doSave: true});
 }
 
+// * MARK:Init Popup Triggers
+
 function initPopupTriggers() {
     // @ts-ignore
     $('#rm_group_members').on('click', '.avatar img', onGroupMemberListClick);
 
     // @ts-ignore
-    $(document).on('input', '.popup .stat-us-maximus-popup-row .text_pole:not(select)', onEntryInput);
+    $(document).on('input', '.stat-us-maximus-popup .stat-us-maximus-popup-row .text_pole:not(select)', onEntryInput);
+    // @ts-ignore
+    $(document).on('input', '.stat-us-maximus-popup .status-fields .text_pole:not(select)', onStatusInput);
 }
