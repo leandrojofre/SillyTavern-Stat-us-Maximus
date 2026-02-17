@@ -32,6 +32,86 @@ export {
 
 // * MARK:Popup Creation
 
+/** Clones the status data of the selected `char`
+    @param {object} char
+    @returns {Promise<boolean|object>}
+*/
+// async function clonePopup(char) {
+//     const cloneContainer = document.createElement("div");
+//     cloneContainer.classList.add("stat-us-max-popup");
+
+//     const cloneWrapper = document.createElement("div");
+//     cloneWrapper.classList.add("d-flex", "flex-col");
+//     cloneWrapper.innerHTML = `<span>${t`Clone ${char.name} stats`}</span>`;
+
+//     const defOption = document.createElement("option");
+//     defOption.value = null;
+//     defOption.innerText = t`--Select target--`;
+
+//     const selectParticipant = document.createElement("select");
+//     selectParticipant.classList.add("flex-grow-1", "px-5px", "m-0");
+//     selectParticipant.append(defOption);
+
+//     const participants = [
+//         ...Object
+//             .entries(power_user.personas)
+//             .map(([key, value]) => {return {name: value, avatar: key, is_user: true}}),
+//         ...characters
+//     ].filter(c => c.avatar !== char.avatar);
+
+//     for (const participant of participants) {
+//         const option = document.createElement("option");
+//         option.value = String(participant.avatar);
+//         option.innerText = String(participant.name);
+//         selectParticipant.append(option);
+//     }
+
+//     const inputOnlyEntries = document.createElement("input");
+//     inputOnlyEntries.type = "checkbox";
+
+//     const spanOnlyEntries = document.createElement("span");
+//     spanOnlyEntries.innerText = t`Transfer only entries`;
+
+//     const labelOnlyEntries = document.createElement("label");
+//     labelOnlyEntries.classList.add("flex-container");
+//     labelOnlyEntries.append(
+//         inputOnlyEntries,
+//         spanOnlyEntries
+//     );
+
+//     cloneWrapper.append(labelOnlyEntries, selectParticipant);
+//     cloneContainer.append(cloneWrapper);
+
+//     const popupResult = await callGenericPopup(cloneContainer, POPUP_TYPE.CONFIRM, "", {
+//         okButton: t`Confirm`,
+//         cancelButton: t`Cancel`
+//     });
+
+//     if (!popupResult) return false;
+
+//     const target = participants.find(c => c.avatar === selectParticipant.value);
+//     const success = !target ? false : transferCharStatus(char, target, {onlySendEntries: inputOnlyEntries.checked});
+
+//     if (success) toastr.success(t`Status clone successfully`);
+//     else toastr.error(t`An error occurred - Status could not be clone`);
+
+//     destroyElement(cloneContainer);
+
+//     return success ? target : false;
+// }
+
+/**
+ * Set user clipboard to a stringified version of an object
+ * @param {object} obj - Object to be sent to the clipboard as text
+ * @returns {Promise<void>}
+ */
+// function exportObjectToClipboard(obj = {}) {
+//     let stringObj = JSON.stringify(obj);
+//     stringObj = escapeNewlines(stringObj);
+
+//     return copyText(stringObj);
+// }
+
 /**
  * @param {string} actionLabel - Are you sure want to...
  * @returns {Promise<boolean>}
