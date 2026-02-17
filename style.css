@@ -26,6 +26,17 @@
     }
 }
 
+.stat-us-maximus-popup[is_user="true"] {
+    .stat-us-maximus-popup-row {
+        background-color: color-mix(in srgb, var(--SmartThemeUserMesBlurTintColor), var(--black30a));
+    }
+}
+
+.stat-us-maximus-popup.bordered-box {
+    padding: 5px;
+    border: solid 1px var(--SmartThemeBorderColor);
+}
+
 .stat-us-maximus-custom-css {
     --stat-us-border-color: var(--SmartThemeBorderColor);
     --stat-us-avatar-height: var(--avatar-base-height);
@@ -253,6 +264,10 @@
         border-radius: 5px;
     }
 
+    .stat-us-maximus-popup-row {
+        background-color: color-mix(in srgb, var(--SmartThemeBotMesBlurTintColor), var(--black30a));
+    }
+
     .bg-bot {
         background-color: var(--SmartThemeBotMesBlurTintColor);
     }
@@ -359,5 +374,10 @@
 
     .square-ratio {
         aspect-ratio: 1 / 1;
+    }
+
+    .bordered-box {
+        padding: 5px;
+        border: solid 1px var(--SmartThemeBorderColor);
     }
 }

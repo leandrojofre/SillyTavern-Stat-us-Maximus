@@ -53,6 +53,8 @@ async function getStatusPopupBlock(avatar) {
         .entries(status.entries)
         .sort(([uidA, entryA], [uidB, entryB]) => entryA.display_position - entryB.display_position);
 
+    if (status.is_user) $statusBlock.attr('is_user', true);
+
     $statusBlock
         .find('.stat-us-maximus-name')
         .text(status.getCharacter().name);
@@ -67,7 +69,6 @@ async function getStatusPopupBlock(avatar) {
     }
 
     $selectRoles.trigger('change');
-
     $statusBlock
         .find('.status-fields :input.text_pole')
         .each(function(i, input) {
