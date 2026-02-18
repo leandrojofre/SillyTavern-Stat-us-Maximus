@@ -146,6 +146,7 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
     }
 
     $valuesSelect.trigger('change');
+
     $entryBlock
         .find('.delete-row')
         .data({uid, avatar, statusId});
@@ -164,6 +165,9 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
                 .val(doEscapeNewlines ? escapeNewlines(value) : value)
                 .trigger('change');
         });
+
+    $entryBlock
+        .attr('entry-uid', uid);
 
     return $entryBlock;
 }
@@ -202,7 +206,7 @@ async function getStatusPopupBlock(avatar) {
         .attr('title', status.avatar);
 
     $statusBlock
-        .find('.menu_button.fa-plus')
+        .find('.status-toolbar .menu_button')
         .data({avatar, statusId});
 
     for (const [text, value] of Object.entries(extension_prompt_roles)) {
@@ -376,13 +380,30 @@ async function onDeleteEntryClick(e) {
         delete status.entries[uid];
 
         const $statusBlock = $(`#${statusId}`);
-        const $container = $statusBlock.find('.stat-us-maximus-popup-row').first();
+        const $container = $statusBlock.find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`).first();
 
         $container.remove();
         $statusBlock.data({doSave: true});
     } catch (err) {
         error(err);
     }
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onBulkToggleEntryDrawer(e) {
+    const $button = $(e.currentTarget);
+    const { statusId } = $button.data();
+    const $statusBlock = $(`#${statusId}`);
+    const $entryContainers = $statusBlock.find('.stat-us-maximus-popup-row');
+
+    $entryContainers.each(function(i, row) {
+        const $rowToggle = $(row).find('.inline-drawer-toggle');
+        const direction = $button.hasClass('fa-compress') ? '.up' : '.down';
+
+        if ($rowToggle.is(direction)) $rowToggle.trigger('click');
+    });
 }
 
 // * MARK:Init Triggers
@@ -393,6 +414,8 @@ function initPopupTriggers() {
 
     // @ts-ignore
     $(document).on('click', '.stat-us-maximus-popup .menu_button.fa-plus', onCreateEntryClick);
+    // @ts-ignore
+    $(document).on('click', '.stat-us-maximus-popup .menu_button.status-bulk-toggle', onBulkToggleEntryDrawer);
     // @ts-ignore
     $(document).on('click', '.stat-us-maximus-popup .stat-us-maximus-popup-row .delete-row', onDeleteEntryClick);
     // @ts-ignore
