@@ -1,10 +1,14 @@
 import {
+    // ST imports
+    t,
+    // Normal imports
     characters,
     context,
     getUser,
     powerUserSettings
 } from '../../index.js';
 
+import {Status} from '../classes/Status';
 import {StatusEntry} from '../classes/StatusEntry';
 
 const {
@@ -53,6 +57,17 @@ function getParticipant(charName, isUser) {
         characters.find(char => char.name === charName);
 }
 
+/**
+ * @param {string} charName
+ * @param {boolean} isUser
+ * @returns {Status|undefined}
+ */
+function getStatusFromName(charName, isUser) {
+    return StatUsMaximus
+        .getStatuses()
+        .find(stat => stat.getCharacter().name === charName);
+}
+
 const ENUMS = {
     characters: function() {
         return characters.map(char => new SlashCommandEnumValue(char.name));
@@ -70,6 +85,13 @@ const ENUMS = {
     boolean: () => [
         new SlashCommandEnumValue('true'),
         new SlashCommandEnumValue('false')
+    ],
+
+    acceptedStatusFields: () => [
+        new SlashCommandEnumValue('separator'),
+        new SlashCommandEnumValue('def_entry_separator'),
+        new SlashCommandEnumValue('prefix'),
+        new SlashCommandEnumValue('suffix')
     ]
 }
 
@@ -101,7 +123,6 @@ async function commandCreateStatus(args) {
 
         return 'true';
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
 
         return 'false';
@@ -112,28 +133,28 @@ async function commandCreateStatus(args) {
  * @param {object} args
  * @param {string} args.char - Character name
  * @param {string} args.field - Field to modify
- * @param {string|SlashCommandClosure|string[]|SlashCommandClosure[]} value - New value of the selected field
+ * @param {string} args.isuser - Wether to search for personas or characters
+ * @param {string} value - New value of the selected field
  * @returns {string} Empty string
  */
-function commandSetStatusField(args, value = "") {
+function commandSetStatusField(args, value = '') {
     try {
-        const {char = "", field = ""} = args;
+        const {char = '', field = 'separator', isuser = 'false'} = args;
 
-        const character = getParticipantFromName(char);
-        const acceptedFields = Object.keys(acceptedStatusFields);
+        const cleanIsUser = isuser === 'trie';
+        const status = getStatusFromName(char, cleanIsUser);
+        const acceptedFields = ENUMS
+            .acceptedStatusFields()
+            .map(key => key.toString());
 
         if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid field "${field}"`);
-        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
 
-        const formData = new FormData();
-        formData.set(field, String(value));
-
-        updateCharStatus(character, formData);
+        status.set(field, String(value));
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
     } finally {
-        return "";
+        return '';
     }
 }
 
@@ -623,6 +644,12 @@ export function registerSlashCommands() {
                     <li>
                         <pre><code>/stum-create-status char="Tom"</code></pre>
                     </li>
+                    <li>
+                        <pre><code>/stum-create-status char="Tom" isuser=true</code></pre>
+                    </li>
+                    <li>
+                        <pre><code>/stum-create-status char="Tom" force=true</code></pre>
+                    </li>
                 </ul>
             </div>`,
         })
@@ -639,14 +666,21 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantNames
+                    enumProvider: ENUMS.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
-                    description: 'Field to update - default value',
+                    description: 'Field to update - defaults to separator',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: customEnumProviders.statusFields
+                    enumProvider: ENUMS.acceptedStatusFields
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - false by default',
+                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    isRequired: false,
+                    enumProvider: ENUMS.boolean
                 })
             ],
             unnamedArgumentList: [
@@ -665,6 +699,9 @@ export function registerSlashCommands() {
                 <ul>
                     <li>
                         <pre><code>/stum-set-status-field char="Tom" field="prefix" "{{name}}: "</code></pre>
+                    </li>
+                    <li>
+                        <pre><code>/stum-set-status-field char="Tom" isuser=false "{{newline}}"</code></pre>
                     </li>
                 </ul>
             </div>`,
