@@ -44,6 +44,7 @@ export {
     extensionSettings,
     metadataName,
     extensionName,
+    htmlSuffix,
     // HTML Related
     updateCaretDisplaySafe,
     getSelectedTextInElem,
@@ -471,7 +472,7 @@ function renderStatusesSafe() {
  */
 // MARK:Render Char Status
 async function renderCharStatus(status) {
-    $(`#chat .stat-us-maximus-custom-css[char-target="${status.avatar}"]`).remove();
+    $(`#chat .${htmlSuffix}-custom-css[char-target="${status.avatar}"]`).remove();
 
     if (status.last_mes_id < 0) return;
 
@@ -513,7 +514,7 @@ async function renderCharStatus(status) {
         .data({avatar: status.avatar});
 
     statusBlock
-        .find('.stat-us-maximus-toolbar .menu_button.fa-pen')
+        .find(`.${htmlSuffix}-toolbar .menu_button.fa-pen`)
         .data({avatar: status.avatar});
 
     /** @type {[string, StatusEntry][]} */

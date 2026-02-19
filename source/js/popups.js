@@ -7,10 +7,11 @@ import {
     t,
     // Normal imports
     extensionName,
-    metadataName,
     escapeNewlines,
     generateUUID,
     saveMetadataSafe,
+    metadataName,
+    htmlSuffix,
     error,
     log,
     // HTML related
@@ -197,11 +198,11 @@ async function getStatusPopupBlock(avatar) {
     $statusBlock.attr('id', statusId);
 
     $statusBlock
-        .find('.stat-us-maximus-name')
+        .find(`.${htmlSuffix}-name`)
         .text(status.getCharacter().name);
 
     $statusBlock
-        .find('.stat-us-maximus-avatar')
+        .find(`.${htmlSuffix}-avatar`)
         .attr('src', status.getThumbnail())
         .attr('title', status.avatar);
 
@@ -380,7 +381,7 @@ async function onDeleteEntryClick(e) {
         delete status.entries[uid];
 
         const $statusBlock = $(`#${statusId}`);
-        const $container = $statusBlock.find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`).first();
+        const $container = $statusBlock.find(`.${htmlSuffix}-popup-row[entry-uid="${uid}"]`).first();
 
         $container.remove();
         $statusBlock.data({doSave: true});
@@ -396,7 +397,7 @@ function onBulkToggleEntryDrawer(e) {
     const $button = $(e.currentTarget);
     const { statusId } = $button.data();
     const $statusBlock = $(`#${statusId}`);
-    const $entryContainers = $statusBlock.find('.stat-us-maximus-popup-row');
+    const $entryContainers = $statusBlock.find(`.${htmlSuffix}-popup-row`);
 
     $entryContainers.each(function(i, row) {
         const $rowToggle = $(row).find('.inline-drawer-toggle');
@@ -413,15 +414,15 @@ function initPopupTriggers() {
     $('#rm_group_members').on('click', '.avatar img', onGroupMemberListClick);
 
     // @ts-ignore
-    $(document).on('click', '.stat-us-maximus-popup .menu_button.fa-plus', onCreateEntryClick);
+    $(document).on('click', `.${htmlSuffix}-popup .menu_button.fa-plus`, onCreateEntryClick);
     // @ts-ignore
-    $(document).on('click', '.stat-us-maximus-popup .menu_button.status-bulk-toggle', onBulkToggleEntryDrawer);
+    $(document).on('click', `.${htmlSuffix}-popup .menu_button.status-bulk-toggle`, onBulkToggleEntryDrawer);
     // @ts-ignore
-    $(document).on('click', '.stat-us-maximus-popup .stat-us-maximus-popup-row .delete-row', onDeleteEntryClick);
+    $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, onDeleteEntryClick);
     // @ts-ignore
-    $(document).on('input', '.stat-us-maximus-popup .stat-us-maximus-popup-row .text_pole', onEntryInput);
+    $(document).on('input', `.${htmlSuffix}-popup-row .text_pole`, onEntryInput);
     // @ts-ignore
-    $(document).on('input', '.stat-us-maximus-popup .stat-us-maximus-popup-row select[name="value_uid"]', onEntryValueSwap);
+    $(document).on('input', `.${htmlSuffix}-popup-row select[name="value_uid"]`, onEntryValueSwap);
     // @ts-ignore
-    $(document).on('input', '.stat-us-maximus-popup .status-fields .text_pole', onStatusInput);
+    $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, onStatusInput);
 }

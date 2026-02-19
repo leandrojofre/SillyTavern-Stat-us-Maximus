@@ -1,19 +1,21 @@
 import {
+    // ST imports
     eventSource,
     eventTypes,
-    metadataName,
-    getActiveParticipants,
-    extension_prompt_roles,
     setExtensionPrompt,
-    context,
-    extensionSettings,
-    generateUUID,
-    log,
-    saveMetadataSafe,
     scrollChatToBottom,
     powerUserSettings,
+    // Normal imports
+    context,
+    getActiveParticipants,
+    extensionSettings,
+    generateUUID,
+    saveMetadataSafe,
     showPopper,
     hidePopper,
+    metadataName,
+    htmlSuffix,
+    log,
     // HTML Related
     updateCaretDisplaySafe,
     getSelectedTextInElem,
@@ -171,7 +173,7 @@ function onToggleEntry(e) {
         .data({enabled: nextState})
         .toggleClass('fa-toggle-on', nextState)
         .toggleClass('fa-toggle-off', !nextState)
-        .closest('.stat-us-maximus-entry')
+        .closest(`.${htmlSuffix}-entry`)
         .toggleClass('disabled', !nextState);
 
     saveMetadataSafe();
@@ -412,7 +414,7 @@ async function onSelectSwitchValueList(e) {
 
     const {altUid, uid, avatar, character, statusBlockId, listId} = $option.data();
 
-    const $entryBlock = $(`.stat-us-maximus-entry[status-block-id="${statusBlockId}"][uid="${uid}"]`).first();
+    const $entryBlock = $(`.${htmlSuffix}-entry[status-block-id="${statusBlockId}"][uid="${uid}"]`).first();
     const popperInstance = $entryBlock.find('.status-value-uid').first().data('switchValuePopper');
     const optionList = $(`#${listId}`)[0];
 
@@ -578,32 +580,32 @@ function onGenerationAfterCommands(...args) {
 function registerEvents() {
     const $chat = $('#chat').first();
 
-    $chat.on('click', '.stat-us-maximus-toolbar', function(e){
+    $chat.on('click', `.${htmlSuffix}-toolbar`, function(e){
         e.stopPropagation();
     });
 
-    $chat.on('pointerdown', '.stat-us-maximus-chat-drawer .fake-selection', function(e){
+    $chat.on('pointerdown', `.${htmlSuffix}-chat-drawer .fake-selection`, function(e){
         e.stopPropagation();
     });
 
     // @ts-ignore
-    $chat.on('click', '.stat-us-maximus-entry .kill-switch', onToggleEntry);
+    $chat.on('click', `.${htmlSuffix}-entry .kill-switch`, onToggleEntry);
     // @ts-ignore
-    $chat.on('click', '.stat-us-maximus-entry .status-value-uid', onOpenSwitchValueList);
+    $chat.on('click', `.${htmlSuffix}-entry .status-value-uid`, onOpenSwitchValueList);
     // @ts-ignore
-    $chat.on('click', '.stat-us-maximus-chat-drawer .status-value-uid-options .list-group-item', onSelectSwitchValueList);
+    $chat.on('click', `.${htmlSuffix}-chat-drawer .status-value-uid-options .list-group-item`, onSelectSwitchValueList);
     // @ts-ignore
-    $chat.on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
+    $chat.on('click', `.${htmlSuffix}-chat-drawer .inline-drawer-header`, onCollapseStatus);
     // @ts-ignore
-    $chat.on('click', '.stat-us-maximus-chat-drawer .fake-input-arrows', onClickInputArrow);
+    $chat.on('click', `.${htmlSuffix}-chat-drawer .fake-input-arrows`, onClickInputArrow);
     // @ts-ignore
-    $chat.on('click', '.stat-us-maximus-toolbar .menu_button.fa-pen', onClickEditStatus);
+    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-pen`, onClickEditStatus);
     // @ts-ignore
-    $chat.on('input', '.stat-us-maximus-chat-drawer .chat-input-editor[type="checkbox"]', onCheckboxToggle);
+    $chat.on('input', `.${htmlSuffix}-chat-drawer .chat-input-editor[type="checkbox"]`, onCheckboxToggle);
     // @ts-ignore
-    $chat.on('pointerdown', '.stat-us-maximus-chat-drawer .fake-input-span', onSelectChatInput);
+    $chat.on('pointerdown', `.${htmlSuffix}-chat-drawer .fake-input-span`, onSelectChatInput);
     // @ts-ignore
-    $chat.on('input', '.stat-us-maximus-entry .chat-input-editor[type="range"]', onRangeSliderMoved);
+    $chat.on('input', `.${htmlSuffix}-entry .chat-input-editor[type="range"]`, onRangeSliderMoved);
 
     // @ts-ignore
     $(document).on('click', onDocumentClick);
