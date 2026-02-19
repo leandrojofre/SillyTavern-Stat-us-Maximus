@@ -4,8 +4,6 @@ import {
     extensionSettings,
     createElement,
     generateUUID,
-    log,
-    error,
     t
 } from "../../index.js";
 import { MacroValueType } from "/scripts/macros/macro-system.js";

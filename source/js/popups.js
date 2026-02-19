@@ -12,8 +12,6 @@ import {
     saveMetadataSafe,
     metadataName,
     htmlSuffix,
-    error,
-    log,
     // HTML related
     HTML_TEMPLATES
 } from '../../index.js';
@@ -386,7 +384,7 @@ async function onDeleteEntryClick(e) {
         $container.remove();
         $statusBlock.data({doSave: true});
     } catch (err) {
-        error(err);
+        StatUsMaximus.error(err);
     }
 }
 

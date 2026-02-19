@@ -15,7 +15,6 @@ import {
     hidePopper,
     metadataName,
     htmlSuffix,
-    log,
     // HTML Related
     updateCaretDisplaySafe,
     getSelectedTextInElem,
@@ -477,7 +476,7 @@ function onDocumentClick(e) {
 // * MARK:ST Listeners
 
 function onMessageRendered() {
-    log('onMessageRendered');
+    StatUsMaximus.log('onMessageRendered');
 
     /** @type {Function} */
     const renderer = StatUsMaximus.renderStatusesSafe;
@@ -486,7 +485,7 @@ function onMessageRendered() {
 }
 
 async function onNewMessageRendered() {
-    log('onMessageRendered');
+    StatUsMaximus.log('onMessageRendered');
 
     /** @type {Function} */
     const renderer = StatUsMaximus.renderStatuses;
@@ -498,7 +497,7 @@ async function onNewMessageRendered() {
 async function onChatChanged(...args) {
     const [ chat_id ] = args;
 
-    log(eventTypes.CHAT_CHANGED, chat_id);
+    StatUsMaximus.log(eventTypes.CHAT_CHANGED, chat_id);
 
     if (!chat_id) return;
 
@@ -510,7 +509,7 @@ async function onChatChanged(...args) {
 }
 
 function onGenerationAfterCommands(...args) {
-    log(eventTypes.GENERATION_AFTER_COMMANDS, args);
+    StatUsMaximus.log(eventTypes.GENERATION_AFTER_COMMANDS, args);
 
     const [ genType ] = args;
     const { extensionPrompts: extension_prompts, characterId: chid, characters: allCharacters } = context();
@@ -556,7 +555,7 @@ function onGenerationAfterCommands(...args) {
         else if (typeof chid === 'string' && allCharacters[chid].avatar === status.avatar)
             isCharGenerating = true;
 
-        log(genType, chid, allCharacters[chid]?.avatar, status.avatar, isCharGenerating);
+        StatUsMaximus.log(genType, chid, allCharacters[chid]?.avatar, status.avatar, isCharGenerating);
 
         const depth = (typeof status.force_depth === 'number' && status.force_depth >= 0) ?
             status.force_depth :

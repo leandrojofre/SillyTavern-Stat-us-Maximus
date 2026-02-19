@@ -26,9 +26,6 @@ export {
     lodash,
     // Native exports
     getFreeDataUid,
-    log,
-    debug,
-    error,
     escapeNewlines,
     unEscapeNewlines,
     exportObjectToClipboard,
@@ -65,6 +62,9 @@ export {
  * @property {(avatar: string) => Promise<void>} openPopupSingle
  * @property {() => Promise<void>} renderStatuses
  * @property {() => void} renderStatusesSafe
+ * @property {(...mess: any[]) => void} log
+ * @property {(...mess: any[]) => void} debug
+ * @property {(...mess: any[]) => void} error
  *
  * @typedef {Object} ExtensionSettings
  * @property {boolean} enabled
@@ -669,7 +669,10 @@ globalThis.StatUsMaximus = {
 
     openPopupSingle: openSingleStatusPopup,
     renderStatuses,
-    renderStatusesSafe
+    renderStatusesSafe,
+    log,
+    debug,
+    error
 };
 
 // * MARK:Extension Settings

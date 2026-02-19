@@ -1,4 +1,12 @@
-import { extension_prompt_roles, getFreeDataUid, messageBelongsToChar, getUser, getThumbnailUrl, log, context } from '../../index.js';
+import {
+    extension_prompt_roles,
+    getFreeDataUid,
+    messageBelongsToChar,
+    getUser,
+    getThumbnailUrl,
+    context
+} from '../../index.js';
+
 import { StatusEntry, entryTemplate } from './StatusEntry.js';
 
 export {
