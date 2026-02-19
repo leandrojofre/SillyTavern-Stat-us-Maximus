@@ -178,8 +178,8 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
  * @returns {Promise<JQuery<HTMLElement>>}
  */
 async function getStatusPopupBlock(avatar) {
-    /** @type {Status} */
-    const status = SillyTavern[metadataName].getStatus(avatar);
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 
@@ -258,7 +258,7 @@ async function openSingleStatusPopup(avatar) {
         }
     });
 
-    SillyTavern[metadataName].renderStatusesSafe();
+    StatUsMaximus.renderStatusesSafe();
 }
 
 // * MARK:Shortcuts
@@ -286,8 +286,8 @@ function onStatusInput(e) {
     const field = $input.attr('name');
     const { avatar, statusId } = $input.data();
 
-    /** @type {Status} */
-    const status = SillyTavern[metadataName].getStatus(avatar);
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 
@@ -304,8 +304,8 @@ function onEntryInput(e) {
     const field = $input.attr('name');
     const { uid, avatar, statusId } = $input.data();
 
-    /** @type {Status} */
-    const status = SillyTavern[metadataName].getStatus(avatar);
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 
@@ -324,8 +324,8 @@ function onEntryValueSwap(e) {
     const selectedAltValue = String($select.val());
     const { uid, avatar } = $select.data();
 
-    /** @type {Status} */
-    const status = SillyTavern[metadataName].getStatus(avatar);
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 
@@ -346,8 +346,8 @@ async function onCreateEntryClick(e) {
     const $button = $(e.currentTarget);
     const { avatar, statusId } = $button.data();
 
-    /** @type {Status} */
-    const status = SillyTavern[metadataName].getStatus(avatar);
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 
@@ -368,8 +368,8 @@ async function onDeleteEntryClick(e) {
     const $button = $(e.currentTarget);
     const { uid, avatar, statusId } = $button.data();
 
-    /** @type {Status} */
-    const status = SillyTavern[metadataName].getStatus(avatar);
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 

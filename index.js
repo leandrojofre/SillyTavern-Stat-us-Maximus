@@ -58,6 +58,14 @@ export {
  * @typedef {{name:string; description: string; avatar:string; is_user: boolean}} UserCharacter
  * @typedef {import('@popperjs/core/index.js').Instance} Instance
  *
+ * @typedef {Object} StatUsMaxInterface
+ * @property {() => any} getStatuses
+ * @property {(avatar: string) => false|Status} getStatus
+ * @property {(avatar: string) => false|Status} addStatus
+ * @property {(avatar: string) => Promise<void>} openPopupSingle
+ * @property {() => Promise<void>} renderStatuses
+ * @property {() => void} renderStatusesSafe
+ *
  * @typedef {Object} ExtensionSettings
  * @property {boolean} enabled
  * @property {boolean} editNumbersFromChat - Legacy name for what now is replace macros with inputs from chat
@@ -605,7 +613,7 @@ async function renderCharStatus(status) {
 }
 
 async function renderStatuses() {
-    const statuses = SillyTavern[metadataName].getStatuses();
+    const statuses = StatUsMaximus.getStatuses();
 
     for (const status of statuses)
         await renderCharStatus(status);
@@ -615,39 +623,54 @@ const saveChatDebounced = lodash.debounce(saveChat, debounceTimeout.MED);
 const renderStatusesDebounced = lodash.debounce(renderStatuses, debounceTimeout.MED);
 const updateCaretDisplayDebounced = lodash.debounce(updateCaretDisplay, debounceTimeout.MICRO);
 
-/**
- * Init extension
- */
-function initExtension() {
-    SillyTavern[metadataName] = {
-        getStatuses: function() {
-            let statuses = context().chatMetadata[metadataName];
+/** @type {StatUsMaxInterface} */
+globalThis.StatUsMaximus = {
+    getStatuses: function() {
+        let statuses = context().chatMetadata[metadataName];
 
-            if (!statuses) statuses = [];
+        if (!statuses) statuses = [];
 
-            statuses = statuses.map(status => status instanceof Status ? status : new Status(status));
+        statuses = statuses.map(status => status instanceof Status ? status : new Status(status));
 
-            context().chatMetadata[metadataName] = statuses;
+        context().chatMetadata[metadataName] = statuses;
 
-            return statuses;
-        },
+        return statuses;
+    },
 
-        getStatus: function(avatar) {
-            /** @type {Status[]} */
-            let statuses = SillyTavern[metadataName].getStatuses();
+    getStatus: function(avatar) {
+        /** @type {Status[]} */
+        let statuses = StatUsMaximus.getStatuses();
 
-            if (!statuses) return false;
+        if (!statuses) return false;
 
-            const status = statuses.find(s => s.avatar === avatar);
+        const status = statuses.find(s => s.avatar === avatar);
 
-            return !status ? false : status;
-        },
+        return !status ? false : status;
+    },
 
-        openPopupSingle: openSingleStatusPopup,
-        renderStatuses,
-        renderStatusesSafe
-    };
-}
+    addStatus: function(avatar) {
+        /** @type {Status[]} */
+        let statuses = StatUsMaximus.getStatuses();
+
+        if (!statuses) return false;
+
+        let status = statuses.find(s => s.avatar === avatar);
+
+        if (!status) {
+            status = new Status({avatar});
+            statuses.push(status);
+        }
+
+        context().chatMetadata[metadataName] = statuses;
+        saveMetadataSafe();
+
+        return status;
+    },
+
+    openPopupSingle: openSingleStatusPopup,
+    renderStatuses,
+    renderStatusesSafe
+};
 
 // * MARK:Extension Settings
 
@@ -779,7 +802,6 @@ $(async function() {
     }
 
     await loadSettingsMenu();
-    initExtension();
     registerEvents();
     initPopupTriggers();
 });

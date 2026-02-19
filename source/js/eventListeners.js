@@ -88,8 +88,8 @@ function updateEntryFromInput(inputTrigger) {
 
     if (!avatar || isNaN(uid)) return;
 
-    /** @type {Status} */
-    const status = SillyTavern[metadataName].getStatus(avatar);
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
     const $inputs = $container.find('.input-value-source');
 
     if (!status) return;
@@ -158,8 +158,8 @@ function onToggleEntry(e) {
     const { avatar, enabled, uid } = entrySwitch.data();
     const nextState = !enabled;
 
-    /** @type {Status} */
-    const status = SillyTavern[metadataName].getStatus(avatar);
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 
@@ -186,8 +186,8 @@ function onCollapseStatus(e) {
     const drawerHeader = $(e.currentTarget);
     const { avatar } = drawerHeader.data();
 
-    /** @type {Status} */
-    const status = SillyTavern[metadataName].getStatus(avatar);
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 
@@ -418,8 +418,8 @@ async function onSelectSwitchValueList(e) {
     const popperInstance = $entryBlock.find('.status-value-uid').first().data('switchValuePopper');
     const optionList = $(`#${listId}`)[0];
 
-    /** @type {Status} */
-    const status = SillyTavern[metadataName].getStatus(avatar);
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status)
         return await hidePopper(popperInstance, optionList);
@@ -480,7 +480,7 @@ function onMessageRendered() {
     log('onMessageRendered');
 
     /** @type {Function} */
-    const renderer = SillyTavern[metadataName].renderStatusesSafe;
+    const renderer = StatUsMaximus.renderStatusesSafe;
 
     renderer();
 }
@@ -489,7 +489,7 @@ async function onNewMessageRendered() {
     log('onMessageRendered');
 
     /** @type {Function} */
-    const renderer = SillyTavern[metadataName].renderStatuses;
+    const renderer = StatUsMaximus.renderStatuses;
 
     await renderer();
     if (powerUserSettings.auto_scroll_chat_to_bottom) scrollChatToBottom();
@@ -503,7 +503,7 @@ async function onChatChanged(...args) {
     if (!chat_id) return;
 
     /** @type {Function} */
-    const renderer = SillyTavern[metadataName].renderStatuses;
+    const renderer = StatUsMaximus.renderStatuses;
 
     await renderer();
     scrollChatToBottom();
@@ -523,8 +523,8 @@ function onGenerationAfterCommands(...args) {
     const macro = CUSTOM_MACROS.getValues;
 
     for (const char of characters) {
-        /** @type {Status} */
-        const status = SillyTavern[metadataName].getStatus(char.avatar);
+        /** @type {Status|false} */
+        const status = StatUsMaximus.getStatus(char.avatar);
 
         if (!status) continue;
 

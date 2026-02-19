@@ -23,7 +23,7 @@ const statusTemplate = Object.freeze({
 
 /**
  * @typedef {Object} StatusData
- * @property {string} [avatar]
+ * @property {string} avatar
  * @property {number} [role]
  * @property {string} [separator]
  * @property {string} [def_entry_separator]
@@ -56,7 +56,7 @@ class Status {
     /**
      * @param {StatusData?} [status={}] - The status data to initialize the Status object with. If not provided, default values will be used.
      */
-    constructor(status = {}) {
+    constructor(status = {avatar: ''}) {
         status = structuredClone(status);
 
         // If it has entries as array, turn into object - Compatibility with older data versions - Remove in months
@@ -79,7 +79,7 @@ class Status {
         }
 
         /** @type {StatusData} */
-        const statusClean = {};
+        const statusClean = {avatar: ''};
 
         for (const key in statusTemplate) {
             if (status[key] === null || status[key] === undefined) continue;
