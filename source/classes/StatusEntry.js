@@ -42,6 +42,9 @@ const altEntryTemplate = Object.freeze({
  * @property {Object<string, AltValueData>} [values]
  */
 class StatusEntry {
+    static template = entryTemplate;
+    static valueTemplate = altEntryTemplate;
+
     /** @property {boolean} */ enabled
     /** @property {string} */ key
     /** @property {string} */ separator

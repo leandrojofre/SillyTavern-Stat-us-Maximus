@@ -48,6 +48,8 @@ const statusTemplate = Object.freeze({
  * @typedef {import('../../index.js').UserCharacter} UserCharacter
  */
 class Status {
+    static template = statusTemplate;
+
     /** @property {string} */ avatar
     /** @property {number} */ role
     /** @property {string} */ separator

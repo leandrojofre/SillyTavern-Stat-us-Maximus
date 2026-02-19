@@ -1,6 +1,6 @@
 import { extension_prompt_roles } from '../../../../script.js';
-import { copyText } from "../../../utils.js";
-import { getGroupMembers } from "../../../group-chats.js";
+import { copyText } from '../../../utils.js';
+import { getGroupMembers } from '../../../group-chats.js';
 
 import { Status } from './source/classes/Status.js';
 import { StatusEntry } from './source/classes/StatusEntry.js';
@@ -21,6 +21,7 @@ export {
     Popup,
     POPUP_TYPE,
     powerUserSettings,
+    characters,
     eventSource,
     eventTypes,
     lodash,
@@ -56,9 +57,11 @@ export {
  * @typedef {import('@popperjs/core/index.js').Instance} Instance
  *
  * @typedef {Object} StatUsMaxInterface
- * @property {() => any} getStatuses
+ * @property {() => Status[]} getStatuses
  * @property {(avatar: string) => false|Status} getStatus
  * @property {(avatar: string) => false|Status} addStatus
+ * @property {typeof Status} Status
+ * @property {typeof StatusEntry} StatusEntry
  * @property {(avatar: string) => Promise<void>} openPopupSingle
  * @property {() => Promise<void>} renderStatuses
  * @property {() => void} renderStatusesSafe
@@ -219,7 +222,7 @@ function exportObjectToClipboard(obj = {}) {
 
 /**
  * @param {string?} [value]
- * @param {string?} [search_key]
+ * @param {string?} [search_key] - Default is `avatar`
  * @returns {UserCharacter}
  */
 function getUser(value, search_key = 'avatar') {
@@ -475,10 +478,10 @@ function renderStatusesSafe() {
 }
 
 /**
+ * MARK:Render Char Status
  * Renders the status block of the selected character in the last message from the character rendered in the chat log.
  * @param {Status} status
  */
-// MARK:Render Char Status
 async function renderCharStatus(status) {
     $(`#chat .${htmlSuffix}-custom-css[char-target="${status.avatar}"]`).remove();
 
@@ -623,7 +626,10 @@ const saveChatDebounced = lodash.debounce(saveChat, debounceTimeout.MED);
 const renderStatusesDebounced = lodash.debounce(renderStatuses, debounceTimeout.MED);
 const updateCaretDisplayDebounced = lodash.debounce(updateCaretDisplay, debounceTimeout.MICRO);
 
-/** @type {StatUsMaxInterface} */
+/**
+ * MARK:Interface
+ * @type {StatUsMaxInterface}
+ */
 globalThis.StatUsMaximus = {
     getStatuses: function() {
         let statuses = context().chatMetadata[metadataName];
@@ -659,14 +665,16 @@ globalThis.StatUsMaximus = {
         if (!status) {
             status = new Status({avatar});
             statuses.push(status);
-        }
 
-        context().chatMetadata[metadataName] = statuses;
-        saveMetadataSafe();
+            context().chatMetadata[metadataName] = statuses;
+            saveMetadataSafe();
+        }
 
         return status;
     },
 
+    Status,
+    StatusEntry,
     openPopupSingle: openSingleStatusPopup,
     renderStatuses,
     renderStatusesSafe,

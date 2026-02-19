@@ -1,186 +1,120 @@
-import { Fuse } from "../../../../../../lib.js";
-import { chat_metadata } from "../../../../../../script.js";
-import { t } from "../../../../../i18n.js";
-import { SlashCommand } from "../../../../../slash-commands/SlashCommand.js";
-import { ARGUMENT_TYPE, SlashCommandArgument, SlashCommandNamedArgument } from "../../../../../slash-commands/SlashCommandArgument.js";
-import { SlashCommandClosure } from "../../../../../slash-commands/SlashCommandClosure.js";
-import { commonEnumProviders, enumIcons } from "../../../../../slash-commands/SlashCommandCommonEnumsProvider.js";
-import { enumTypes, SlashCommandEnumValue } from "../../../../../slash-commands/SlashCommandEnumValue.js";
-import { SlashCommandExecutor } from "../../../../../slash-commands/SlashCommandExecutor.js";
-import { SlashCommandParser } from "../../../../../slash-commands/SlashCommandParser.js";
-import { fetchStatusDebounced, getParticipant, setSaveStateFlag } from "../../index_old.js";
-import { addCharAltValue, addCharEntry, createCharStatus, deleteCharStatus, fillMissingMetadata, getCharAltValue, getCharEntry, getCharStatus, removeCharAltValue, removeCharEntry, updateCharAltValue, updateCharEntry, updateCharStatus } from "./statusControls.js";
+import {
+    characters,
+    context,
+    getUser,
+    powerUserSettings
+} from '../../index.js';
 
-/*  # TODO
-    - [X] Command to create Status data
-    - [X] Command to delete Status data
-*/
+import {StatusEntry} from '../classes/StatusEntry';
+
+const {
+    SlashCommandEnumValue
+} = context();
+
+/**
+ * @typedef {import('../classes/Status.js').UserCharacter} UserCharacter
+ */
+
+// * MARK:Utility Methods
 
 /** Takes an object with a key and value and generates a comment
-    @param {object} entry
-*/
+ * @param {StatusEntry} entry
+ * @returns {string}
+ */
 function buildUIDsComment(entry) {
-    let comment = "";
+    const value = entry.values[entry.value_uid].value;
+    const title = entry.key;
+    const placeSeparator = title.length > 0 && value.length > 0;
+    const separator = placeSeparator ? ' - ' : '';
+    const longValue = value.length > 20;
+    const suffix = longValue ? '...' : '';
 
-    if (entry?.key !== undefined) comment += entry.key;
-    if (comment.length > 0 && entry?.value) comment += " - ";
-    if (entry?.value) comment += entry.value.slice(0, 20).trim();
-    if (entry?.value?.length > 20) comment += "...";
-
-    return comment;
+    return `${title}${separator}${value.slice(0, 20).trim()}${suffix}`;
 }
 
-/** Gets an active chat participant by its name
-    @param {String} name - Character name
-*/
-function getParticipantFromName(name = "") {
-    const metadata = chat_metadata.stat_us_maximus ?? [];
-    const chars = metadata.map(status => getParticipant(status.avatar, status.is_user));
-    const character = chars.find(char => char.name === name) ?? false;
-
-    return character;
+/**
+ * @param {string} charName
+ * @returns {boolean}
+ */
+function characterHasMetadata(charName) {
+    return StatUsMaximus.getStatuses().some(stat => {
+        return stat.getCharacter().name === charName;
+    });
 }
 
-/** Accepted key values and their descriptions */
-const acceptedStatusFields = {
-    // role: "Determines the role at which the status is sent to the prompt",
-    // is_collapsed: "Wether to collapse or expand the status block in the chat",
-    separator: "The separator used between entries",
-    def_entry_separator: "Default title/value separator set when creating an entry",
-    prefix: "Text added before the first entry",
-    suffix: "Text added after the last entry"
-};
+/**
+ * @param {string} charName
+ * @param {boolean} isUser
+ * @returns {Character|UserCharacter}
+ */
+function getParticipant(charName, isUser) {
+    return isUser ?
+        getUser(charName, 'name') :
+        characters.find(char => char.name === charName);
+}
 
-/** Accepted key values and their descriptions */
-const acceptedEntryFields = {
-    enabled: "Determines if the entry gets added to the prompt",
-    key: "Title of the entry",
-    value: "Value of the entry",
-    separator: "Separator between the key and value",
-    // display_position: "Order at which the entry gets inserted (starts at 0)"
-};
-
-/** Accepted alt key values and their descriptions */
-const acceptedAltEntryFields = {
-    key: "Nickname of the alt entry - only used in the select button",
-    value: "Value of the alt entry"
-};
-
-/** Enum providers for slash commands autocomplete */
-const customEnumProviders = {
-    /** All possible char entities within the chat status metadata.
-        @returns {SlashCommandEnumValue[]}
-    */
-    participantNames: () => {
-        const metadata = chat_metadata.stat_us_maximus ?? [];
-        const chars = metadata.map(status => getParticipant(status.avatar, status.is_user));
-        const chars_filtered = chars.filter(char => !!char);
-
-        return chars_filtered.map(char => new SlashCommandEnumValue(char.name, char.avatar, enumTypes.name, enumIcons.character));
+const ENUMS = {
+    characters: function() {
+        return characters.map(char => new SlashCommandEnumValue(char.name));
     },
 
-    /** All modifiable entry fields.
-        @returns {SlashCommandEnumValue[]}
-    */
-    statusFields: () => Object
-        .entries(acceptedStatusFields)
-        .map(([key, value]) => new SlashCommandEnumValue(key, value, enumTypes.enum, enumIcons.enum)),
-
-    /** All modifiable entry fields.
-        @returns {SlashCommandEnumValue[]}
-    */
-    entryFields: () => Object
-        .entries(acceptedEntryFields)
-        .map(([key, value]) => new SlashCommandEnumValue(key, value, enumTypes.enum, enumIcons.enum)),
-
-    /** All entry UIDs within a character's status.
-        @returns {SlashCommandEnumValue[]}
-    */
-    entryUIDs:  (/** @type {SlashCommandExecutor} */ executor) => {
-        const name = executor.namedArgumentList.find(it => it.name == 'char')?.value ?? "";
-
-        if (name instanceof SlashCommandClosure) return [];
-        if (!name) return [];
-
-        const character = getParticipantFromName(name);
-        const status = getCharStatus(character);
-
-        if (!status) return [];
-
-        const entries = status.entries;
-
-        if (entries.length < 1) return [];
-
-        return entries.map(entry => new SlashCommandEnumValue(String(entry.uid), buildUIDsComment(entry), enumTypes.number, enumIcons.key));
+    personas: function() {
+        return Object.values(powerUserSettings.personas).map(name => new SlashCommandEnumValue(name));
     },
 
-    /** All modifiable alt entry fields.
-        @returns {SlashCommandEnumValue[]}
-    */
-    altEntryFields: () => Object
-        .entries(acceptedAltEntryFields)
-        .map(([key, value]) => new SlashCommandEnumValue(key, value, enumTypes.enum, enumIcons.enum)),
+    entities: () => [
+        ...ENUMS.personas(),
+        ...ENUMS.characters()
+    ],
 
-    /** All entry UIDs within a character's status.
-        @returns {SlashCommandEnumValue[]}
-    */
-    altEntryUIDs:  (/** @type {SlashCommandExecutor} */ executor) => {
-        const name = executor.namedArgumentList.find(it => it.name == 'char')?.value ?? "";
-        const entry_uid = executor.namedArgumentList.find(it => it.name == 'uid')?.value ?? "";
+    boolean: () => [
+        new SlashCommandEnumValue('true'),
+        new SlashCommandEnumValue('false')
+    ]
+}
 
-        if (name instanceof SlashCommandClosure) return [];
-        if (entry_uid instanceof SlashCommandClosure) return [];
-        if (!name || !entry_uid) return [];
-
-        const character = getParticipantFromName(String(name));
-
-        if (!character) return [];
-
-        const entry = getCharEntry(character, Number(entry_uid));
-
-        if (!entry || !entry?.alt_values?.length) return [];
-
-        return entry.alt_values.map(alt => new SlashCommandEnumValue(String(alt.uid), buildUIDsComment(alt), enumTypes.number, enumIcons.key));
-    }
-};
+// * MARK: Command Methods
 
 /** Creates status data for a character
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.isuser - Wether to search for personas or characters
-    @returns {Promise<String>} True if succeeds, False otherwise
-*/
-async function commandCreateStatus(args, value) {
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.isuser - Wether to search for personas or characters
+ * @param {string} args.force - If multiple characters have the same name, it forces creation of data on ALL, despite if they were used or not in the chat
+ * @returns {Promise<string>} True if succeeds, False otherwise
+ */
+async function commandCreateStatus(args) {
     try {
-        const {char = "", isuser = "false"} = args;
+        const {char = '', isuser = 'false', force = 'false'} = args;
 
-        if (getParticipantFromName(char)) return "true";
+        const cleanForce = force === 'true';
+        const cleanIsUser = isuser === 'trie';
 
-        const parsed_isuser = isuser === "true";
-        const character = getParticipant(char, parsed_isuser, {field: "name"});
+        if (!cleanForce && characterHasMetadata(char)) return 'true';
 
-        if (!character) throw new Error(`The character "${args?.char}" could not be found`);
+        const character = getParticipant(char, cleanIsUser);
 
-        const status = createCharStatus(character);
+        if (!character) throw new Error(`The character '${args?.char}' could not be found`);
 
-        if (!status) return "false";
+        const status = StatUsMaximus.addStatus(character.avatar);
 
-        return "true";
+        if (!status) return 'false';
+
+        return 'true';
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
 
-        return "false";
+        return 'false';
     }
 }
 
 /** Updates the value of an entry field
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.field - Field to modify
-    @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
-    @returns {String} Empty string
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.field - Field to modify
+ * @param {string|SlashCommandClosure|string[]|SlashCommandClosure[]} value - New value of the selected field
+ * @returns {string} Empty string
+ */
 function commandSetStatusField(args, value = "") {
     try {
         const {char = "", field = ""} = args;
@@ -204,11 +138,11 @@ function commandSetStatusField(args, value = "") {
 }
 
 /** Deletes the status data a character
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.isuser - Wether to search for personas or characters
-    @returns {Promise<String>} True if succeeds, False otherwise
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.isuser - Wether to search for personas or characters
+ * @returns {Promise<String>} True if succeeds, False otherwise
+ */
 async function commandDeleteStatus(args, value) {
     try {
         const {char = "", isuser = "false"} = args;
@@ -233,10 +167,10 @@ async function commandDeleteStatus(args, value) {
 }
 
 /** Creates a new entry for a character
-    @param {object} args
-    @param {String} args.char - Character name
-    @returns {Promise<String>} UID of the new entry or empty string
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @returns {Promise<String>} UID of the new entry or empty string
+ */
 async function commandCreateEntry(args, value) {
     try {
         const name = args.char;
@@ -258,13 +192,13 @@ async function commandCreateEntry(args, value) {
 }
 
 /** Gets an entry uid by searching for a value trough its fields
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.field - Field to search
-    @param {String} args.fuzzy - Wether to do a fuzzy match or exact math
-    @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - Value to match against field
-    @returns {Promise<String>} UID of the entry or empty string
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.field - Field to search
+ * @param {string} args.fuzzy - Wether to do a fuzzy match or exact math
+ * @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - Value to match against field
+ * @returns {Promise<String>} UID of the entry or empty string
+ */
 async function commandGetEntryUID(args, value = "") {
     try {
         const {char = "", field = "key", fuzzy = "false"} = args;
@@ -304,13 +238,13 @@ async function commandGetEntryUID(args, value = "") {
 }
 
 /** Updates the value of an entry field
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.uid - Entry UID
-    @param {String} args.field - Field to modify
-    @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
-    @returns {String} Empty string
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.uid - Entry UID
+ * @param {string} args.field - Field to modify
+ * @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
+ * @returns {String} Empty string
+ */
 function commandSetEntryField(args, value = "") {
     try {
         const {char = "", uid = "-1", field = "key"} = args;
@@ -337,12 +271,12 @@ function commandSetEntryField(args, value = "") {
 }
 
 /** Gets the value of an entry field
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.uid - Entry UID
-    @param {String} args.field - Field to search
-    @returns {String} Value of the field or empty string
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.uid - Entry UID
+ * @param {string} args.field - Field to search
+ * @returns {String} Value of the field or empty string
+ */
 function commandGetEntryField(args, value) {
     try {
         const {char = "", uid = "-1", field = "key"} = args;
@@ -369,11 +303,11 @@ function commandGetEntryField(args, value) {
 }
 
 /** Deletes an status entry from a character
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.uid - Entry UID
-    @returns {String} True if succeeds, False otherwise
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.uid - Entry UID
+ * @returns {String} True if succeeds, False otherwise
+ */
 function commandDeleteEntry(args, value) {
     try {
         const {char = "", uid = "-1"} = args;
@@ -398,12 +332,12 @@ function commandDeleteEntry(args, value) {
 }
 
 /** Switches the value of an entry by one of its alt values
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.uid - Entry UID
-    @param {String} args.altuid - UID of the entry alt value
-    @returns {String} Empty string
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.uid - Entry UID
+ * @param {string} args.altuid - UID of the entry alt value
+ * @returns {String} Empty string
+ */
 function commandSwitchEntryValue(args, value) {
     try {
         const {char = "", uid = "-1", altuid = "-1"} = args;
@@ -437,13 +371,13 @@ function commandSwitchEntryValue(args, value) {
 }
 
 /** Creates a new entry for a character
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.uid - Entry UID
-    @param {String} args.key - Title of the alt value
-    @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
-    @returns {String} UID of the new alt value or empty string
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.uid - Entry UID
+ * @param {string} args.key - Title of the alt value
+ * @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
+ * @returns {String} UID of the new alt value or empty string
+ */
 function commandCreateEntryAltValue(args, value = "") {
     try {
         const {char = "", uid = "-1", key = ""} = args;
@@ -470,14 +404,14 @@ function commandCreateEntryAltValue(args, value = "") {
 }
 
 /** Gets the UID of an entry alt value by searching for a match trough its fields
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.uid - Entry UID
-    @param {String} args.field - Field to search
-    @param {String} args.fuzzy - Wether to do a fuzzy match or exact math
-    @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - Value to match against field
-    @returns {String} UID of the entry or empty string
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.uid - Entry UID
+ * @param {string} args.field - Field to search
+ * @param {string} args.fuzzy - Wether to do a fuzzy match or exact math
+ * @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - Value to match against field
+ * @returns {String} UID of the entry or empty string
+ */
 function commandGetAltEntryUID(args, value = "") {
     try {
         const {char = "", uid = "-1", field = "key", fuzzy = "false"} = args;
@@ -521,14 +455,14 @@ function commandGetAltEntryUID(args, value = "") {
 }
 
 /** Updates the selected field of the entry alt value
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.uid - Entry UID
-    @param {String} args.altuid - UID of the entry alt value
-    @param {String} args.field - Field to modify
-    @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
-    @returns {String} Empty string
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.uid - Entry UID
+ * @param {string} args.altuid - UID of the entry alt value
+ * @param {string} args.field - Field to modify
+ * @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
+ * @returns {String} Empty string
+ */
 function commandSetAltEntryField(args, value = "") {
     try {
         const {char = "", uid = "-1", altuid = "-1", field = "key"} = args;
@@ -558,13 +492,13 @@ function commandSetAltEntryField(args, value = "") {
 }
 
 /** Gets the value of an alt entry field
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.uid - Entry UID
-    @param {String} args.altuid - UID of the entry alt value
-    @param {String} args.field - Field to search
-    @returns {String} Field value of the alt entry or empty string
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.uid - Entry UID
+ * @param {string} args.altuid - UID of the entry alt value
+ * @param {string} args.field - Field to search
+ * @returns {String} Field value of the alt entry or empty string
+ */
 function commandGetAltEntryField(args, value) {
     try {
         const {char = "", uid = "-1", altuid = "-1", field = "key"} = args;
@@ -593,12 +527,12 @@ function commandGetAltEntryField(args, value) {
 }
 
 /** Deletes an alt value within a status entry
-    @param {object} args
-    @param {String} args.char - Character name
-    @param {String} args.uid - Entry UID
-    @param {String} args.altuid - UID of the entry alt value
-    @returns {String} True if succeeds, False otherwise
-*/
+ * @param {object} args
+ * @param {string} args.char - Character name
+ * @param {string} args.uid - Entry UID
+ * @param {string} args.altuid - UID of the entry alt value
+ * @returns {String} True if succeeds, False otherwise
+ */
 function commandDeleteAltEntry(args, value) {
     try {
         const {char = "", uid = "-1", altuid = "-1"} = args;
@@ -625,8 +559,8 @@ function commandDeleteAltEntry(args, value) {
 }
 
 /** Wipes all status metadata in the active chat file
-    @returns {Promise<String>} True or False
-*/
+ * @returns {Promise<String>} True or False
+ */
 async function commandDeleteChatStatus() {
     try {
         delete SillyTavern.getContext().chatMetadata.stat_us_maximus;
@@ -639,11 +573,21 @@ async function commandDeleteChatStatus() {
     return "true";
 }
 
-/** Register all slash commands into SillyTavern */
+/**
+ * MARK:Register Commands
+ */
 export function registerSlashCommands() {
+    const {
+        SlashCommandParser,
+        SlashCommand,
+        SlashCommandArgument,
+        SlashCommandNamedArgument,
+        ARGUMENT_TYPE
+    } = context();
+
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-create-status",
+            name: 'stum-create-status',
             callback: commandCreateStatus,
             returns: 'True or False',
             namedArgumentList: [
@@ -652,14 +596,21 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: () => [...commonEnumProviders.characters()(), ...commonEnumProviders.personas()]
+                    enumProvider: ENUMS.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - false by default',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: commonEnumProviders.boolean()
+                    enumProvider: ENUMS.boolean
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'force',
+                    description: 'If multiple characters or personas have the same name, it will create metadata for all - Not recommended if you\'re sure that won\'t happen, as the metadata can grow too large',
+                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    isRequired: false,
+                    enumProvider: ENUMS.boolean
                 })
             ],
             helpString: `
