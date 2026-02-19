@@ -39,6 +39,8 @@ export {
     messageBelongsToChar,
     getUser,
     generateUUID,
+    showPopper,
+    hidePopper,
     extensionSettings,
     metadataName,
     extensionName,
@@ -53,6 +55,7 @@ export {
 
 /**
  * @typedef {{name:string; description: string; avatar:string; is_user: boolean}} UserCharacter
+ * @typedef {import('@popperjs/core/index.js').Instance} Instance
  *
  * @typedef {Object} ExtensionSettings
  * @property {boolean} enabled
@@ -89,7 +92,8 @@ const {
 } = context();
 
 const {
-    lodash
+    lodash,
+    Popper
 } = SillyTavern.libs;
 
 /**
@@ -308,6 +312,40 @@ function createElement(elem, options = {}) {
 }
 
 /**
+ * @param {Instance} popperInstance
+ * @param {HTMLDivElement|HTMLElement} tooltip
+ */
+async function showPopper(popperInstance, tooltip) {
+    tooltip.setAttribute('data-show', '');
+
+    await popperInstance.setOptions((options) => ({
+        ...options,
+        modifiers: [
+            ...options.modifiers,
+            { name: 'eventListeners', enabled: true }
+        ]
+    }));
+
+    await popperInstance.update();
+}
+
+/**
+ * @param {Instance} popperInstance
+ * @param {HTMLDivElement|HTMLElement} tooltip
+ */
+async function hidePopper(popperInstance, tooltip) {
+    tooltip.removeAttribute('data-show');
+
+    await popperInstance.setOptions((options) => ({
+        ...options,
+        modifiers: [
+            ...options.modifiers,
+            { name: 'eventListeners', enabled: false }
+        ]
+    }));
+}
+
+/**
  * @param {ChatMessage} mes
  * @param {Character|Object?} [char]
  * @param {boolean?} [is_user]
@@ -452,6 +490,7 @@ async function renderCharStatus(status) {
 
     const statusBlock = (await HTML_TEMPLATES.get('chatStatus')).clone();
     const entryBlockTemplate = (await HTML_TEMPLATES.get('chatStatusEntry')).clone();
+    const statusBlockId = `${generateUUID()}_chat_stat_block`;
 
     statusBlock
         .attr('char-target', status.avatar);
@@ -477,14 +516,15 @@ async function renderCharStatus(status) {
         .find('.stat-us-maximus-toolbar .menu_button.fa-pen')
         .data({avatar: status.avatar});
 
+    /** @type {[string, StatusEntry][]} */
     const entries = Object
         .entries(status.entries)
         .sort(([uidA, entryA], [uidB, entryB]) => entryA.display_position - entryB.display_position);
 
     for (const [uid, entry] of entries) {
-        /** @type {StatusEntry} */
         const {key, separator, values, value_uid, enabled} = entry;
         const entryBlock = entryBlockTemplate.clone();
+        const $entryBlock = $(entryBlock);
 
         const macro = CUSTOM_MACROS[extensionSettings.editNumbersFromChat ? 'getInputs' : 'getValues'];
 
@@ -494,21 +534,62 @@ async function renderCharStatus(status) {
 
         if (extensionSettings.editNumbersFromChat) valueClean = valueClean.replaceAll("<br>", "\n");
 
-        $(entryBlock).find('.status-title').html(`<span class="d-inline">${titleClean}</span>`);
-        $(entryBlock).find('.status-separator').html(separatorClean);
-        $(entryBlock).find('.status-description').html(`<span class="d-inline">${valueClean}</span>`);
+        $entryBlock.attr({'status-block-id': statusBlockId, uid});
+        $entryBlock.find('.status-title').html(`<span class="d-inline">${titleClean}</span>`);
+        $entryBlock.find('.status-separator').html(separatorClean);
+        $entryBlock.find('.status-description').html(`<span class="d-inline">${valueClean}</span>`);
 
-        $(entryBlock)
+        $entryBlock
             .find('.kill-switch')
             .addClass(enabled ? 'fa-toggle-on' : 'fa-toggle-off')
             .data({avatar: status.avatar, uid, enabled});
 
-        $(entryBlock)
+        $entryBlock
             .toggleClass('disabled', !enabled);
 
-        $(entryBlock)
+        $entryBlock
             .find('.fake-inputs-container')
             .data({avatar: status.avatar, uid, value_uid});
+
+        const entryValues = Object.entries(values);
+
+        if (entryValues?.length > 1) {
+            // Gods I hate Popper, even this simplification of the previous code is a spaghetti mess
+
+            const switchValueButton = $entryBlock.find('.status-value-uid').first()[0];
+            const switchValueOptionsListId = `${generateUUID()}_chat_stat_block_popper`;
+            const switchValueOptionsList = createElement('div', {
+                attr: { role: 'tooltip', 'avatar-target': status.avatar, id: switchValueOptionsListId },
+                class: 'status-value-uid-options list-group'
+            });
+
+            statusBlock.append(switchValueOptionsList);
+
+            const switchValuePopper = Popper.createPopper(switchValueButton, switchValueOptionsList, {
+                modifiers: [{
+                    name: 'eventListeners',
+                    enabled: false
+                }],
+                strategy: 'absolute',
+                placement: 'left'
+            });
+
+            for (const [altUid, value] of entryValues) {
+                const option = createElement('div', {
+                    data: { altUid, uid, avatar: status.avatar, character, listId: switchValueOptionsListId, statusBlockId },
+                    class: 'list-group-item status-value-uid-options-item',
+                    innerText: value.title || `UID: ${altUid}`
+                });
+
+                switchValueOptionsList.append(option);
+            }
+
+            $(switchValueButton)
+                .attr('toggle-for', switchValueOptionsListId)
+                .data({switchValuePopper, listId: switchValueOptionsListId});
+        } else {
+            $entryBlock.find('.status-value-uid').toggleClass('d-none', true);
+        }
 
         statusBlock
             .find(`.${htmlSuffix}-entries-list`)

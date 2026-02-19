@@ -232,21 +232,6 @@
         cursor: pointer;
     }
 
-    .status-value-uid-options * {
-        border-radius: 0;
-    }
-
-    .status-value-uid-options {
-        display: none;
-    }
-
-    .status-value-uid-options[data-show] {
-        display: block;
-        z-index: 40;
-        overflow-y: scroll;
-        max-height: 15vh;
-    }
-
     .inline-drawer.bg-bot .inline-drawer-header {
         background-color: color-mix(in srgb, var(--SmartThemeBotMesBlurTintColor), var(--black30a));
     }
@@ -364,6 +349,7 @@
 
     .text-line.value.show-spaces {
         background-color: var(--stat-us-show-spaces-color);
+        font-family: monospace;
     }
 
     .text-line.value {
@@ -389,5 +375,20 @@
     .bordered-box {
         padding: 5px;
         border: solid 1px var(--SmartThemeBorderColor);
+    }
+
+    .status-value-uid-options * {
+        border-radius: 0;
+    }
+
+    .status-value-uid-options {
+        display: none;
+    }
+
+    .status-value-uid-options[data-show] {
+        display: block;
+        z-index: 40;
+        overflow-y: scroll;
+        max-height: 15vh;
     }
 }

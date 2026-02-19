@@ -12,6 +12,8 @@ import {
     saveMetadataSafe,
     scrollChatToBottom,
     powerUserSettings,
+    showPopper,
+    hidePopper,
     // HTML Related
     updateCaretDisplaySafe,
     getSelectedTextInElem,
@@ -388,6 +390,88 @@ function onClickEditStatus(e) {
     if (avatar) openSingleStatusPopup(avatar);
 }
 
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onOpenSwitchValueList(e) {
+    const select = e.currentTarget;
+    const $select = $(select);
+    const popperInstance = $select.data('switchValuePopper');
+    const optionListId = $select.data('listId');
+    const $optionList = $(`#${optionListId}`);
+
+    await showPopper(popperInstance, $optionList[0]);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onSelectSwitchValueList(e) {
+    const option = e.currentTarget;
+    const $option = $(option);
+
+    const {altUid, uid, avatar, character, statusBlockId, listId} = $option.data();
+
+    const $entryBlock = $(`.stat-us-maximus-entry[status-block-id="${statusBlockId}"][uid="${uid}"]`).first();
+    const popperInstance = $entryBlock.find('.status-value-uid').first().data('switchValuePopper');
+    const optionList = $(`#${listId}`)[0];
+
+    /** @type {Status} */
+    const status = SillyTavern[metadataName].getStatus(avatar);
+
+    if (!status)
+        return await hidePopper(popperInstance, optionList);
+
+    /** @type {StatusEntry} */
+    const entry = status.entries[uid];
+
+    if (Number(entry.value_uid) === Number(altUid))
+        return await hidePopper(popperInstance, optionList);
+
+    entry.set('value_uid', altUid);
+
+    const macro = CUSTOM_MACROS[extensionSettings.editNumbersFromChat ? 'getInputs' : 'getValues'];
+    const entryValue = entry.values[entry.value_uid];
+    let valueClean = macro(entryValue.value, character);
+
+    if (extensionSettings.editNumbersFromChat) valueClean = valueClean.replaceAll("<br>", "\n");
+
+    $entryBlock
+        .find('.status-description')
+        .html(`<span class="d-inline">${valueClean}</span>`);
+
+    await hidePopper(popperInstance, optionList);
+    saveMetadataSafe();
+}
+
+/**
+ * @param {EventData<HTMLElement>} e
+ */
+function onHidePopperLists(e) {
+    const $clickedElement = $(e.target);
+
+    $('#chat .status-value-uid-options[data-show]').each(function(i, elem) {
+        const invalidClickTarget =
+            $clickedElement.attr('id') === elem.id ||
+            $clickedElement.data('listId') === elem.id;
+
+        if (invalidClickTarget) return;
+
+        const popperInstance = $(`.status-value-uid[toggle-for="${elem.id}"]`)
+            .first()
+            .data('switchValuePopper');
+
+        hidePopper(popperInstance, elem);
+    });
+}
+
+/**
+ * @param {EventData<HTMLElement>} e
+ */
+function onDocumentClick(e) {
+    onHidePopperLists(e);
+}
+
 // * MARK:ST Listeners
 
 function onMessageRendered() {
@@ -505,6 +589,10 @@ function registerEvents() {
     // @ts-ignore
     $chat.on('click', '.stat-us-maximus-entry .kill-switch', onToggleEntry);
     // @ts-ignore
+    $chat.on('click', '.stat-us-maximus-entry .status-value-uid', onOpenSwitchValueList);
+    // @ts-ignore
+    $chat.on('click', '.stat-us-maximus-chat-drawer .status-value-uid-options .list-group-item', onSelectSwitchValueList);
+    // @ts-ignore
     $chat.on('click', '.stat-us-maximus-chat-drawer .inline-drawer-header', onCollapseStatus);
     // @ts-ignore
     $chat.on('click', '.stat-us-maximus-chat-drawer .fake-input-arrows', onClickInputArrow);
@@ -516,6 +604,9 @@ function registerEvents() {
     $chat.on('pointerdown', '.stat-us-maximus-chat-drawer .fake-input-span', onSelectChatInput);
     // @ts-ignore
     $chat.on('input', '.stat-us-maximus-entry .chat-input-editor[type="range"]', onRangeSliderMoved);
+
+    // @ts-ignore
+    $(document).on('click', onDocumentClick);
 
     eventSource.makeLast(eventTypes.CHAT_CHANGED, onChatChanged);
 
