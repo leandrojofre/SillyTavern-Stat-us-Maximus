@@ -427,12 +427,12 @@ async function commandSetEntryField(args, value = '') {
 }
 
 /** Gets the value of an entry field
- * @param {object} args
+ * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @param {string} args.field - Field to search
- * @returns {String} Value of the field or empty string
+ * @returns {string} Value of the field or empty string
  */
 function commandGetEntryField(args, value) {
     try {
@@ -462,11 +462,11 @@ function commandGetEntryField(args, value) {
 }
 
 /** Deletes an status entry from a character
- * @param {object} args
+ * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
- * @returns {String} True if succeeds, False otherwise
+ * @returns {'true'|'false'} True if succeeds, False otherwise
  */
 function commandDeleteEntry(args, value) {
     try {
@@ -481,11 +481,12 @@ function commandDeleteEntry(args, value) {
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
         if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
 
-        const deletionSucceed = status.delEntry(cleanUID);
+        /** @type {true|false} */
+        const deletionSucceed = status.delEntry(cleanUID) ?? false;
 
         if (deletionSucceed) StatUsMaximus.renderStatusesSafe();
 
-        return String(deletionSucceed ?? false);
+        return deletionSucceed ? 'true' : 'false';
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         return 'false';
@@ -493,12 +494,12 @@ function commandDeleteEntry(args, value) {
 }
 
 /** Switches the value of an entry by one of its alt values
- * @param {object} args
+ * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @param {string} args.altuid - UID of the entry alt value
- * @returns {String} Empty string
+ * @returns {string} Empty string
  */
 function commandSwitchEntryValue(args, value) {
     try {
