@@ -5,7 +5,9 @@ import {
     characters,
     context,
     getUser,
-    powerUserSettings
+    powerUserSettings,
+    saveMetadataSafe,
+    metadataName
 } from '../../index.js';
 
 import {Status} from '../classes/Status';
@@ -785,18 +787,17 @@ async function commandDeleteAltEntry(args, value) {
 
 /**
  * Wipes all status metadata in the active chat file
- * @returns {Promise<string>} True or False
+ * @returns {Promise<'true'|'false'>} True or False
  */
 async function commandDeleteChatStatus() {
     try {
-        delete SillyTavern.getContext().chatMetadata.stat_us_maximus;
-        setSaveStateFlag(true);
-        SillyTavern.getContext().saveChat();
+        delete context().chatMetadata[metadataName];
+        saveMetadataSafe();
     } catch (error) {
-        return "false";
+        return 'false';
     }
 
-    return "true";
+    return 'true';
 }
 
 // * MARK:Register Commands
@@ -1499,7 +1500,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-delete-alt-entry",
+            name: 'stum-delete-alt-entry',
             callback: commandDeleteAltEntry,
             returns: 'True or False',
             namedArgumentList: [
@@ -1549,11 +1550,11 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-delete-chat-status",
-            callback: async (args, value) => await commandDeleteChatStatus(),
+            name: 'stum-delete-chat-status',
+            callback: commandDeleteChatStatus,
             helpString: `
             <div>
-                Wipes all the Status metadata for all characters in the currently open chat, has no confirm screen and cannot be undone.
+                Wipes all the Status metadata for all characters in the currently open chat. It has no confirm screen and cannot be undone, unless a backup of the chat is restored.
             </div>
             <div>
                 <strong>Example</strong>
