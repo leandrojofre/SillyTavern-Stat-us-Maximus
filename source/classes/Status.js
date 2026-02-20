@@ -98,7 +98,7 @@ class Status {
             statusClean[key] = status[key];
         }
 
-        Object.assign(this, statusTemplate, statusClean);
+        Object.assign(this, structuredClone(statusTemplate), structuredClone(statusClean));
     }
 
     /**

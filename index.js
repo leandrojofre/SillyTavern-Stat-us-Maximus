@@ -658,7 +658,6 @@ globalThis.StatUsMaximus = {
     },
 
     addStatus: function(avatar) {
-        /** @type {Status[]} */
         let statuses = StatUsMaximus.getStatuses();
 
         if (!statuses) return false;

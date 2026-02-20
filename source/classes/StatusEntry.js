@@ -88,7 +88,7 @@ class StatusEntry {
                 entryClean[key] = entry[key];
         }
 
-        Object.assign(this, structuredClone(entryTemplate), entryClean);
+        Object.assign(this, structuredClone(entryTemplate), structuredClone(entryClean));
     }
 
     /**
