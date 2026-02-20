@@ -509,7 +509,7 @@ async function commandGetEntryField(args, value) {
 
         if (!entry) return '';
 
-        return String(entry.get(field, cleanUID) ?? '');
+        return String(entry.get(field, entry.value_uid) ?? '');
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         StatUsMaximus.error(error);
