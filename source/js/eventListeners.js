@@ -73,6 +73,10 @@ const AllowedNumericInputs = Object.freeze({
  * @typedef {Event & {data: Object; currentTarget: T;}} EventData
  */
 
+/**
+ * @typedef {import('../../index.js').UserCharacter} UserCharacter
+ */
+
 // * MARK:DOM Listeners
 
 /**
@@ -513,12 +517,17 @@ function onGenerationAfterCommands(...args) {
 
     const [ genType ] = args;
     const { extensionPrompts: extension_prompts, characterId: chid, characters: allCharacters } = context();
+    const activeParticipants = getActiveParticipants();
 
     for (const key of Object.keys(extension_prompts)) {
         if (key.includes(metadataName)) delete extension_prompts[key];
     }
 
-    const characters = getActiveParticipants().chars;
+    /** @type {(Character|UserCharacter)[]} */
+    const characters = [...activeParticipants.chars];
+
+    if (activeParticipants.user) characters.push(activeParticipants.user);
+
     const macro = CUSTOM_MACROS.getValues;
 
     for (const char of characters) {

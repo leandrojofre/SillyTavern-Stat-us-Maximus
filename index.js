@@ -224,28 +224,30 @@ function exportObjectToClipboard(obj = {}) {
 
 /**
  * @param {string?} [value]
- * @param {string?} [search_key] - Default is `avatar`
+ * @param {Object} [options]
+ * @param {string?} [options.searchKey] - Default is `avatar`
+ * @param {string[]?} [options.ignoreAvatars] - Only used in search by `name`
  * @returns {UserCharacter|null}
  */
-function getUser(value, search_key = 'avatar') {
+function getUser(value, {searchKey = 'avatar', ignoreAvatars = []} = {}) {
     const { powerUserSettings: power_user } = context();
 
     if (!value) value = power_user.default_persona;
     if (!value) return null;
 
     let avatar = '';
-    const correctSearchKey = ['avatar', 'name'].includes(search_key);
+    const correctSearchKey = ['avatar', 'name'].includes(searchKey);
 
     if (!correctSearchKey) return null;
 
-    if (search_key === 'avatar') avatar = value;
+    if (searchKey === 'avatar') avatar = value;
 
-    if (search_key === 'name')
+    if (searchKey === 'name')
         avatar = Object
             .entries(power_user.personas)
             .map(([avatar, name]) => {return {name, avatar}})
-            .find(per => per.name === value)
-            .avatar;
+            .find(per => per.name === value && !ignoreAvatars.includes(per.avatar))
+            ?.avatar;
 
     if (!avatar || !power_user.personas[avatar]) return null;
 
@@ -260,7 +262,7 @@ function getUser(value, search_key = 'avatar') {
 /**
  *
  * @param {string[]?} [discard]
- * @returns {{chars: Character[]; user: UserCharacter}}
+ * @returns {{chars: Character[]; user: UserCharacter;}}
  */
 function getActiveParticipants(discard = []) {
     const { groupId: group_id, groups, characterId: chid } = context();

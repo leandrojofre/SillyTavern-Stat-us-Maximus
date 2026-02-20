@@ -77,21 +77,22 @@ function characterHasMetadata(charName) {
 /**
  * @param {string} charName
  * @param {EntityFilter} isUser
+ * @param {string[]?} [ignoreAvatars]
  * @returns {Character|UserCharacter}
  */
-function getParticipant(charName, isUser) {
+function getParticipant(charName, isUser, ignoreAvatars = []) {
     if (isUser === 'all') {
-        const user = getUser(charName, 'name');
+        const user = getUser(charName, {searchKey: 'name', ignoreAvatars});
 
         if (!user)
-            return characters.find(char => char.name === charName);
+            return characters.find(char => char.name === charName && !ignoreAvatars.includes(char.avatar));
 
         return user;
     }
 
     return isUser === 'true' ?
-        getUser(charName, 'name') :
-        characters.find(char => char.name === charName);
+        getUser(charName, {searchKey: 'name', ignoreAvatars}) :
+        characters.find(char => char.name === charName && !ignoreAvatars.includes(char.avatar));
 }
 
 /**
@@ -247,13 +248,37 @@ async function commandCreateStatus(args) {
 
         if (!cleanForce && characterHasMetadata(char)) return 'true';
 
-        const character = getParticipant(char, cleanIsUser);
+        if (cleanForce) {
+            const ignoreAvatars = [];
+            const safeStop = 100;
+            let continueWhile = true;
+            let loop = 0
 
-        if (!character) throw new Error(`The character '${args?.char}' could not be found`);
+            while (continueWhile && loop < safeStop) {
+                const character = getParticipant(char, cleanIsUser, ignoreAvatars);
+                StatUsMaximus.log(character);
 
-        const status = StatUsMaximus.addStatus(character.avatar);
+                if (!character) {
+                    continueWhile = false;
+                    continue;
+                }
 
-        if (!status) return 'false';
+                ignoreAvatars.push(character.avatar);
+                const status = StatUsMaximus.addStatus(character.avatar);
+
+                if (!status) break;
+
+                loop++;
+            }
+        } else {
+            const character = getParticipant(char, cleanIsUser);
+
+            if (!character) throw new Error(`The character '${char}' could not be found`);
+
+            const status = StatUsMaximus.addStatus(character.avatar);
+
+            if (!status) return 'false';
+        }
 
         return 'true';
     } catch (error) {
