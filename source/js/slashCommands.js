@@ -429,7 +429,7 @@ async function commandGetEntryUID(args, value = '') {
             uid = results[0]?.item?.uid;
         } else {
             const entry = search.find(entry => String(entry[field]) === value);
-            uid = entry.uid;
+            uid = entry?.uid;
         }
 
         return String(uid ?? '');
