@@ -26,7 +26,8 @@ const {
 
 // * MARK:Utility Methods
 
-/** Takes an object with a key and value and generates a comment
+/**
+ * Takes an object with a key and value and generates a comment
  * @param {StatusEntry} entry
  * @returns {string}
  */
@@ -41,7 +42,8 @@ function buildUIDsComment(entry) {
     return `${title}${separator}${value.slice(0, 20).trim()}${suffix}`;
 }
 
-/** Takes an object with a key and value and generates a comment
+/**
+ * Takes an object with a key and value and generates a comment
  * @param {{title: string; value: string;}} alt
  * @returns {string}
  */
@@ -220,7 +222,8 @@ const ENUMS_STRINGS = {
 
 // * MARK: Command Methods
 
-/** Creates status data for a character
+/**
+ * Creates status data for a character
  * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -253,7 +256,8 @@ async function commandCreateStatus(args) {
     }
 }
 
-/** Updates the value of an entry field
+/**
+ * Updates the value of an entry field
  * @param {Object} args
  * @param {string} args.char - Character name
  * @param {string} args.field - Field to modify
@@ -282,7 +286,8 @@ async function commandSetStatusField(args, value = '') {
     }
 }
 
-/** Deletes the status data a character
+/**
+ * Deletes the status data a character
  * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -312,7 +317,8 @@ async function commandDeleteStatus(args, value) {
     }
 }
 
-/** Creates a new entry for a character
+/**
+ * Creates a new entry for a character
  * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -339,7 +345,8 @@ async function commandCreateEntry(args, value) {
     }
 }
 
-/** Gets an entry uid by searching for a value trough its fields
+/**
+ * Gets an entry uid by searching for a value trough its fields
  * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -397,7 +404,8 @@ async function commandGetEntryUID(args, value = '') {
     }
 }
 
-/** Updates the value of an entry field
+/**
+ * Updates the value of an entry field
  * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -435,7 +443,8 @@ async function commandSetEntryField(args, value = '') {
     }
 }
 
-/** Gets the value of an entry field
+/**
+ * Gets the value of an entry field
  * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -470,7 +479,8 @@ async function commandGetEntryField(args, value) {
     }
 }
 
-/** Deletes an status entry from a character
+/**
+ * Deletes an status entry from a character
  * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -502,7 +512,8 @@ async function commandDeleteEntry(args, value) {
     }
 }
 
-/** Switches the value of an entry by one of its alt values
+/**
+ * Switches the value of an entry by one of its alt values
  * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -544,7 +555,8 @@ async function commandSwitchEntryValue(args, value) {
     }
 }
 
-/** Creates a new entry for a character
+/**
+ * Creates a new entry for a character
  * @param {object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -581,7 +593,8 @@ async function commandCreateEntryAltValue(args, value = '') {
     }
 }
 
-/** Gets the UID of an entry alt value by searching for a match trough its fields
+/**
+ * Gets the UID of an entry alt value by searching for a match trough its fields
  * @param {object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -642,7 +655,8 @@ async function commandGetAltEntryUID(args, value = '') {
     }
 }
 
-/** Updates the selected field of the entry alt value
+/**
+ * Updates the selected field of the entry alt value
  * @param {object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -686,7 +700,8 @@ async function commandSetAltEntryField(args, value = '') {
     }
 }
 
-/** Gets the value of an alt entry field
+/**
+ * Gets the value of an alt entry field
  * @param {object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -697,32 +712,39 @@ async function commandSetAltEntryField(args, value = '') {
  */
 async function commandGetAltEntryField(args, value) {
     try {
-        const {char = "", isuser = 'all', uid = "-1", altuid = "-1", field = "key"} = args;
+        const {char = '', isuser = 'all', uid = '-1', altuid = '-1', field = 'title'} = args;
 
-        const parsed_uid = Number(uid);
-        const parsed_altuid = Number(altuid);
-        const character = getParticipantFromName(char);
-        const acceptedFields = Object.keys(acceptedEntryFields);
+        const cleanUID = Number(uid);
+        const cleanAltUID = Number(altuid);
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
 
-        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
-        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
-        if (isNaN(parsed_altuid) || parsed_altuid < 0) throw new Error(`Invalid alt UID "${altuid}"`);
+        const status = getStatusFromName(char, cleanIsUser);
+        const acceptedFields = ENUMS_STRINGS.acceptedAltEntryFields;
+
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (isNaN(cleanAltUID) || cleanAltUID < 0) throw new Error(`Invalid alt UID "${altuid}"`);
         if (!acceptedFields.includes(field)) throw new Error(`Invalid field "${field}"`);
 
-        const alt = getCharAltValue(character, parsed_uid, parsed_altuid);
+        /** @type {StatusEntry} */
+        const entry = status.entries[cleanUID];
 
-        if (!alt) return "";
+        if (!entry) return '';
 
-        return String(alt[field] ?? "");
+        const alt = entry.values[cleanAltUID];
+
+        if (!alt) return '';
+
+        return String(alt[field] ?? '');
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
-
-        return "";
+        return '';
     }
 }
 
-/** Deletes an alt value within a status entry
+/**
+ * Deletes an alt value within a status entry
  * @param {object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
@@ -755,7 +777,8 @@ async function commandDeleteAltEntry(args, value) {
     }
 }
 
-/** Wipes all status metadata in the active chat file
+/**
+ * Wipes all status metadata in the active chat file
  * @returns {Promise<string>} True or False
  */
 async function commandDeleteChatStatus() {
@@ -1413,7 +1436,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-get-alt-entry-field",
+            name: 'stum-get-alt-entry-field',
             callback: commandGetAltEntryField,
             returns: 'Alt entry field value',
             namedArgumentList: [
@@ -1422,33 +1445,40 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantNames
+                    enumProvider: ENUMS_PROVIDER.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
                     description: 'UID of the status entry',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.entryUIDs
+                    enumProvider: ENUMS_PROVIDER.entryUIDs
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'altuid',
                     description: 'UID of the status entry alternative value',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.altEntryUIDs
+                    enumProvider: ENUMS_PROVIDER.altEntryUIDs
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
-                    description: 'Field to match - default key',
+                    description: 'Field to match - defaults to title',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: customEnumProviders.altEntryFields
+                    enumProvider: ENUMS_PROVIDER.acceptedAltEntryFields
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
             <div>
-                Get the field value of one of the alt entry values. If no match is found, an empty string is returned.
+                Gets the field of the selected alt value of the entry. If no match is found, an empty string is returned.
             </div>
             <div>
                 <strong>Example</strong>
