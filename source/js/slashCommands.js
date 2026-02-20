@@ -144,6 +144,11 @@ const ENUMS_PROVIDER = {
         new SlashCommandEnumValue('title', 'Title of the currently selected entry swipe on the selector')
     ],
 
+    acceptedAltEntryFields: () => [
+        new SlashCommandEnumValue('value'),
+        new SlashCommandEnumValue('title')
+    ],
+
     entryUIDs: (executor, scope) => {
         const charName = executor.namedArgumentList.find(it => it.name === 'char').value;
         const isUser = executor.namedArgumentList.find(it => it.name === 'isuser').value;
@@ -206,6 +211,10 @@ const ENUMS_STRINGS = {
 
     acceptedEntryFields: ENUMS_PROVIDER
         .acceptedEntryFields()
+        .map(key => key.toString()),
+
+    acceptedAltEntryFields: ENUMS_PROVIDER
+        .acceptedAltEntryFields()
         .map(key => key.toString())
 }
 
@@ -582,45 +591,54 @@ async function commandCreateEntryAltValue(args, value = '') {
  * @param {string} value - Value to match against field
  * @returns {Promise<string>} UID of the entry or empty string
  */
-async function commandGetAltEntryUID(args, value = "") {
+async function commandGetAltEntryUID(args, value = '') {
     try {
-        const {char = "", isuser = 'all', uid = "-1", field = "key", fuzzy = "false"} = args;
+        const {char = '', isuser = 'all', uid = '-1', field = 'key', fuzzy = 'false'} = args;
 
-        const character = getParticipantFromName(char);
-        const parsed_uid = Number(uid);
-        const acceptedFields = Object.keys(acceptedAltEntryFields);
+        const cleanUID = Number(uid);
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
 
-        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
-        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
+        const status = getStatusFromName(char, cleanIsUser);
+        const acceptedFields = ENUMS_STRINGS.acceptedAltEntryFields;
+
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
         if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid alt field "${field}"`);
 
-        let alt_uid = "";
-        const entry = getCharEntry(character, parsed_uid);
+        /** @type {StatusEntry} */
+        const entry = status.entries[cleanUID];
 
-        if (!entry) return "";
+        if (!entry) return '';
 
-        if (fuzzy === "true") {
-            const fuse = new Fuse(entry.alt_values, {
+        const search = entry.values
+            .map(function([uid, alt]) {
+                return structuredClone({...alt, uid});
+            });
+
+        let altUID = '';
+
+        if (fuzzy === 'true') {
+            const fuse = new Fuse(search, {
                 keys: [{ name: field, weight: 1 }],
                 includeScore: true,
                 threshold: 0.3,
             });
+
             const results = fuse.search(String(value));
 
-            if (!results || results.length === 0) return "";
+            if (!results || results.length === 0) return '';
 
-            alt_uid = results[0]?.item?.uid;
+            altUID = results[0]?.item?.uid;
         } else {
-            const altEntry = entry?.alt_values?.find(entry => String(entry[field]) === value);
-            alt_uid = altEntry?.uid;
+            const alt = search.find(v => String(v[field]) === value);
+            altUID = alt.uid;
         }
 
-        return String(alt_uid ?? "");
+        return String(altUID ?? '');
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to fetch Status Metadata: ${error.message}`);
-
-        return "";
+        return '';
     }
 }
 
@@ -746,9 +764,8 @@ async function commandDeleteChatStatus() {
     return "true";
 }
 
-/**
- * MARK:Register Commands
- */
+// * MARK:Register Commands
+
 export function registerSlashCommands() {
     const {
         SlashCommandParser,
@@ -1259,7 +1276,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-get-alt-entry-uid",
+            name: 'stum-get-alt-entry-uid',
             callback: commandGetAltEntryUID,
             returns: 'UID of the alt entry',
             namedArgumentList: [
@@ -1268,28 +1285,35 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantNames
+                    enumProvider: ENUMS_PROVIDER.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
                     description: 'UID of the status entry',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.entryUIDs
+                    enumProvider: ENUMS_PROVIDER.entryUIDs
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
-                    description: 'Field to match - default key',
+                    description: 'Field to match - defaults to title',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: customEnumProviders.altEntryFields
+                    enumProvider: ENUMS_PROVIDER.acceptedAltEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'fuzzy',
-                    description: 'Do an exact match or a fuzzy match - exact by default (fuzzy:false)',
+                    description: 'Do an exact match or a fuzzy match - defaults to false (exact match)',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: commonEnumProviders.boolean()
+                    enumProvider: ENUMS_PROVIDER.boolean
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -1307,10 +1331,10 @@ export function registerSlashCommands() {
                 <strong>Example</strong>
                 <ul>
                     <li>
-                        <pre><code>/stum-get-alt-entry-uid char="Tom" field="key" "Summer Clothes"</code></pre>
+                        <pre><code>/stum-get-alt-entry-uid char="Tom" field="title" "Summer Clothes"</code></pre>
                     </li>
                     <li>
-                        <pre><code>/stum-get-alt-entry-uid char="Tom" field="key" fuzzy=true "Summer Clothes"</code></pre>
+                        <pre><code>/stum-get-alt-entry-uid char="Tom" field="title" fuzzy=true "Summer Clothes"</code></pre>
                     </li>
                 </ul>
             </div>`,
