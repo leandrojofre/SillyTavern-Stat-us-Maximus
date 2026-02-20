@@ -283,6 +283,7 @@ async function commandCreateStatus(args) {
         return 'true';
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
         return 'false';
     }
 }
@@ -312,6 +313,7 @@ async function commandSetStatusField(args, value = '') {
         status.set(field, String(value));
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
     } finally {
         return '';
     }
@@ -344,6 +346,7 @@ async function commandDeleteStatus(args, value) {
         return 'true';
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
         return 'false';
     }
 }
@@ -372,6 +375,7 @@ async function commandCreateEntry(args, value) {
         return String(entryUid);
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
         return '';
     }
 }
@@ -431,6 +435,7 @@ async function commandGetEntryUID(args, value = '') {
         return String(uid ?? '');
     } catch (error) {
         toastr.error(t`Failed to fetch Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
         return '';
     }
 }
@@ -469,6 +474,7 @@ async function commandSetEntryField(args, value = '') {
         StatUsMaximus.renderStatusesSafe();
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
     } finally {
         return '';
     }
@@ -506,6 +512,7 @@ async function commandGetEntryField(args, value) {
         return String(entry.get(field, cleanUID) ?? '');
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
         return '';
     }
 }
@@ -538,6 +545,7 @@ async function commandDeleteEntry(args, value) {
         return deletionSucceed ? 'true' : 'false';
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
         return 'false';
     }
 }
@@ -581,6 +589,7 @@ async function commandSwitchEntryValue(args, value) {
         return '';
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
         return '';
     }
 }
@@ -619,6 +628,7 @@ async function commandCreateEntryAltValue(args, value = '') {
         return String(altUID ?? '');
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
         return '';
     }
 }
@@ -681,6 +691,7 @@ async function commandGetAltEntryUID(args, value = '') {
         return String(altUID ?? '');
     } catch (error) {
         toastr.error(t`Failed to fetch Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
         return '';
     }
 }
@@ -725,6 +736,7 @@ async function commandSetAltEntryField(args, value = '') {
         if (doSwitch) StatUsMaximus.renderStatusesSafe();
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
     } finally {
         return '';
     }
@@ -769,6 +781,7 @@ async function commandGetAltEntryField(args, value) {
         return String(alt[field] ?? '');
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
         return '';
     }
 }
@@ -810,6 +823,7 @@ async function commandDeleteAltEntry(args, value) {
         return deletionSucceed ? 'true' : 'false';
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
+        StatUsMaximus.error(error);
         return 'false';
     }
 }
@@ -823,6 +837,7 @@ async function commandDeleteChatStatus() {
         delete context().chatMetadata[metadataName];
         saveMetadataSafe();
     } catch (error) {
+        StatUsMaximus.error(error);
         return 'false';
     }
 
