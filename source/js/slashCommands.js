@@ -432,9 +432,9 @@ async function commandSetEntryField(args, value = '') {
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @param {string} args.field - Field to search
- * @returns {string} Value of the field or empty string
+ * @returns {Promise<string>} Value of the field or empty string
  */
-function commandGetEntryField(args, value) {
+async function commandGetEntryField(args, value) {
     try {
         const {char = '', isuser = 'all', uid = '-1', field = 'key'} = args;
 
@@ -466,9 +466,9 @@ function commandGetEntryField(args, value) {
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
- * @returns {'true'|'false'} True if succeeds, False otherwise
+ * @returns {Promise<'true'|'false'>} True if succeeds, False otherwise
  */
-function commandDeleteEntry(args, value) {
+async function commandDeleteEntry(args, value) {
     try {
         const {char = '', isuser = 'all', uid = '-1'} = args;
 
@@ -499,9 +499,9 @@ function commandDeleteEntry(args, value) {
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @param {string} args.altuid - UID of the entry alt value
- * @returns {string} Empty string
+ * @returns {Promise<string>} Empty string
  */
-function commandSwitchEntryValue(args, value) {
+async function commandSwitchEntryValue(args, value) {
     try {
         const {char = '', isuser = 'all', uid = '-1', altuid = '-1'} = args;
 
@@ -571,15 +571,16 @@ function commandCreateEntryAltValue(args, value = "") {
 /** Gets the UID of an entry alt value by searching for a match trough its fields
  * @param {object} args
  * @param {string} args.char - Character name
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @param {string} args.field - Field to search
  * @param {string} args.fuzzy - Wether to do a fuzzy match or exact math
- * @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - Value to match against field
- * @returns {String} UID of the entry or empty string
+ * @param {string} value - Value to match against field
+ * @returns {Promise<string>} UID of the entry or empty string
  */
-function commandGetAltEntryUID(args, value = "") {
+async function commandGetAltEntryUID(args, value = "") {
     try {
-        const {char = "", uid = "-1", field = "key", fuzzy = "false"} = args;
+        const {char = "", isuser = 'all', uid = "-1", field = "key", fuzzy = "false"} = args;
 
         const character = getParticipantFromName(char);
         const parsed_uid = Number(uid);
@@ -622,15 +623,16 @@ function commandGetAltEntryUID(args, value = "") {
 /** Updates the selected field of the entry alt value
  * @param {object} args
  * @param {string} args.char - Character name
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @param {string} args.altuid - UID of the entry alt value
  * @param {string} args.field - Field to modify
- * @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
- * @returns {String} Empty string
+ * @param {string} value - New value of the selected field
+ * @returns {Promise<string>} Empty string
  */
-function commandSetAltEntryField(args, value = "") {
+async function commandSetAltEntryField(args, value = "") {
     try {
-        const {char = "", uid = "-1", altuid = "-1", field = "key"} = args;
+        const {char = "", isuser = 'all', uid = "-1", altuid = "-1", field = "key"} = args;
 
         const parsed_uid = Number(uid);
         const parsed_altuid = Number(altuid);
@@ -659,14 +661,15 @@ function commandSetAltEntryField(args, value = "") {
 /** Gets the value of an alt entry field
  * @param {object} args
  * @param {string} args.char - Character name
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @param {string} args.altuid - UID of the entry alt value
  * @param {string} args.field - Field to search
- * @returns {String} Field value of the alt entry or empty string
+ * @returns {Promise<string>} Field value of the alt entry or empty string
  */
-function commandGetAltEntryField(args, value) {
+async function commandGetAltEntryField(args, value) {
     try {
-        const {char = "", uid = "-1", altuid = "-1", field = "key"} = args;
+        const {char = "", isuser = 'all', uid = "-1", altuid = "-1", field = "key"} = args;
 
         const parsed_uid = Number(uid);
         const parsed_altuid = Number(altuid);
@@ -694,13 +697,14 @@ function commandGetAltEntryField(args, value) {
 /** Deletes an alt value within a status entry
  * @param {object} args
  * @param {string} args.char - Character name
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @param {string} args.altuid - UID of the entry alt value
- * @returns {String} True if succeeds, False otherwise
+ * @returns {Promise<string>} True if succeeds, False otherwise
  */
-function commandDeleteAltEntry(args, value) {
+async function commandDeleteAltEntry(args, value) {
     try {
-        const {char = "", uid = "-1", altuid = "-1"} = args;
+        const {char = "", isuser = 'all', uid = "-1", altuid = "-1"} = args;
 
         const parsed_uid = Number(uid);
         const parsed_altuid = Number(altuid);
@@ -724,7 +728,7 @@ function commandDeleteAltEntry(args, value) {
 }
 
 /** Wipes all status metadata in the active chat file
- * @returns {Promise<String>} True or False
+ * @returns {Promise<string>} True or False
  */
 async function commandDeleteChatStatus() {
     try {
