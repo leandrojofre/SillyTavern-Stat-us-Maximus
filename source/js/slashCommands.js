@@ -41,6 +41,21 @@ function buildUIDsComment(entry) {
     return `${title}${separator}${value.slice(0, 20).trim()}${suffix}`;
 }
 
+/** Takes an object with a key and value and generates a comment
+ * @param {{title: string; value: string;}} alt
+ * @returns {string}
+ */
+function buildAltUIDsComment(alt) {
+    const title = alt.title;
+    const value = alt.value;
+    const placeSeparator = title.length > 0 && value.length > 0;
+    const separator = placeSeparator ? ' - ' : '';
+    const longValue = value.length > 20;
+    const suffix = longValue ? '...' : '';
+
+    return `${title}${separator}${value.slice(0, 20).trim()}${suffix}`;
+}
+
 /**
  * @param {string} charName
  * @returns {boolean}
@@ -148,6 +163,32 @@ const ENUMS_PROVIDER = {
 
         return entries
             .map(([uid, entry]) => new SlashCommandEnumValue(uid, buildUIDsComment(entry)));
+    },
+
+    altEntryUIDs: (executor, scope) => {
+        const charName = executor.namedArgumentList.find(it => it.name === 'char').value;
+        const entryUID = executor.namedArgumentList.find(it => it.name === 'uid').value;
+        const isUser = executor.namedArgumentList.find(it => it.name === 'isuser').value;
+
+        if (!charName || typeof charName !== 'string') return [];
+        if (!entryUID || typeof entryUID !== 'string') return [];
+        if (!isUser || typeof isUser !== 'string') return [];
+
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.find(en => en === isUser) ?? 'all';
+        const status = getStatusFromName(charName.toString(), cleanIsUser);
+
+        if (!status) return [];
+
+        /** @type {StatusEntry} */
+        const entry = status.entries[entryUID];
+
+        if (!entry) return [];
+
+        const altValues = Object.entries(entry.values);
+
+        return altValues
+            .map(([uid, altValue]) => new SlashCommandEnumValue(uid, buildAltUIDsComment(altValue)));
     }
 };
 
@@ -372,11 +413,11 @@ async function commandSetEntryField(args, value = '') {
         if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
 
         /** @type {StatusEntry} */
-        const entry = status.entries[uid];
+        const entry = status.entries[cleanUID];
 
         if (!entry) return '';
 
-        entry.set(field, String(value), Number(uid));
+        entry.set(field, String(value), cleanUID);
         StatUsMaximus.renderStatusesSafe();
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
@@ -409,7 +450,7 @@ function commandGetEntryField(args, value) {
         if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
 
         /** @type {StatusEntry} */
-        const entry = status.entries[uid];
+        const entry = status.entries[cleanUID];
 
         if (!entry) return '';
 
@@ -454,39 +495,42 @@ function commandDeleteEntry(args, value) {
 /** Switches the value of an entry by one of its alt values
  * @param {object} args
  * @param {string} args.char - Character name
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @param {string} args.altuid - UID of the entry alt value
  * @returns {String} Empty string
  */
 function commandSwitchEntryValue(args, value) {
     try {
-        const {char = "", uid = "-1", altuid = "-1"} = args;
+        const {char = '', isuser = 'all', uid = '-1', altuid = '-1'} = args;
 
-        const parsed_uid = Number(uid);
-        const parsed_altuid = Number(altuid);
-        const character = getParticipantFromName(char);
+        const cleanUID = Number(uid);
+        const cleanAltUID = Number(altuid);
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
 
-        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
-        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
-        if (isNaN(parsed_altuid) || parsed_altuid < 0) throw new Error(`Invalid alt UID "${altuid}"`);
+        const status = getStatusFromName(char, cleanIsUser);
 
-        const alt = getCharAltValue(character, parsed_uid, parsed_altuid);
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (isNaN(cleanAltUID) || cleanAltUID < 0) throw new Error(`Invalid alt UID "${altuid}"`);
 
-        if (!alt) return "";
+        /** @type {StatusEntry} */
+        const entry = status.entries[cleanUID];
 
-        const formData = new FormData();
-        formData.set("value", alt.value);
-        formData.set("value_uid", alt.uid);
+        if (!entry) return '';
 
-        updateCharEntry(character, parsed_uid, formData, false);
-        fetchStatusDebounced({forceUIUpdate: true});
+        const doSwitch = entry.value_uid !== cleanAltUID;
 
-        return "";
+        if (doSwitch) {
+            entry.swapValue(cleanAltUID);
+            StatUsMaximus.renderStatusesSafe();
+        }
+
+        return '';
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
-
-        return "";
+        return '';
     }
 }
 
@@ -998,7 +1042,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-get-entry-field",
+            name: 'stum-get-entry-field',
             callback: commandGetEntryField,
             returns: 'Entry field value',
             namedArgumentList: [
@@ -1048,7 +1092,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-delete-entry",
+            name: 'stum-delete-entry',
             callback: commandDeleteEntry,
             returns: 'True or False',
             namedArgumentList: [
@@ -1091,7 +1135,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-switch-entry-value",
+            name: 'stum-switch-entry-value',
             callback: commandSwitchEntryValue,
             returns: 'Empty String',
             namedArgumentList: [
@@ -1100,26 +1144,33 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantNames
+                    enumProvider: ENUMS_PROVIDER.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
                     description: 'UID of the status entry',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.entryUIDs
+                    enumProvider: ENUMS_PROVIDER.entryUIDs
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'altuid',
                     description: 'UID of the status entry alternative value',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.altEntryUIDs
+                    enumProvider: ENUMS_PROVIDER.altEntryUIDs
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
             <div>
-                Switches the Status Entry value by one of the entry alt values.
+                Switches the Status Entry value by one of the Entry's alt values.
             </div>
             <div>
                 <strong>Example</strong>

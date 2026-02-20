@@ -138,4 +138,18 @@ class StatusEntry {
 
         return this;
     }
+
+    /**
+     * @param {number} uid
+     * @returns {StatusEntry}
+     */
+    swapValue(uid) {
+        const altValue = this.values[uid];
+
+        if (!altValue) return this;
+
+        this.value_uid = uid;
+
+        return this;
+    }
 }
