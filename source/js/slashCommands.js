@@ -159,14 +159,13 @@ const ENUMS_PROVIDER = {
     ],
 
     entryUIDs: (executor, scope) => {
-        const charName = executor.namedArgumentList.find(it => it.name === 'char').value;
-        const isUser = executor.namedArgumentList.find(it => it.name === 'isuser').value;
+        const charName = executor.namedArgumentList.find(it => it.name === 'char')?.value;
+        const isUser = executor.namedArgumentList.find(it => it.name === 'isuser')?.value;
 
         if (!charName || typeof charName !== 'string') return [];
-        if (!isUser || typeof isUser !== 'string') return [];
 
         const entityFilters = ENUMS_STRINGS.entityFilters;
-        const cleanIsUser = entityFilters.find(en => en === isUser) ?? 'all';
+        const cleanIsUser = entityFilters.find(tag => tag === isUser) ?? 'all';
         const status = getStatusFromName(charName.toString(), cleanIsUser);
 
         if (!status) return [];
