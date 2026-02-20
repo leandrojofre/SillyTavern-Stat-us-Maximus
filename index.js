@@ -224,7 +224,7 @@ function exportObjectToClipboard(obj = {}) {
 /**
  * @param {string?} [value]
  * @param {string?} [search_key] - Default is `avatar`
- * @returns {UserCharacter}
+ * @returns {UserCharacter|null}
  */
 function getUser(value, search_key = 'avatar') {
     const { powerUserSettings: power_user } = context();

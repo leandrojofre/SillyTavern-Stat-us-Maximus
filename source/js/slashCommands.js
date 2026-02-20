@@ -17,6 +17,7 @@ const {
 
 /**
  * @typedef {import('../classes/Status.js').UserCharacter} UserCharacter
+ * @typedef {'true'|'false'|'all'} EntityFilter
  */
 
 // * MARK:Utility Methods
@@ -48,27 +49,43 @@ function characterHasMetadata(charName) {
 
 /**
  * @param {string} charName
- * @param {boolean} isUser
+ * @param {EntityFilter} isUser
  * @returns {Character|UserCharacter}
  */
 function getParticipant(charName, isUser) {
-    return isUser ?
+    if (isUser === 'all') {
+        const user = getUser(charName, 'name');
+
+        if (!user)
+            return characters.find(char => char.name === charName);
+
+        return user;
+    }
+
+    return isUser === 'true' ?
         getUser(charName, 'name') :
         characters.find(char => char.name === charName);
 }
 
 /**
  * @param {string} charName
- * @param {boolean} isUser
+ * @param {EntityFilter} isUser
  * @returns {Status|undefined}
  */
 function getStatusFromName(charName, isUser) {
-    return StatUsMaximus
-        .getStatuses()
+    const statuses = StatUsMaximus.getStatuses();
+
+    if (isUser === 'all')
+        return statuses.find(stat => stat.getCharacter().name === charName);
+
+    const isUserFilter = isUser === 'true';
+
+    return statuses
+        .filter(stat => stat.is_user === isUserFilter)
         .find(stat => stat.getCharacter().name === charName);
 }
 
-const ENUMS = {
+const ENUMS_PROVIDER = {
     characters: function() {
         return characters.map(char => new SlashCommandEnumValue(char.name));
     },
@@ -78,11 +95,17 @@ const ENUMS = {
     },
 
     entities: () => [
-        ...ENUMS.personas(),
-        ...ENUMS.characters()
+        ...ENUMS_PROVIDER.personas(),
+        ...ENUMS_PROVIDER.characters()
     ],
 
     boolean: () => [
+        new SlashCommandEnumValue('true'),
+        new SlashCommandEnumValue('false')
+    ],
+
+    entityFilters: () => [
+        new SlashCommandEnumValue('all'),
         new SlashCommandEnumValue('true'),
         new SlashCommandEnumValue('false')
     ],
@@ -93,6 +116,15 @@ const ENUMS = {
         new SlashCommandEnumValue('prefix'),
         new SlashCommandEnumValue('suffix')
     ]
+};
+
+const ENUMS_STRINGS = {
+    /** @type {EntityFilter[]} */
+    entityFilters: [
+        'all',
+        'true',
+        'false'
+    ]
 }
 
 // * MARK: Command Methods
@@ -100,16 +132,18 @@ const ENUMS = {
 /** Creates status data for a character
  * @param {object} args
  * @param {string} args.char - Character name
- * @param {string} args.isuser - Wether to search for personas or characters
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.force - If multiple characters have the same name, it forces creation of data on ALL, despite if they were used or not in the chat
  * @returns {Promise<string>} True if succeeds, False otherwise
  */
 async function commandCreateStatus(args) {
     try {
-        const {char = '', isuser = 'false', force = 'false'} = args;
+        const {char = '', isuser = 'all', force = 'false'} = args;
 
         const cleanForce = force === 'true';
-        const cleanIsUser = isuser === 'trie';
+
+        const entryFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entryFilters.includes(isuser) ? isuser : 'all';
 
         if (!cleanForce && characterHasMetadata(char)) return 'true';
 
@@ -133,17 +167,19 @@ async function commandCreateStatus(args) {
  * @param {object} args
  * @param {string} args.char - Character name
  * @param {string} args.field - Field to modify
- * @param {string} args.isuser - Wether to search for personas or characters
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} value - New value of the selected field
  * @returns {string} Empty string
  */
 function commandSetStatusField(args, value = '') {
     try {
-        const {char = '', field = 'separator', isuser = 'false'} = args;
+        const {char = '', field = 'separator', isuser = 'all'} = args;
 
-        const cleanIsUser = isuser === 'trie';
+        const entryFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entryFilters.includes(isuser) ? isuser : 'all';
+
         const status = getStatusFromName(char, cleanIsUser);
-        const acceptedFields = ENUMS
+        const acceptedFields = ENUMS_PROVIDER
             .acceptedStatusFields()
             .map(key => key.toString());
 
@@ -161,14 +197,15 @@ function commandSetStatusField(args, value = '') {
 /** Deletes the status data a character
  * @param {object} args
  * @param {string} args.char - Character name
- * @param {string} args.isuser - Wether to search for personas or characters
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @returns {Promise<String>} True if succeeds, False otherwise
  */
 async function commandDeleteStatus(args, value) {
     try {
-        const {char = '', isuser = 'false'} = args;
+        const {char = '', isuser = 'all'} = args;
 
-        const cleanIsUser = isuser === 'true';
+        const entryFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entryFilters.includes(isuser) ? isuser : 'all';
         const status = getStatusFromName(char, cleanIsUser);
 
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
@@ -181,7 +218,6 @@ async function commandDeleteStatus(args, value) {
 
         return 'true';
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
 
         return 'false';
@@ -191,25 +227,28 @@ async function commandDeleteStatus(args, value) {
 /** Creates a new entry for a character
  * @param {object} args
  * @param {string} args.char - Character name
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @returns {Promise<String>} UID of the new entry or empty string
  */
 async function commandCreateEntry(args, value) {
     try {
-        const name = args.char;
-        const character = getParticipantFromName(name);
+        const {char = '', isuser = 'all'} = args;
 
-        if (!character) throw new Error(`The character "${args?.char}" could not be found in the metadata`);
+        const entryFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entryFilters.includes(isuser) ? isuser : 'all';
+        const status = getStatusFromName(char, cleanIsUser);
 
-        const entry = addCharEntry(character);
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
 
-        if (!entry) return "";
+        const entryUid = status.addEntry();
 
-        return String(entry.uid);
+        if (!entryUid && isNaN(entryUid)) return '';
+
+        return String(entryUid);
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
 
-        return "";
+        return '';
     }
 }
 
@@ -618,21 +657,21 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: ENUMS.entities
+                    enumProvider: ENUMS_PROVIDER.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
-                    description: 'Whether to look for personas or characters - false by default',
-                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS.boolean
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'force',
                     description: 'If multiple characters or personas have the same name, it will create metadata for all - false by default',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: ENUMS.boolean
+                    enumProvider: ENUMS_PROVIDER.boolean
                 })
             ],
             helpString: `
@@ -646,10 +685,10 @@ export function registerSlashCommands() {
                         <pre><code>/stum-create-status char="Tom"</code></pre>
                     </li>
                     <li>
-                        <pre><code>/stum-create-status char="Tom" isuser=true</code></pre>
+                        <pre><code>/stum-create-status char="Tom" isuser="all"</code></pre>
                     </li>
                     <li>
-                        <pre><code>/stum-create-status char="Tom" force=true</code></pre>
+                        <pre><code>/stum-create-status char="Tom" isuser="false" force=true</code></pre>
                     </li>
                 </ul>
             </div>`,
@@ -667,21 +706,21 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: ENUMS.entities
+                    enumProvider: ENUMS_PROVIDER.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
                     description: 'Field to update - defaults to separator',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS.acceptedStatusFields
+                    enumProvider: ENUMS_PROVIDER.acceptedStatusFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
-                    description: 'Whether to look for personas or characters - false by default',
-                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS.boolean
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -702,7 +741,7 @@ export function registerSlashCommands() {
                         <pre><code>/stum-set-status-field char="Tom" field="prefix" "{{name}}: "</code></pre>
                     </li>
                     <li>
-                        <pre><code>/stum-set-status-field char="Tom" isuser=false "{\\{newline}}"</code></pre>
+                        <pre><code>/stum-set-status-field char="Tom" isuser="all" "{\\{newline}}"</code></pre>
                     </li>
                 </ul>
             </div>`,
@@ -720,14 +759,14 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: ENUMS.entities
+                    enumProvider: ENUMS_PROVIDER.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
-                    description: 'Whether to look for personas or characters - false by default',
-                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS.boolean
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -756,7 +795,14 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantNames
+                    enumProvider: ENUMS_PROVIDER.entities
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
