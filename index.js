@@ -60,6 +60,7 @@ export {
  * @property {() => Status[]} getStatuses
  * @property {(avatar: string) => false|Status} getStatus
  * @property {(avatar: string) => false|Status} addStatus
+ * @property {(status: Status) => boolean|Status} delStatus
  * @property {typeof Status} Status
  * @property {typeof StatusEntry} StatusEntry
  * @property {(avatar: string) => Promise<void>} openPopupSingle
@@ -644,7 +645,6 @@ globalThis.StatUsMaximus = {
     },
 
     getStatus: function(avatar) {
-        /** @type {Status[]} */
         let statuses = StatUsMaximus.getStatuses();
 
         if (!statuses) return false;
@@ -671,6 +671,18 @@ globalThis.StatUsMaximus = {
         }
 
         return status;
+    },
+
+    delStatus: function(status) {
+        let statuses = StatUsMaximus.getStatuses();
+
+        if (!statuses) return false;
+
+        statuses = statuses.filter(s => s.avatar !== status.avatar);
+
+        context().chatMetadata[metadataName] = statuses;
+
+        return true;
     },
 
     Status,

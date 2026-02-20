@@ -166,24 +166,25 @@ function commandSetStatusField(args, value = '') {
  */
 async function commandDeleteStatus(args, value) {
     try {
-        const {char = "", isuser = "false"} = args;
-        const parsed_isuser = isuser === "true";
-        const character = getParticipant(char, parsed_isuser, {field: "name"});
+        const {char = '', isuser = 'false'} = args;
 
-        if (!character) throw new Error(`The character "${args?.char}" could not be found`);
+        const cleanIsUser = isuser === 'true';
+        const status = getStatusFromName(char, cleanIsUser);
 
-        const success = deleteCharStatus(character);
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
 
-        if (!success) return "false";
+        const success = StatUsMaximus.delStatus(status);
 
-        fetchStatusDebounced({forceUIUpdate: true});
+        if (!success) return 'false';
 
-        return "true";
+        StatUsMaximus.renderStatusesSafe();
+
+        return 'true';
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
 
-        return "false";
+        return 'false';
     }
 }
 
@@ -628,7 +629,7 @@ export function registerSlashCommands() {
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'force',
-                    description: 'If multiple characters or personas have the same name, it will create metadata for all - Not recommended if you\'re sure that won\'t happen, as the metadata can grow too large',
+                    description: 'If multiple characters or personas have the same name, it will create metadata for all - false by default',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
                     enumProvider: ENUMS.boolean
@@ -636,7 +637,7 @@ export function registerSlashCommands() {
             ],
             helpString: `
             <div>
-                Creates status data for the selected character in the active chat and returns true. If the character already has data, this does nothing and returns false.
+                Creates status data for the selected character in the active chat and returns <code>true</code>. If the character already has data, this does nothing and returns <code>false</code>. <code>force</code> is not recommended to be used, as the metadata can grow too large depending on the amount of repeated names. Plus, if multiple characters have the same name, operations that include editing them though commands can become imprecise, as they only use character names as an argument; giving characters unique names is recommended.
             </div>
             <div>
                 <strong>Example</strong>
@@ -692,7 +693,7 @@ export function registerSlashCommands() {
             ],
             helpString: `
             <div>
-                Set the value of one of the core fields of you Character's status. If you use ST's macros as the field value, you'll need to escape them like this: {\\{char}}.
+                Set the value of one of the core fields of you Character's status. If you use ST's macros as the field value, and you don't want the macro to be parsed, you'll need to escape them like this: <code>{\\{char}}</code>.
             </div>
             <div>
                 <strong>Example</strong>
@@ -701,7 +702,7 @@ export function registerSlashCommands() {
                         <pre><code>/stum-set-status-field char="Tom" field="prefix" "{{name}}: "</code></pre>
                     </li>
                     <li>
-                        <pre><code>/stum-set-status-field char="Tom" isuser=false "{{newline}}"</code></pre>
+                        <pre><code>/stum-set-status-field char="Tom" isuser=false "{\\{newline}}"</code></pre>
                     </li>
                 </ul>
             </div>`,
@@ -719,19 +720,19 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: () => [...commonEnumProviders.characters()(), ...commonEnumProviders.personas()]
+                    enumProvider: ENUMS.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - false by default',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: commonEnumProviders.boolean()
+                    enumProvider: ENUMS.boolean
                 })
             ],
             helpString: `
             <div>
-                Deletes status data of the selected character in the active chat and returns true. If the deletion fails, this does nothing and returns false.
+                Deletes status data of the selected character in the active chat and returns <code>true</code>. If the deletion fails, this does nothing and returns <code>false</code>.
             </div>
             <div>
                 <strong>Example</strong>
