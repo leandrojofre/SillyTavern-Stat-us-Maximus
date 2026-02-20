@@ -370,7 +370,7 @@ async function commandCreateEntry(args, value) {
 
         const entryUid = status.addEntry();
 
-        if (!entryUid && isNaN(entryUid)) return '';
+        if (entryUid < 0 || isNaN(entryUid)) return '';
 
         return String(entryUid);
     } catch (error) {
@@ -470,7 +470,7 @@ async function commandSetEntryField(args, value = '') {
 
         if (!entry) return '';
 
-        entry.set(field, String(value), cleanUID);
+        entry.set(field, String(value), entry.value_uid);
         StatUsMaximus.renderStatusesSafe();
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
