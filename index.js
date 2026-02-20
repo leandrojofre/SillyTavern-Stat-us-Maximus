@@ -7,6 +7,7 @@ import { StatusEntry } from './source/classes/StatusEntry.js';
 import { registerEvents } from './source/js/eventListeners.js';
 import { initPopupTriggers, openSingleStatusPopup } from './source/js/popups.js';
 import { CUSTOM_MACROS } from './source/js/macros.js';
+import { registerSlashCommands } from './source/js/slashCommands.js';
 
 export {
     // ST re-exports
@@ -827,4 +828,5 @@ $(async function() {
     await loadSettingsMenu();
     registerEvents();
     initPopupTriggers();
+    registerSlashCommands();
 });

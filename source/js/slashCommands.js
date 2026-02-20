@@ -10,12 +10,16 @@ import {
     metadataName
 } from '../../index.js';
 
-import {Status} from '../classes/Status';
-import {StatusEntry} from '../classes/StatusEntry';
+import { Status } from '../classes/Status.js';
+import { StatusEntry } from '../classes/StatusEntry.js';
+
+export {
+    registerSlashCommands
+};
 
 const {
     SlashCommandEnumValue
-} = context();
+} = SillyTavern.getContext();
 
 const {
     Fuse
@@ -802,7 +806,7 @@ async function commandDeleteChatStatus() {
 
 // * MARK:Register Commands
 
-export function registerSlashCommands() {
+function registerSlashCommands() {
     const {
         SlashCommandParser,
         SlashCommand,
