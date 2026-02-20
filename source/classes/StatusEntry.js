@@ -125,6 +125,19 @@ class StatusEntry {
     }
 
     /**
+     * @param {string} title
+     * @param {string} value
+     * @returns {number}
+     */
+    addValue(title, value) {
+        const newUID = getFreeDataUid(this.values);
+
+        this.values[newUID] = {title, value};
+
+        return newUID;
+    }
+
+    /**
      * @param {string} key
      * @param {string} value
      * @param {number} uid

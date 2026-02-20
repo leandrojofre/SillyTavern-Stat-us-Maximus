@@ -538,33 +538,37 @@ async function commandSwitchEntryValue(args, value) {
 /** Creates a new entry for a character
  * @param {object} args
  * @param {string} args.char - Character name
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
- * @param {string} args.key - Title of the alt value
- * @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
- * @returns {String} UID of the new alt value or empty string
+ * @param {string} args.key - Title of the alt value - deprecated argument
+ * @param {string} args.title - Title of the alt value
+ * @param {string} value - New value of the selected field
+ * @returns {Promise<string>} UID of the new alt value or empty string
  */
-function commandCreateEntryAltValue(args, value = "") {
+async function commandCreateEntryAltValue(args, value = '') {
     try {
-        const {char = "", uid = "-1", key = ""} = args;
+        const {char = '', isuser = 'all', uid = "-1", title = '', key = ''} = args;
 
-        const parsed_uid = Number(uid);
-        const character = getParticipantFromName(char);
+        const cleanUID = Number(uid);
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
 
-        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
-        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
+        const status = getStatusFromName(char, cleanIsUser);
 
-        const alt = addCharAltValue(character, parsed_uid, {value: String(value), key: String(key)});
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
 
-        if (!alt) return "";
+        /** @type {StatusEntry} */
+        const entry = status.entries[cleanUID];
 
-        fetchStatusDebounced({forceUIUpdate: true});
+        if (!entry) return '';
 
-        return String(alt.uid ?? "");
+        const altUID = entry.addValue(String(title || key), value);
+
+        return String(altUID ?? '');
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
-
-        return "";
+        return '';
     }
 }
 
@@ -1199,20 +1203,33 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantNames
+                    enumProvider: ENUMS_PROVIDER.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
                     description: 'UID of the status entry',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.entryUIDs
+                    enumProvider: ENUMS_PROVIDER.entryUIDs
                 }),
                 SlashCommandNamedArgument.fromProps({
-                    name: 'key',
+                    name: 'title',
                     description: 'Title of the alt value',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'key',
+                    description: 'Title of the alt value - this argument will be deprecated, use title instead',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -1224,7 +1241,7 @@ export function registerSlashCommands() {
             ],
             helpString: `
             <div>
-                Creates a new Status Entry alternative value and returns its UID. If it fails an empty string is returned.
+                Creates a new alternative value for the selected Status Entry and returns its UID. If it fails an empty string is returned.
             </div>
             <div>
                 <strong>Example</strong>
@@ -1233,7 +1250,7 @@ export function registerSlashCommands() {
                         <pre><code>/stum-create-alt-entry-value char="Tom" uid=7 "Content of the entry"</code></pre>
                     </li>
                     <li>
-                        <pre><code>/stum-create-alt-entry-value char="Tom" uid=7 key="Title of the entry" "Content of the entry"</code></pre>
+                        <pre><code>/stum-create-alt-entry-value char="Tom" uid=7 title="Title of the entry" "Content of the entry"</code></pre>
                     </li>
                 </ul>
             </div>`,
