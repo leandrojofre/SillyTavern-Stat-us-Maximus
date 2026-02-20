@@ -102,12 +102,26 @@ class StatusEntry {
             return this.setValue(key, value, uid);
 
         if (key === 'values') return this;
-
         if (!Object.keys(entryTemplate).includes(key)) return this;
 
         this[key] = value;
 
         return this;
+    }
+
+    /**
+     * @param {string} key
+     * @param {number?} [uid]
+     * @returns {string|number|boolean|undefined}
+     */
+    get(key, uid) {
+        if ((key === 'value' || key === 'title') && !isNaN(Number(uid)))
+            return this.values[uid][key];
+
+        if (key === 'values') return undefined;
+        if (!Object.keys(entryTemplate).includes(key)) return undefined;
+
+        return this[key];
     }
 
     /**

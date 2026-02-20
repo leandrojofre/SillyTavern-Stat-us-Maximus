@@ -360,8 +360,8 @@ async function commandSetEntryField(args, value = '') {
     try {
         const {char = '', isuser = 'all', uid = '-1', field = 'key'} = args;
 
-        const entityFilters = ENUMS_STRINGS.entityFilters;
         const cleanUID = Number(uid);
+        const entityFilters = ENUMS_STRINGS.entityFilters;
         const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
 
         const status = getStatusFromName(char, cleanIsUser);
@@ -388,32 +388,37 @@ async function commandSetEntryField(args, value = '') {
 /** Gets the value of an entry field
  * @param {object} args
  * @param {string} args.char - Character name
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @param {string} args.field - Field to search
  * @returns {String} Value of the field or empty string
  */
 function commandGetEntryField(args, value) {
     try {
-        const {char = "", uid = "-1", field = "key"} = args;
+        const {char = '', isuser = 'all', uid = '-1', field = 'key'} = args;
 
-        const parsed_uid = Number(uid);
-        const character = getParticipantFromName(char);
-        const acceptedFields = Object.keys(acceptedEntryFields);
+        const cleanUID = Number(uid);
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
+
+        const status = getStatusFromName(char, cleanIsUser);
+        const acceptedFields = ENUMS_STRINGS.acceptedEntryFields;
 
         if (!acceptedFields.includes(field)) throw new Error(`Invalid field "${field}"`);
-        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
-        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
 
-        const entry = getCharEntry(character, parsed_uid);
+        /** @type {StatusEntry} */
+        const entry = status.entries[uid];
 
-        if (!entry) return "";
+        if (!entry) return '';
 
-        return String(entry[field] ?? "");
+        return String(entry.get(field, cleanUID) ?? '');
     } catch (error) {
         // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
 
-        return "";
+        return '';
     }
 }
 
@@ -1002,26 +1007,33 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantNames
+                    enumProvider: ENUMS_PROVIDER.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
                     description: 'UID of the status entry',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.entryUIDs
+                    enumProvider: ENUMS_PROVIDER.entryUIDs
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
-                    description: 'Field to match - default key',
+                    description: 'Field to match - defaults to value',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: customEnumProviders.entryFields
+                    enumProvider: ENUMS_PROVIDER.acceptedEntryFields
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
             <div>
-                Get the value of the Status Entry field of a Character. If no match is found, an empty string is returned.
+                Get the value of the selected field from the Status Entry of a Character. If no match is found, an empty string is returned.
             </div>
             <div>
                 <strong>Example</strong>
