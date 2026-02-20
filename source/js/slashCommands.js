@@ -500,7 +500,6 @@ async function commandDeleteEntry(args, value) {
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
         if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
 
-        /** @type {true|false} */
         const deletionSucceed = status.delEntry(cleanUID) ?? false;
 
         if (deletionSucceed) StatUsMaximus.renderStatusesSafe();
@@ -750,30 +749,37 @@ async function commandGetAltEntryField(args, value) {
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @param {string} args.altuid - UID of the entry alt value
- * @returns {Promise<string>} True if succeeds, False otherwise
+ * @returns {Promise<'true'|'false'>} True if succeeds, False otherwise
  */
 async function commandDeleteAltEntry(args, value) {
     try {
-        const {char = "", isuser = 'all', uid = "-1", altuid = "-1"} = args;
+        const {char = '', isuser = 'all', uid = '-1', altuid = '-1'} = args;
 
-        const parsed_uid = Number(uid);
-        const parsed_altuid = Number(altuid);
-        const character = getParticipantFromName(char);
+        const cleanUID = Number(uid);
+        const cleanAltUID = Number(altuid);
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
 
-        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
-        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
-        if (isNaN(parsed_altuid) || parsed_altuid < 0) throw new Error(`Invalid alt UID "${altuid}"`);
+        const status = getStatusFromName(char, cleanIsUser);
 
-        const deletionSucceed = removeCharAltValue(character, parsed_uid, parsed_altuid);
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (isNaN(cleanAltUID) || cleanAltUID < 0) throw new Error(`Invalid alt UID "${altuid}"`);
 
-        if (deletionSucceed) fetchStatusDebounced({forceUIUpdate: true});
+        /** @type {StatusEntry} */
+        const entry = status.entries[cleanUID];
 
-        return String(deletionSucceed ?? false);
+        if (!entry) return 'false';
+
+        const doRefresh = entry.value_uid === cleanAltUID;
+        const deletionSucceed = entry.delValue(cleanAltUID) ?? false;
+
+        if (deletionSucceed && doRefresh) StatUsMaximus.renderStatusesSafe();
+
+        return deletionSucceed ? 'true' : 'false';
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
-
-        return "false";
+        return 'false';
     }
 }
 
@@ -1175,7 +1181,7 @@ export function registerSlashCommands() {
             ],
             helpString: `
             <div>
-                Deletes an entry from the status of a character. Returns true if the deletion was a success, and false otherwise.
+                Deletes an entry from the status of a character. Returns <code>true</code> if the deletion was a success, and <code>false</code> otherwise.
             </div>
             <div>
                 <strong>Example</strong>
@@ -1502,26 +1508,33 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantNames
+                    enumProvider: ENUMS_PROVIDER.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
                     description: 'UID of the status entry',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.entryUIDs
+                    enumProvider: ENUMS_PROVIDER.entryUIDs
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'altuid',
                     description: 'UID of the status entry alternative value',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.altEntryUIDs
+                    enumProvider: ENUMS_PROVIDER.altEntryUIDs
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
             <div>
-                Deletes an alt value within a status entry. Returns true if the deletion was a success, and false otherwise.
+                Deletes a value swipe within a status entry. Returns <code>true</code> if the deletion was a success, and <code>false</code> otherwise.
             </div>
             <div>
                 <strong>Example</strong>

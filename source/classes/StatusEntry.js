@@ -156,6 +156,21 @@ class StatusEntry {
 
     /**
      * @param {number} uid
+     * @returns {boolean}
+     */
+    delValue(uid) {
+        if (isNaN(Number(uid))) return false;
+
+        const value = this.values[uid];
+
+        if (!value) return true;
+
+        delete this.values[uid];
+        return true;
+    }
+
+    /**
+     * @param {number} uid
      * @returns {StatusEntry}
      */
     swapValue(uid) {
