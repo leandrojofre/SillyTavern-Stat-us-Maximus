@@ -15,6 +15,10 @@ const {
     SlashCommandEnumValue
 } = context();
 
+const {
+    Fuse
+} = SillyTavern.libs;
+
 /**
  * @typedef {import('../classes/Status.js').UserCharacter} UserCharacter
  * @typedef {'true'|'false'|'all'} EntityFilter
@@ -115,6 +119,14 @@ const ENUMS_PROVIDER = {
         new SlashCommandEnumValue('def_entry_separator'),
         new SlashCommandEnumValue('prefix'),
         new SlashCommandEnumValue('suffix')
+    ],
+
+    acceptedEntryFields: () => [
+        new SlashCommandEnumValue('enabled'),
+        new SlashCommandEnumValue('key'),
+        new SlashCommandEnumValue('separator'),
+        new SlashCommandEnumValue('value', 'Value of the currently selected entry swipe'),
+        new SlashCommandEnumValue('title', 'Title of the currently selected entry swipe on the selector')
     ]
 };
 
@@ -158,7 +170,6 @@ async function commandCreateStatus(args) {
         return 'true';
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
-
         return 'false';
     }
 }
@@ -183,7 +194,7 @@ function commandSetStatusField(args, value = '') {
             .acceptedStatusFields()
             .map(key => key.toString());
 
-        if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid field "${field}"`);
+        if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid Status field "${field}"`);
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
 
         status.set(field, String(value));
@@ -219,7 +230,6 @@ async function commandDeleteStatus(args, value) {
         return 'true';
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
-
         return 'false';
     }
 }
@@ -247,7 +257,6 @@ async function commandCreateEntry(args, value) {
         return String(entryUid);
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
-
         return '';
     }
 }
@@ -255,46 +264,60 @@ async function commandCreateEntry(args, value) {
 /** Gets an entry uid by searching for a value trough its fields
  * @param {object} args
  * @param {string} args.char - Character name
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.field - Field to search
  * @param {string} args.fuzzy - Wether to do a fuzzy match or exact math
- * @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - Value to match against field
+ * @param {string} value - Value to match against field
  * @returns {Promise<String>} UID of the entry or empty string
  */
-async function commandGetEntryUID(args, value = "") {
+async function commandGetEntryUID(args, value = '') {
     try {
-        const {char = "", field = "key", fuzzy = "false"} = args;
+        const {char = '', isuser = 'all', field = 'key', fuzzy = 'false'} = args;
 
-        const character = getParticipantFromName(char);
-        const status = getCharStatus(character);
-        const acceptedFields = Object.keys(acceptedEntryFields);
+        const entryFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entryFilters.includes(isuser) ? isuser : 'all';
+        const status = getStatusFromName(char, cleanIsUser);
 
-        if (!acceptedFields.includes(field)) throw new Error(`Invalid field "${field}"`);
+        const acceptedFields = ENUMS_PROVIDER
+            .acceptedEntryFields()
+            .map(key => key.toString());
+
+        if (!acceptedFields.includes(field)) throw new Error(`Invalid Status Entry field "${field}"`);
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
 
-        let uid = "";
+        let uid = '';
 
-        if (fuzzy === "true") {
-            const fuse = new Fuse(status.entries, {
+        /** @type {[string, StatusEntry][]} */
+        const entries = Object.entries(status.entries);
+        const search = entries
+            .map(function([uid, entry]) {
+                const value = entry.values[entry.value_uid].value;
+                const title = entry.values[entry.value_uid].title;
+
+                return structuredClone({...entry, uid, value, title});
+            });
+
+        if (fuzzy === 'true') {
+            const fuse = new Fuse(search, {
                 keys: [{ name: field, weight: 1 }],
                 includeScore: true,
                 threshold: 0.3,
             });
+
             const results = fuse.search(String(value));
 
-            if (!results || results.length === 0) return "";
+            if (!results || results.length === 0) return '';
 
             uid = results[0]?.item?.uid;
         } else {
-            const entry = status?.entries?.find(entry => String(entry[field]) === value);
-            uid = entry?.uid;
+            const entry = search.find(entry => String(entry[field]) === value);
+            uid = entry.uid;
         }
 
-        return String(uid ?? "");
+        return String(uid ?? '');
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to fetch Status Metadata: ${error.message}`);
-
-        return "";
+        return '';
     }
 }
 
@@ -831,21 +854,28 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantNames
+                    enumProvider: ENUMS_PROVIDER.entities
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
-                    description: 'Field to match - default key',
+                    description: 'Field to match - defaults to key',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: customEnumProviders.entryFields
+                    enumProvider: ENUMS_PROVIDER.acceptedEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'fuzzy',
-                    description: 'Do an exact match or a fuzzy match - exact by default (fuzzy:false)',
+                    description: 'Do an exact match or a fuzzy match - defaults to false (exact match)',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: commonEnumProviders.boolean()
+                    enumProvider: ENUMS_PROVIDER.boolean
                 })
             ],
             unnamedArgumentList: [
@@ -857,7 +887,7 @@ export function registerSlashCommands() {
             ],
             helpString: `
             <div>
-                Get an entry uid by pairing a Character status field against a value, returning the uid of the first match. If no match is found, an empty string is returned.
+                Get an entry UID by pairing a Character's Status Entry field against a value, returning the UID of the first match. If no match is found, an empty string is returned.
             </div>
             <div>
                 <strong>Example</strong>
