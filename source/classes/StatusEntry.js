@@ -118,6 +118,7 @@ class StatusEntry {
      */
     setValue(key, value, uid) {
         if (!Object.keys(altEntryTemplate).includes(key)) return this;
+        if (!this.values[uid]) return this;
 
         this.values[uid][key] = value;
 

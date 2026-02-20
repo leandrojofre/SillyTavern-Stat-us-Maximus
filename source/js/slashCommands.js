@@ -127,7 +127,28 @@ const ENUMS_PROVIDER = {
         new SlashCommandEnumValue('separator'),
         new SlashCommandEnumValue('value', 'Value of the currently selected entry swipe'),
         new SlashCommandEnumValue('title', 'Title of the currently selected entry swipe on the selector')
-    ]
+    ],
+
+    entryUIDs: (executor, scope) => {
+        const charName = executor.namedArgumentList.find(it => it.name === 'char').value;
+        const isUser = executor.namedArgumentList.find(it => it.name === 'isuser').value;
+
+        if (!charName || typeof charName !== 'string') return [];
+        if (!isUser || typeof isUser !== 'string') return [];
+
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.find(en => en === isUser) ?? 'all';
+        const status = getStatusFromName(charName.toString(), cleanIsUser);
+
+        if (!status) return [];
+
+        const entries = Object.entries(status.entries);
+
+        if (entries.length < 1) return [];
+
+        return entries
+            .map(([uid, entry]) => new SlashCommandEnumValue(uid, buildUIDsComment(entry)));
+    }
 };
 
 const ENUMS_STRINGS = {
@@ -136,17 +157,25 @@ const ENUMS_STRINGS = {
         'all',
         'true',
         'false'
-    ]
+    ],
+
+    acceptedStatusFields: ENUMS_PROVIDER
+        .acceptedStatusFields()
+        .map(key => key.toString()),
+
+    acceptedEntryFields: ENUMS_PROVIDER
+        .acceptedEntryFields()
+        .map(key => key.toString())
 }
 
 // * MARK: Command Methods
 
 /** Creates status data for a character
- * @param {object} args
+ * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.force - If multiple characters have the same name, it forces creation of data on ALL, despite if they were used or not in the chat
- * @returns {Promise<string>} True if succeeds, False otherwise
+ * @returns {Promise<'true'|'false'>} True if succeeds, False otherwise
  */
 async function commandCreateStatus(args) {
     try {
@@ -154,8 +183,8 @@ async function commandCreateStatus(args) {
 
         const cleanForce = force === 'true';
 
-        const entryFilters = ENUMS_STRINGS.entityFilters;
-        const cleanIsUser = entryFilters.includes(isuser) ? isuser : 'all';
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
 
         if (!cleanForce && characterHasMetadata(char)) return 'true';
 
@@ -175,24 +204,22 @@ async function commandCreateStatus(args) {
 }
 
 /** Updates the value of an entry field
- * @param {object} args
+ * @param {Object} args
  * @param {string} args.char - Character name
  * @param {string} args.field - Field to modify
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} value - New value of the selected field
- * @returns {string} Empty string
+ * @returns {Promise<string>} Empty string
  */
-function commandSetStatusField(args, value = '') {
+async function commandSetStatusField(args, value = '') {
     try {
         const {char = '', field = 'separator', isuser = 'all'} = args;
 
-        const entryFilters = ENUMS_STRINGS.entityFilters;
-        const cleanIsUser = entryFilters.includes(isuser) ? isuser : 'all';
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
 
         const status = getStatusFromName(char, cleanIsUser);
-        const acceptedFields = ENUMS_PROVIDER
-            .acceptedStatusFields()
-            .map(key => key.toString());
+        const acceptedFields = ENUMS_STRINGS.acceptedStatusFields;
 
         if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid Status field "${field}"`);
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
@@ -206,17 +233,18 @@ function commandSetStatusField(args, value = '') {
 }
 
 /** Deletes the status data a character
- * @param {object} args
+ * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
- * @returns {Promise<String>} True if succeeds, False otherwise
+ * @returns {Promise<'true'|'false'>} True if succeeds, False otherwise
  */
 async function commandDeleteStatus(args, value) {
     try {
         const {char = '', isuser = 'all'} = args;
 
-        const entryFilters = ENUMS_STRINGS.entityFilters;
-        const cleanIsUser = entryFilters.includes(isuser) ? isuser : 'all';
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
+
         const status = getStatusFromName(char, cleanIsUser);
 
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
@@ -235,17 +263,17 @@ async function commandDeleteStatus(args, value) {
 }
 
 /** Creates a new entry for a character
- * @param {object} args
+ * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
- * @returns {Promise<String>} UID of the new entry or empty string
+ * @returns {Promise<string>} UID of the new entry or empty string
  */
 async function commandCreateEntry(args, value) {
     try {
         const {char = '', isuser = 'all'} = args;
 
-        const entryFilters = ENUMS_STRINGS.entityFilters;
-        const cleanIsUser = entryFilters.includes(isuser) ? isuser : 'all';
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
         const status = getStatusFromName(char, cleanIsUser);
 
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
@@ -262,25 +290,23 @@ async function commandCreateEntry(args, value) {
 }
 
 /** Gets an entry uid by searching for a value trough its fields
- * @param {object} args
+ * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.field - Field to search
  * @param {string} args.fuzzy - Wether to do a fuzzy match or exact math
  * @param {string} value - Value to match against field
- * @returns {Promise<String>} UID of the entry or empty string
+ * @returns {Promise<string>} UID of the entry or empty string
  */
 async function commandGetEntryUID(args, value = '') {
     try {
         const {char = '', isuser = 'all', field = 'key', fuzzy = 'false'} = args;
 
-        const entryFilters = ENUMS_STRINGS.entityFilters;
-        const cleanIsUser = entryFilters.includes(isuser) ? isuser : 'all';
-        const status = getStatusFromName(char, cleanIsUser);
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
 
-        const acceptedFields = ENUMS_PROVIDER
-            .acceptedEntryFields()
-            .map(key => key.toString());
+        const status = getStatusFromName(char, cleanIsUser);
+        const acceptedFields = ENUMS_STRINGS.acceptedEntryFields;
 
         if (!acceptedFields.includes(field)) throw new Error(`Invalid Status Entry field "${field}"`);
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
@@ -322,35 +348,40 @@ async function commandGetEntryUID(args, value = '') {
 }
 
 /** Updates the value of an entry field
- * @param {object} args
+ * @param {Object} args
  * @param {string} args.char - Character name
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @param {string} args.field - Field to modify
- * @param {String|SlashCommandClosure|String[]|SlashCommandClosure[]} value - New value of the selected field
- * @returns {String} Empty string
+ * @param {string} value - New value of the selected field
+ * @returns {Promise<string>} Empty string
  */
-function commandSetEntryField(args, value = "") {
+async function commandSetEntryField(args, value = '') {
     try {
-        const {char = "", uid = "-1", field = "key"} = args;
+        const {char = '', isuser = 'all', uid = '-1', field = 'key'} = args;
 
-        const parsed_uid = Number(uid);
-        const character = getParticipantFromName(char);
-        const acceptedFields = Object.keys(acceptedEntryFields);
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanUID = Number(uid);
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
+
+        const status = getStatusFromName(char, cleanIsUser);
+        const acceptedFields = ENUMS_STRINGS.acceptedEntryFields;
 
         if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid field "${field}"`);
-        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
-        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
 
-        const formData = new FormData();
-        formData.set(field, String(value));
+        /** @type {StatusEntry} */
+        const entry = status.entries[uid];
 
-        updateCharEntry(character, parsed_uid, formData);
-        fetchStatusDebounced({forceUIUpdate: true});
+        if (!entry) return '';
+
+        entry.set(field, String(value), Number(uid));
+        StatUsMaximus.renderStatusesSafe();
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
     } finally {
-        return "";
+        return '';
     }
 }
 
@@ -720,7 +751,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-set-status-field",
+            name: 'stum-set-status-field',
             callback: commandSetStatusField,
             returns: 'Empty string',
             namedArgumentList: [
@@ -748,7 +779,7 @@ export function registerSlashCommands() {
             ],
             unnamedArgumentList: [
                 SlashCommandArgument.fromProps({
-                    description: 'New value of the field - default to empty text',
+                    description: 'New value of the field - defaults to empty text',
                     isRequired: true,
                     typeList: [ARGUMENT_TYPE.STRING]
                 })
@@ -773,7 +804,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-delete-status",
+            name: 'stum-delete-status',
             callback: commandDeleteStatus,
             returns: 'True or False',
             namedArgumentList: [
@@ -809,7 +840,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-create-entry",
+            name: 'stum-create-entry',
             callback: commandCreateEntry,
             returns: 'Status entry uid',
             namedArgumentList: [
@@ -845,7 +876,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-get-entry-uid",
+            name: 'stum-get-entry-uid',
             callback: commandGetEntryUID,
             returns: 'UID of the entry',
             namedArgumentList: [
@@ -905,7 +936,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-set-entry-field",
+            name: 'stum-set-entry-field',
             callback: commandSetEntryField,
             returns: 'Empty string',
             namedArgumentList: [
@@ -914,33 +945,40 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantNames
+                    enumProvider: ENUMS_PROVIDER.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
                     description: 'UID of the status entry',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.entryUIDs
+                    enumProvider: ENUMS_PROVIDER.entryUIDs
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
-                    description: 'Field to update - default value',
+                    description: 'Field to update - defaults to value',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: customEnumProviders.entryFields
+                    enumProvider: ENUMS_PROVIDER.acceptedEntryFields
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
                 SlashCommandArgument.fromProps({
-                    description: 'New value of the field - default to empty text',
+                    description: 'New value of the field - defaults to empty text',
                     isRequired: true,
                     typeList: [ARGUMENT_TYPE.STRING]
                 })
             ],
             helpString: `
             <div>
-                Set the value of the Status Entry field of a Character.
+                Set the value for one of the fields of a Character's Status Entry.
             </div>
             <div>
                 <strong>Example</strong>
