@@ -1381,32 +1381,13 @@ export function registerSlashCommands() {
             callback: async (args, value) => await commandDeleteChatStatus(),
             helpString: `
             <div>
-                Wipes all character status in the chat, has no confirm screen and can not be undone.
+                Wipes all the Status metadata for all characters in the currently open chat, has no confirm screen and cannot be undone.
             </div>
             <div>
                 <strong>Example</strong>
                 <ul>
                     <li>
                         <pre><code>/stum-delete-chat-status</code></pre>
-                    </li>
-                </ul>
-            </div>`,
-        })
-    );
-
-    SlashCommandParser.addCommandObject(
-        SlashCommand.fromProps({
-            name: "stum-fill-missing-metadata",
-            callback: async (args, value) => String(await fillMissingMetadata()),
-            helpString: `
-            <div>
-                Fills the metadata in case an update adds more values or properties - WARN This is a dev command used for bug fixing, only use it if instructed to do so by a developer.
-            </div>
-            <div>
-                <strong>Example</strong>
-                <ul>
-                    <li>
-                        <pre><code>/stum-fill-missing-metadata</code></pre>
                     </li>
                 </ul>
             </div>`,
