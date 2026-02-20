@@ -415,9 +415,7 @@ function commandGetEntryField(args, value) {
 
         return String(entry.get(field, cleanUID) ?? '');
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
-
         return '';
     }
 }
@@ -425,29 +423,31 @@ function commandGetEntryField(args, value) {
 /** Deletes an status entry from a character
  * @param {object} args
  * @param {string} args.char - Character name
+ * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
  * @returns {String} True if succeeds, False otherwise
  */
 function commandDeleteEntry(args, value) {
     try {
-        const {char = "", uid = "-1"} = args;
+        const {char = '', isuser = 'all', uid = '-1'} = args;
 
-        const parsed_uid = Number(uid);
-        const character = getParticipantFromName(char);
+        const cleanUID = Number(uid);
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
 
-        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
-        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
+        const status = getStatusFromName(char, cleanIsUser);
 
-        const deletionSucceed = removeCharEntry(character, parsed_uid);
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
 
-        if (deletionSucceed) fetchStatusDebounced({forceUIUpdate: true});
+        const deletionSucceed = status.delEntry(cleanUID);
+
+        if (deletionSucceed) StatUsMaximus.renderStatusesSafe();
 
         return String(deletionSucceed ?? false);
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
-
-        return "false";
+        return 'false';
     }
 }
 
@@ -1057,14 +1057,21 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantNames
+                    enumProvider: ENUMS_PROVIDER.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
                     description: 'UID of the status entry',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.entryUIDs
+                    enumProvider: ENUMS_PROVIDER.entryUIDs
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `

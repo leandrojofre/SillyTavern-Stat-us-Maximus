@@ -106,7 +106,7 @@ class Status {
      * @returns {Status}
      */
     set(key, value) {
-        if (key === 'entries') return;
+        if (key === 'entries') return this;
         if (!Object.keys(statusTemplate).includes(key)) return this;
 
         this[key] = value;
@@ -128,6 +128,21 @@ class Status {
         this.entries[newUid] = rawEntry;
 
         return newUid;
+    }
+
+    /**
+     * @param {number} uid
+     * @returns {boolean}
+     */
+    delEntry(uid) {
+        if (isNaN(Number(uid))) return false;
+
+        const entry = this.entries[uid];
+
+        if (!entry) return true;
+
+        delete this.entries[uid];
+        return true;
     }
 
     /**
