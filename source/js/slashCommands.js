@@ -593,7 +593,7 @@ async function commandCreateEntryAltValue(args, value = '') {
  */
 async function commandGetAltEntryUID(args, value = '') {
     try {
-        const {char = '', isuser = 'all', uid = '-1', field = 'key', fuzzy = 'false'} = args;
+        const {char = '', isuser = 'all', uid = '-1', field = 'title', fuzzy = 'false'} = args;
 
         const cleanUID = Number(uid);
         const entityFilters = ENUMS_STRINGS.entityFilters;
@@ -652,31 +652,37 @@ async function commandGetAltEntryUID(args, value = '') {
  * @param {string} value - New value of the selected field
  * @returns {Promise<string>} Empty string
  */
-async function commandSetAltEntryField(args, value = "") {
+async function commandSetAltEntryField(args, value = '') {
     try {
-        const {char = "", isuser = 'all', uid = "-1", altuid = "-1", field = "key"} = args;
+        const {char = '', isuser = 'all', uid = "-1", altuid = "-1", field = 'title'} = args;
 
-        const parsed_uid = Number(uid);
-        const parsed_altuid = Number(altuid);
-        const character = getParticipantFromName(char);
-        const acceptedFields = Object.keys(acceptedAltEntryFields);
+        const cleanUID = Number(uid);
+        const cleanAltUID = Number(altuid);
+        const entityFilters = ENUMS_STRINGS.entityFilters;
+        const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
 
-        if (!character) throw new Error(`The character "${char}" could not be found in the metadata`);
-        if (isNaN(parsed_uid) || parsed_uid < 0) throw new Error(`Invalid UID "${uid}"`);
-        if (isNaN(parsed_altuid) || parsed_altuid < 0) throw new Error(`Invalid alt UID "${altuid}"`);
+        const status = getStatusFromName(char, cleanIsUser);
+        const acceptedFields = ENUMS_STRINGS.acceptedAltEntryFields;
+
+        if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
+        if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
+        if (isNaN(cleanAltUID) || cleanAltUID < 0) throw new Error(`Invalid alt UID "${altuid}"`);
         if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid alt field "${field}"`);
 
+        /** @type {StatusEntry} */
+        const entry = status.entries[cleanUID];
 
-        const formData = new FormData();
-        formData.set(field, String(value));
+        if (!entry) return '';
 
-        updateCharAltValue(character, parsed_uid, parsed_altuid, formData);
-        fetchStatusDebounced({forceUIUpdate: true});
+        const doSwitch = entry.value_uid !== cleanAltUID;
+
+        entry.setValue(field, value, cleanAltUID);
+
+        if (doSwitch) StatUsMaximus.renderStatusesSafe();
     } catch (error) {
-        // @ts-ignore
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
     } finally {
-        return "";
+        return '';
     }
 }
 
@@ -1343,7 +1349,7 @@ export function registerSlashCommands() {
 
     SlashCommandParser.addCommandObject(
         SlashCommand.fromProps({
-            name: "stum-set-alt-entry-field",
+            name: 'stum-set-alt-entry-field',
             callback: commandSetAltEntryField,
             returns: 'Empty string',
             namedArgumentList: [
@@ -1352,28 +1358,35 @@ export function registerSlashCommands() {
                     description: 'Name of the character',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: true,
-                    enumProvider: customEnumProviders.participantNames
+                    enumProvider: ENUMS_PROVIDER.entities
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'uid',
                     description: 'UID of the status entry',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.entryUIDs
+                    enumProvider: ENUMS_PROVIDER.entryUIDs
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'altuid',
                     description: 'UID of the status entry alternative value',
                     typeList: [ARGUMENT_TYPE.NUMBER],
                     isRequired: true,
-                    enumProvider: customEnumProviders.altEntryUIDs
+                    enumProvider: ENUMS_PROVIDER.altEntryUIDs
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
-                    description: 'Field to update - default value',
+                    description: 'Field to match - defaults to title',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: customEnumProviders.altEntryFields
+                    enumProvider: ENUMS_PROVIDER.acceptedAltEntryFields
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'isuser',
+                    description: 'Whether to look for personas or characters - look for all by default',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                    enumProvider: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -1385,13 +1398,13 @@ export function registerSlashCommands() {
             ],
             helpString: `
             <div>
-                Updates the field value of one of the Status Entry alt descriptions.
+                Updates the field of the selected Status Entry value.
             </div>
             <div>
                 <strong>Example</strong>
                 <ul>
                     <li>
-                        <pre><code>/stum-set-alt-entry-field char="Tom" field="key" uid=7 altuid=2 "- A red hoodie"</code></pre>
+                        <pre><code>/stum-set-alt-entry-field char="Tom" field="title" uid=7 altuid=2 "- A red hoodie"</code></pre>
                     </li>
                 </ul>
             </div>`,

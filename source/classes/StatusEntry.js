@@ -92,6 +92,7 @@ class StatusEntry {
     }
 
     /**
+     * Updates an entry field - it also updates the currently selected value if its field are sent
      * @param {string} key
      * @param {string|number|boolean} value
      * @param {number?} [uid]
@@ -138,6 +139,7 @@ class StatusEntry {
     }
 
     /**
+     * Updates one of the values of an entry
      * @param {string} key
      * @param {string} value
      * @param {number} uid
