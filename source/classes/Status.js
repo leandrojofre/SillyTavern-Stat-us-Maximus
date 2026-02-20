@@ -4,7 +4,8 @@ import {
     messageBelongsToChar,
     getUser,
     getThumbnailUrl,
-    context
+    context,
+    unEscapeNewlines
 } from '../../index.js';
 
 import { StatusEntry, entryTemplate } from './StatusEntry.js';
@@ -108,6 +109,8 @@ class Status {
     set(key, value) {
         if (key === 'entries') return this;
         if (!Object.keys(statusTemplate).includes(key)) return this;
+
+        if (typeof value === 'string') value = unEscapeNewlines(value);
 
         this[key] = value;
 
