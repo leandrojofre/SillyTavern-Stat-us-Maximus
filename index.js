@@ -489,16 +489,14 @@ function renderStatusesSafe() {
 async function renderCharStatus(status) {
     $(`#chat .${htmlSuffix}-custom-css[char-target="${status.avatar}"]`).remove();
 
+    status.refreshPosition();
+
     if (status.last_mes_id < 0) return;
 
     /** @type {string} */
-    const character = status.is_user ?
-        powerUserSettings.personas[status.avatar] :
-        characters.find(char => char.avatar === status.avatar).name;
+    const character = status.getCharacter().name;
 
     if (!character) return;
-
-    status.refreshPosition();
 
     const lastMess = $(`#chat .mes[mesid="${status.last_mes_id}"][is_user="${status.is_user}"]`).last();
 
