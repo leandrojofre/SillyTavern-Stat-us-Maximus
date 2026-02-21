@@ -10,8 +10,7 @@ import {
     escapeNewlines,
     generateUUID,
     saveMetadataSafe,
-    getActiveParticipants,
-    context,
+    getUser,
     // HTML related
     HTML_TEMPLATES,
     htmlSuffix,
@@ -334,26 +333,34 @@ async function onShortcutClick(e) {
 
     if (type === 'save') return saveMetadataSafe();
 
+    const members = StatUsMaximus.getStatuses();
+
+    if (type === 'all') {
+        if (!members?.length) return;
+
+        return await openMultiStatusPopup(members);
+    }
+
     if (type === 'users') {
-        const users = StatUsMaximus
-            .getStatuses()
-            .filter(status => status.is_user)
-            .map(status => status.getCharacter());
+        const users = members
+            .filter(status => status.is_user);
 
         if (!users.length) return;
 
         return await openMultiStatusPopup(users);
     }
 
-    const { user, chars } = getActiveParticipants();
-
     if (type === 'user') {
+        const user = getUser();
         const avatar = user.avatar;
 
         return await openSingleStatusPopup(avatar, true);
     }
 
     if (type === 'characters') {
+        const chars = members
+            .filter(status => !status.is_user);
+
         return await openMultiStatusPopup(chars);
     }
 }
@@ -533,4 +540,24 @@ function initPopupTriggers() {
 
     // @ts-ignore
     $(`.${htmlSuffix}-right-menu-toolbar`).on('click', '.menu_button', onShortcutClick);
+
+    const wandMenuShortcutText = createElement('span', { innerText: extensionName });
+    const wandMenuShortcutIcon = createElement('div', { class: 'fa-solid fa-table extensionsMenuExtensionButton' });
+
+    const wandMenuShortcut = createElement('div', {
+        attr: { role: 'listitem' },
+        class: 'list-group-item flex-container flexGap5 interactable',
+        append: [ wandMenuShortcutIcon, wandMenuShortcutText ]
+    });
+
+    const wandMenuShortcutContainer = createElement('div', {
+        attr: { id: `${htmlSuffix}-wand-menu-shortcut`, tabindex: '0', type: 'all' },
+        class: 'extension_container interactable',
+        append: [ wandMenuShortcut ]
+    });
+
+    $('#extensionsMenu').append(wandMenuShortcutContainer);
+
+    // @ts-ignore
+    $(`#${htmlSuffix}-wand-menu-shortcut`).on('click', onShortcutClick);
 }
