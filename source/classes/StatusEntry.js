@@ -1,4 +1,4 @@
-import { getFreeDataUid } from '../../index.js';
+import { getFreeDataUid, unEscapeNewlines } from '../../index.js';
 
 export {
     entryTemplate,
@@ -99,6 +99,8 @@ class StatusEntry {
      * @returns {StatusEntry}
      */
     set(key, value, uid) {
+        if (typeof value === 'string') value = unEscapeNewlines(value);
+
         if ((key === 'value' || key === 'title') && typeof value === 'string')
             return this.setValue(key, value, uid);
 

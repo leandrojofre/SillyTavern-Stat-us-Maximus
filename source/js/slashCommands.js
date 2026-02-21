@@ -644,7 +644,7 @@ async function commandCreateEntryAltValue(args, value = '') {
  */
 async function commandGetAltEntryUID(args, value = '') {
     try {
-        const {char = '', isuser = 'all', uid = '-1', field = 'title', fuzzy = 'false'} = args;
+        let {char = '', isuser = 'all', uid = '-1', field = 'title', fuzzy = 'false'} = args;
 
         const cleanUID = Number(uid);
         const entityFilters = ENUMS_STRINGS.entityFilters;
@@ -653,6 +653,7 @@ async function commandGetAltEntryUID(args, value = '') {
         const status = getStatusFromName(char, cleanIsUser);
         const acceptedFields = ENUMS_STRINGS.acceptedAltEntryFields;
 
+        if (field === 'key') field = 'title';
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
         if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
         if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid alt field "${field}"`);
@@ -709,7 +710,7 @@ async function commandGetAltEntryUID(args, value = '') {
  */
 async function commandSetAltEntryField(args, value = '') {
     try {
-        const {char = '', isuser = 'all', uid = "-1", altuid = "-1", field = 'title'} = args;
+        let {char = '', isuser = 'all', uid = "-1", altuid = "-1", field = 'title'} = args;
 
         const cleanUID = Number(uid);
         const cleanAltUID = Number(altuid);
@@ -719,6 +720,7 @@ async function commandSetAltEntryField(args, value = '') {
         const status = getStatusFromName(char, cleanIsUser);
         const acceptedFields = ENUMS_STRINGS.acceptedAltEntryFields;
 
+        if (field === 'key') field = 'title';
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
         if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
         if (isNaN(cleanAltUID) || cleanAltUID < 0) throw new Error(`Invalid alt UID "${altuid}"`);
@@ -754,7 +756,7 @@ async function commandSetAltEntryField(args, value = '') {
  */
 async function commandGetAltEntryField(args, value) {
     try {
-        const {char = '', isuser = 'all', uid = '-1', altuid = '-1', field = 'title'} = args;
+        let {char = '', isuser = 'all', uid = '-1', altuid = '-1', field = 'title'} = args;
 
         const cleanUID = Number(uid);
         const cleanAltUID = Number(altuid);
@@ -764,6 +766,7 @@ async function commandGetAltEntryField(args, value) {
         const status = getStatusFromName(char, cleanIsUser);
         const acceptedFields = ENUMS_STRINGS.acceptedAltEntryFields;
 
+        if (field === 'key') field = 'title';
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
         if (isNaN(cleanUID) || cleanUID < 0) throw new Error(`Invalid UID "${uid}"`);
         if (isNaN(cleanAltUID) || cleanAltUID < 0) throw new Error(`Invalid alt UID "${altuid}"`);
