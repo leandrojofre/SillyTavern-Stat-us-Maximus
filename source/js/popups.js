@@ -266,6 +266,51 @@ async function openSingleStatusPopup(avatar, is_user = false) {
     StatUsMaximus.renderStatusesSafe();
 }
 
+/**
+ * @param {{avatar: string; is_user?: boolean}[]} avatars
+ */
+async function openMultiStatusPopup(avatars = []) {
+    if (!avatars?.length) return;
+
+    const statusesWrapper = createElement('div', {
+        class: `${htmlSuffix}-popup-wrapper flex-container flexFlowColumn flexnowrap gap5px padding0`
+    });
+
+    const $statusesWrapper = $(statusesWrapper);
+    let noBlocksCreated = true;
+
+    for (const {avatar, is_user} of avatars) {
+        const $statusBlock = await getStatusPopupBlock(avatar, is_user);
+
+        if (!$statusBlock) continue;
+
+        $statusesWrapper.append($statusBlock);
+        noBlocksCreated = false;
+    }
+
+    if (noBlocksCreated) return;
+
+    await callGenericPopup($statusesWrapper, POPUP_TYPE.TEXT, "", {
+        okButton: t`Close Status`,
+        allowVerticalScrolling: true,
+        wide: true,
+        onClose: () => {
+            $statusesWrapper.each(function(i, elem) {
+                const $statusBlock = $(elem);
+                const doSave = $statusBlock.data().doSave;
+
+                if (doSave) saveMetadataSafe();
+
+                $statusBlock.remove();
+            });
+
+            $statusesWrapper.remove();
+        }
+    });
+
+    StatUsMaximus.renderStatusesSafe();
+}
+
 // * MARK:Shortcuts
 
 /**
@@ -278,6 +323,39 @@ async function onGroupMemberListClick(e) {
     if (!avatar) return;
 
     await openSingleStatusPopup(avatar);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onShortcutClick(e) {
+    const $button = $(e.currentTarget);
+    const type = $button.attr('type');
+
+    if (type === 'save') return saveMetadataSafe();
+
+    if (type === 'users') {
+        const users = StatUsMaximus
+            .getStatuses()
+            .filter(status => status.is_user)
+            .map(status => status.getCharacter());
+
+        if (!users.length) return;
+
+        return await openMultiStatusPopup(users);
+    }
+
+    const { user, chars } = getActiveParticipants();
+
+    if (type === 'user') {
+        const avatar = user.avatar;
+
+        return await openSingleStatusPopup(avatar, true);
+    }
+
+    if (type === 'characters') {
+        return await openMultiStatusPopup(chars);
+    }
 }
 
 // * MARK:Input Listeners
@@ -410,34 +488,6 @@ function onBulkToggleEntryDrawer(e) {
 
         if ($rowToggle.is(direction)) $rowToggle.trigger('click');
     });
-}
-
-/**
- * @param {EventData<HTMLDivElement>} e
- */
-async function onShortcutClick(e) {
-    const $button = $(e.currentTarget);
-    const type = $button.attr('type');
-
-    if (type === 'save') return saveMetadataSafe();
-
-    if (type === 'users') {
-        const users = Object.keys(context().powerUserSettings.personas);
-
-        return;
-    }
-
-    const { user, chars } = getActiveParticipants();
-
-    if (type === 'user') {
-        const avatar = user.avatar;
-
-        return await openSingleStatusPopup(avatar, true);
-    }
-
-    if (type === 'characters') {
-        return;
-    }
 }
 
 // * MARK:Init Triggers
