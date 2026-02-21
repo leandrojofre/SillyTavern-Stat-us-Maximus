@@ -10,10 +10,10 @@ import {
     escapeNewlines,
     generateUUID,
     saveMetadataSafe,
-    metadataName,
-    htmlSuffix,
     // HTML related
-    HTML_TEMPLATES
+    HTML_TEMPLATES,
+    htmlSuffix,
+    createElement
 } from '../../index.js';
 
 import {Status} from '../classes/Status.js';
@@ -426,4 +426,26 @@ function initPopupTriggers() {
     $(document).on('input', `.${htmlSuffix}-popup-row select[name="value_uid"]`, onEntryValueSwap);
     // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, onStatusInput);
+
+    const saveMetadataButton = createElement('div', { attr: { role: 'button' }, class: 'menu_button flex1 fa-solid fa-floppy-disk bg-bot' });
+    const charactersButton = createElement('div', { attr: { role: 'button' }, class: 'menu_button flex1 fa-solid fa-table bg-bot' });
+    const userButton = createElement('div', { attr: { role: 'button' }, class: 'menu_button flex1 fa-solid fa-user-cog bg-bot' });
+    const usersButton = createElement('div', { attr: { role: 'button' }, class: 'menu_button flex1 fa-solid fa-users-cog bg-bot' });
+    const buttonWrapper = createElement('div', {
+        class: 'flex-container flexnowrap gap5px padding0',
+        append: [ saveMetadataButton, charactersButton, userButton, usersButton ]
+    });
+
+    const title = createElement('small', { innerText: extensionName, class: 'paddingTop5' });
+    const toolbar = createElement('div', {
+        attr: { style: 'justify-content: space-between' },
+        class: `${htmlSuffix}-right-menu-toolbar ${htmlSuffix}-custom-css flex-container flexFlowColumn flexnowrap gap0 padding0 paddingLeftRight5 standoutHeader`,
+        append: [ title, buttonWrapper ]
+    });
+
+    $('#rm_group_chats_block .inline-drawer:has(> #groupCurrentMemberListToggle)')
+        .prepend($(toolbar).clone());
+
+    $('#avatar-and-name-block')
+        .after($(toolbar).clone());
 }

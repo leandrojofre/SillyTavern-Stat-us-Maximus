@@ -318,7 +318,8 @@ function createElement(elem, options = {}) {
 
     const classes = options.class ?? '';
 
-    element.classList.add(...(classes.split(' ')));
+    if (classes.length > 0)
+        element.classList.add(...(classes.split(' ')));
 
     if (options.innerHTML) element.innerHTML = options.innerHTML ?? '';
     if (options.innerText) element.innerText = options.innerText ?? '';
