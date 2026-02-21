@@ -60,11 +60,11 @@ export {
  * @typedef {Object} StatUsMaxInterface
  * @property {() => Status[]} getStatuses
  * @property {(avatar: string) => false|Status} getStatus
- * @property {(avatar: string) => false|Status} addStatus
+ * @property {(avatar: string, is_user?: boolean) => false|Status} addStatus
  * @property {(status: Status) => boolean|Status} delStatus
  * @property {typeof Status} Status
  * @property {typeof StatusEntry} StatusEntry
- * @property {(avatar: string) => Promise<void>} openPopupSingle
+ * @property {(avatar: string, is_user?: boolean) => Promise<void>} openPopupSingle
  * @property {() => Promise<void>} renderStatuses
  * @property {() => void} renderStatusesSafe
  * @property {(...mess: any[]) => void} log
@@ -495,7 +495,7 @@ async function renderCharStatus(status) {
     if (status.last_mes_id < 0) return;
 
     /** @type {string} */
-    const character = status.getCharacter().name;
+    const character = status.getCharacter()?.name;
 
     if (!character) return;
 
@@ -658,7 +658,7 @@ globalThis.StatUsMaximus = {
         return !status ? false : status;
     },
 
-    addStatus: function(avatar) {
+    addStatus: function(avatar, is_user) {
         let statuses = StatUsMaximus.getStatuses();
 
         if (!statuses) return false;
@@ -666,7 +666,7 @@ globalThis.StatUsMaximus = {
         let status = statuses.find(s => s.avatar === avatar);
 
         if (!status) {
-            status = new Status({avatar});
+            status = new Status({avatar, is_user});
             statuses.push(status);
 
             context().chatMetadata[metadataName] = statuses;

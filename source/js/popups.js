@@ -10,6 +10,8 @@ import {
     escapeNewlines,
     generateUUID,
     saveMetadataSafe,
+    getActiveParticipants,
+    context,
     // HTML related
     HTML_TEMPLATES,
     htmlSuffix,
@@ -173,13 +175,14 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
 
 /**
  * @param {string} avatar
+ * @param {boolean?} [is_user]
  * @returns {Promise<JQuery<HTMLElement>>}
  */
-async function getStatusPopupBlock(avatar) {
+async function getStatusPopupBlock(avatar, is_user = false) {
     let status = StatUsMaximus.getStatus(avatar);
 
     if (!status) {
-        status = StatUsMaximus.addStatus(avatar);
+        status = StatUsMaximus.addStatus(avatar, is_user);
 
         if (!status) return;
     };
@@ -240,9 +243,10 @@ async function getStatusPopupBlock(avatar) {
 
 /**
  * @param {string} avatar
+ * @param {boolean?} [is_user]
  */
-async function openSingleStatusPopup(avatar) {
-    const $statusBlock = await getStatusPopupBlock(avatar);
+async function openSingleStatusPopup(avatar, is_user = false) {
+    const $statusBlock = await getStatusPopupBlock(avatar, is_user);
 
     if (!$statusBlock) return;
 
@@ -408,6 +412,34 @@ function onBulkToggleEntryDrawer(e) {
     });
 }
 
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onShortcutClick(e) {
+    const $button = $(e.currentTarget);
+    const type = $button.attr('type');
+
+    if (type === 'save') return saveMetadataSafe();
+
+    if (type === 'users') {
+        const users = Object.keys(context().powerUserSettings.personas);
+
+        return;
+    }
+
+    const { user, chars } = getActiveParticipants();
+
+    if (type === 'user') {
+        const avatar = user.avatar;
+
+        return await openSingleStatusPopup(avatar, true);
+    }
+
+    if (type === 'characters') {
+        return;
+    }
+}
+
 // * MARK:Init Triggers
 
 function initPopupTriggers() {
@@ -427,10 +459,10 @@ function initPopupTriggers() {
     // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, onStatusInput);
 
-    const saveMetadataButton = createElement('div', { attr: { role: 'button' }, class: 'menu_button flex1 fa-solid fa-floppy-disk bg-bot' });
-    const charactersButton = createElement('div', { attr: { role: 'button' }, class: 'menu_button flex1 fa-solid fa-table bg-bot' });
-    const userButton = createElement('div', { attr: { role: 'button' }, class: 'menu_button flex1 fa-solid fa-user-cog bg-bot' });
-    const usersButton = createElement('div', { attr: { role: 'button' }, class: 'menu_button flex1 fa-solid fa-users-cog bg-bot' });
+    const saveMetadataButton = createElement('div', { attr: { role: 'button', type: 'save' }, class: 'menu_button flex1 fa-solid fa-floppy-disk bg-bot' });
+    const charactersButton = createElement('div', { attr: { role: 'button', type: 'characters' }, class: 'menu_button flex1 fa-solid fa-table bg-bot' });
+    const userButton = createElement('div', { attr: { role: 'button', type: 'user' }, class: 'menu_button flex1 fa-solid fa-user-cog bg-bot' });
+    const usersButton = createElement('div', { attr: { role: 'button', type: 'users' }, class: 'menu_button flex1 fa-solid fa-users-cog bg-bot' });
     const buttonWrapper = createElement('div', {
         class: 'flex-container flexnowrap gap5px padding0',
         append: [ saveMetadataButton, charactersButton, userButton, usersButton ]
@@ -448,4 +480,7 @@ function initPopupTriggers() {
 
     $('#avatar-and-name-block')
         .after($(toolbar).clone());
+
+    // @ts-ignore
+    $(`.${htmlSuffix}-right-menu-toolbar`).on('click', '.menu_button', onShortcutClick);
 }
