@@ -620,6 +620,8 @@ async function renderCharStatus(status) {
 async function renderStatuses() {
     const statuses = StatUsMaximus.getStatuses();
 
+    $(`#chat .${htmlSuffix}-custom-css.${htmlSuffix}-chat-drawer`).remove();
+
     for (const status of statuses)
         await renderCharStatus(status);
 }

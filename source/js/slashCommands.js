@@ -179,13 +179,12 @@ const ENUMS_PROVIDER = {
     },
 
     altEntryUIDs: (executor, scope) => {
-        const charName = executor.namedArgumentList.find(it => it.name === 'char').value;
-        const entryUID = executor.namedArgumentList.find(it => it.name === 'uid').value;
-        const isUser = executor.namedArgumentList.find(it => it.name === 'isuser').value;
+        const charName = executor.namedArgumentList.find(it => it.name === 'char')?.value;
+        const entryUID = executor.namedArgumentList.find(it => it.name === 'uid')?.value;
+        const isUser = executor.namedArgumentList.find(it => it.name === 'isuser')?.value;
 
         if (!charName || typeof charName !== 'string') return [];
         if (!entryUID || typeof entryUID !== 'string') return [];
-        if (!isUser || typeof isUser !== 'string') return [];
 
         const entityFilters = ENUMS_STRINGS.entityFilters;
         const cleanIsUser = entityFilters.find(en => en === isUser) ?? 'all';
@@ -663,7 +662,9 @@ async function commandGetAltEntryUID(args, value = '') {
 
         if (!entry) return '';
 
-        const search = entry.values
+        /** @type {[string, {title: string; value:string;}][]} */
+        const values = Object.entries(entry.values);
+        const search = values
             .map(function([uid, alt]) {
                 return structuredClone({...alt, uid});
             });
@@ -684,7 +685,7 @@ async function commandGetAltEntryUID(args, value = '') {
             altUID = results[0]?.item?.uid;
         } else {
             const alt = search.find(v => String(v[field]) === value);
-            altUID = alt.uid;
+            altUID = alt?.uid;
         }
 
         return String(altUID ?? '');
@@ -835,6 +836,7 @@ async function commandDeleteChatStatus() {
     try {
         delete context().chatMetadata[metadataName];
         saveMetadataSafe();
+        StatUsMaximus.renderStatusesSafe();
     } catch (error) {
         StatUsMaximus.error(error);
         return 'false';
