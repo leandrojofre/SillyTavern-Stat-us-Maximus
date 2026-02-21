@@ -176,10 +176,13 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
  * @returns {Promise<JQuery<HTMLElement>>}
  */
 async function getStatusPopupBlock(avatar) {
-    /** @type {Status|false} */
-    const status = StatUsMaximus.getStatus(avatar);
+    let status = StatUsMaximus.getStatus(avatar);
 
-    if (!status) return;
+    if (!status) {
+        status = StatUsMaximus.addStatus(avatar);
+
+        if (!status) return;
+    };
 
     const $statusBlock = $(await HTML_TEMPLATES.get('popupStatus')).clone();
     const $selectRoles = $statusBlock.find('select[name="role"]');
