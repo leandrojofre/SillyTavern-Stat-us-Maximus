@@ -10,6 +10,10 @@ import {
     escapeNewlines,
     generateUUID,
     saveMetadataSafe,
+    getThumbnailUrl,
+    getParticipant,
+    getActiveParticipants,
+    extensionSettings,
     getUser,
     // HTML related
     HTML_TEMPLATES,
@@ -181,6 +185,34 @@ async function getStatusPopupBlock(avatar, is_user = false) {
     let status = StatUsMaximus.getStatus(avatar);
 
     if (!status) {
+        if (!extensionSettings.autoDetectParticipants) {
+            const $statusBlockEmpty = $(await HTML_TEMPLATES.get('popupStatusEmpty')).clone();
+            const statusId = `${generateUUID()}_stat_block`;
+            const character = getParticipant(avatar, {is_user});
+
+            if (!character) return;
+
+            const thumbnail = getThumbnailUrl(is_user ? 'persona' : 'avatar', character.avatar);
+
+            $statusBlockEmpty
+                .attr('id', statusId);
+
+            $statusBlockEmpty
+                .find(`.${htmlSuffix}-name`)
+                .text(character.name);
+
+            $statusBlockEmpty
+                .find(`.${htmlSuffix}-avatar`)
+                .attr('src', thumbnail)
+                .attr('title', character.avatar);
+
+            $statusBlockEmpty
+                .find(`.create-status`)
+                .data({avatar, is_user, statusId});
+
+            return $statusBlockEmpty;
+        }
+
         status = StatUsMaximus.addStatus(avatar, is_user);
 
         if (!status) return;
@@ -333,11 +365,21 @@ async function onShortcutClick(e) {
 
     if (type === 'save') return saveMetadataSafe();
 
+    if (type === 'user') {
+        const user = getUser();
+        const avatar = user.avatar;
+        return await openSingleStatusPopup(avatar, true);
+    }
+
+    if (type === 'characters') {
+        const { chars } = getActiveParticipants();
+        return await openMultiStatusPopup(chars);
+    }
+
     const members = StatUsMaximus.getStatuses();
 
     if (type === 'all') {
         if (!members?.length) return;
-
         return await openMultiStatusPopup(members);
     }
 
@@ -348,20 +390,6 @@ async function onShortcutClick(e) {
         if (!users.length) return;
 
         return await openMultiStatusPopup(users);
-    }
-
-    if (type === 'user') {
-        const user = getUser();
-        const avatar = user.avatar;
-
-        return await openSingleStatusPopup(avatar, true);
-    }
-
-    if (type === 'characters') {
-        const chars = members
-            .filter(status => !status.is_user);
-
-        return await openMultiStatusPopup(chars);
     }
 }
 
@@ -497,12 +525,36 @@ function onBulkToggleEntryDrawer(e) {
     });
 }
 
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onCreateStatusClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, is_user, statusId } = $button.data();
+
+    if (!avatar) return;
+
+    const status = StatUsMaximus.addStatus(avatar, is_user);
+
+    if (!status) return;
+
+    const $statusBlockEmpty = $(`#${statusId}`);
+    const $statusBlock = await getStatusPopupBlock(avatar, is_user);
+
+    if (!$statusBlock) return;
+
+    $statusBlockEmpty.after($statusBlock);
+    $statusBlockEmpty.remove();
+}
+
 // * MARK:Init Triggers
 
 function initPopupTriggers() {
     // @ts-ignore
     $('#rm_group_members').on('click', '.avatar img', onGroupMemberListClick);
 
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .menu_button.create-status`, onCreateStatusClick);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .menu_button.fa-plus`, onCreateEntryClick);
     // @ts-ignore
@@ -515,6 +567,8 @@ function initPopupTriggers() {
     $(document).on('input', `.${htmlSuffix}-popup-row select[name="value_uid"]`, onEntryValueSwap);
     // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, onStatusInput);
+
+    // * Right Menu Button
 
     const saveMetadataButton = createElement('div', { attr: { role: 'button', type: 'save' }, class: 'menu_button flex1 fa-solid fa-floppy-disk bg-bot' });
     const charactersButton = createElement('div', { attr: { role: 'button', type: 'characters' }, class: 'menu_button flex1 fa-solid fa-table bg-bot' });
@@ -540,6 +594,8 @@ function initPopupTriggers() {
 
     // @ts-ignore
     $(`.${htmlSuffix}-right-menu-toolbar`).on('click', '.menu_button', onShortcutClick);
+
+    // * Wand Menu Button
 
     const wandMenuShortcutText = createElement('span', { innerText: extensionName });
     const wandMenuShortcutIcon = createElement('div', { class: 'fa-solid fa-table extensionsMenuExtensionButton' });

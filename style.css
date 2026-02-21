@@ -173,8 +173,12 @@
         margin: 0;
     }
 
-    .ms-5px {
+    .mt-5px {
         margin-top: 5px;
+    }
+
+    .ms-15px {
+        margin-left: 15px;
     }
 
     .mb-5px {

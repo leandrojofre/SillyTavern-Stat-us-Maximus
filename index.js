@@ -40,6 +40,7 @@ export {
     generateUUID,
     showPopper,
     hidePopper,
+    getParticipant,
     extensionSettings,
     metadataName,
     extensionName,
@@ -300,6 +301,29 @@ function getActiveParticipants(discard = []) {
 }
 
 /**
+ * @param {string} value
+ * @param {{search_key?: string; is_user?: boolean}?} [options]
+ * @returns {Character|UserCharacter}
+ */
+function getParticipant(value, {search_key = 'avatar', is_user = false} = {}) {
+    if (is_user)
+        return getUser(value, {searchKey: search_key});
+
+    const { groupId } = context();
+
+    /** @type {Character} */
+    let char;
+
+    if (groupId)
+        char = getGroupMembers().find(m => m[search_key] === value);
+
+    if (!char)
+        char = characters.find(c => c[search_key] === value);
+
+    return char;
+}
+
+/**
  * Creates or populates elements
  * @param {string|HTMLElement} elem
  * @param {{class?:string; attr?:Object; data?:Object; innerHTML?: string; innerText?: string; append?: HTMLElement[]}} [options]
@@ -489,6 +513,8 @@ function renderStatusesSafe() {
  */
 async function renderCharStatus(status) {
     $(`#chat .${htmlSuffix}-custom-css[char-target="${status.avatar}"]`).remove();
+
+    if (!Object.keys(status.entries).length) return;
 
     status.refreshPosition();
 
