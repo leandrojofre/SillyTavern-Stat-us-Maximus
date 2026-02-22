@@ -362,7 +362,7 @@ async function openMultiStatusPopup(avatars = []) {
     if (!avatars?.length) return;
 
     const statusesWrapper = createElement('div', {
-        class: `${htmlSuffix}-popup-wrapper flex-container flexFlowColumn flexnowrap gap5px padding0`
+        class: `${htmlSuffix}-popup-wrapper flex-container flexFlowColumn flexnowrap gap10px padding0`
     });
 
     const $statusesWrapper = $(statusesWrapper);
@@ -449,7 +449,9 @@ async function onShortcutClick(e) {
             ...chars
         ];
 
-        if (user) participants.push(user);
+        const userIncluded = participants.some(p => p.avatar === user.avatar);
+
+        if (user && !userIncluded) participants.push(user);
         return await openMultiStatusPopup(participants);
     }
 

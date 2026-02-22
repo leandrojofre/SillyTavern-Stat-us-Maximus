@@ -43,7 +43,7 @@
 }
 
 .stat-us-maximus-popup.bordered-box {
-    padding: 5px;
+    padding: 5px 10px;
     border: solid 1px var(--SmartThemeBorderColor);
 }
 
@@ -265,6 +265,10 @@
 
     .stat-us-maximus-popup-row {
         background-color: color-mix(in srgb, var(--SmartThemeBotMesBlurTintColor), var(--black30a));
+    }
+
+    .stat-us-maximus-popup-row:last-child {
+        margin-bottom: 5px;
     }
 
     .bg-bot {
