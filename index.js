@@ -42,6 +42,7 @@ export {
     hidePopper,
     getParticipant,
     isChatOpen,
+    parseValue,
     extensionSettings,
     metadataName,
     extensionName,
@@ -504,6 +505,25 @@ function isChatOpen() {
     const { chatId } = context();
 
     return !chatId ? false : true;
+}
+
+/**
+ * @param {string|boolean|number} value
+ * @returns {string|boolean|number}
+ */
+function parseValue(value) {
+    const allowed = ['string', 'boolean', 'number'];
+
+    if (!allowed.includes(typeof value)) return value;
+
+    if (value === 'true' || value === 'false')
+        return value === 'true';
+
+    const number = Number(value);
+
+    if (!isNaN(number)) return number;
+
+    return value;
 }
 
 function saveMetadataSafe() {

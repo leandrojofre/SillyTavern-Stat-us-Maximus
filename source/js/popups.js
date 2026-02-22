@@ -450,8 +450,9 @@ function onEntryInput(e) {
 
     /** @type {StatusEntry} */
     const entry = status.entries[uid];
+    const valueClean = field === 'value_uid' ? Number(newValue) : newValue;
 
-    entry.set(field, newValue, entry.value_uid);
+    entry.set(field, valueClean, entry.value_uid);
     $(`#${statusId}`).data({doSave: true});
 }
 
@@ -529,9 +530,11 @@ function onCreateEntryValueClick(e) {
 
     if (!status) return;
 
-    const valueUID = status.addEntryValue(uid);
+    const valueUID = status
+        .getEntry(uid)
+        .addValue('', '');
 
-    if (valueUID < 0) return;
+    if (typeof valueUID !== 'number' || valueUID < 0) return;
 
     status
         .getEntry(uid)
@@ -540,17 +543,57 @@ function onCreateEntryValueClick(e) {
     const $statusBlock =  $(`#${statusId}`);
     const $entryBlock = $statusBlock.find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`);
     const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
-    const $valueTitle = $entryBlock.find('input[name="title"]');
 
     $('<option>', { text: `UID: ${valueUID}`, value: valueUID }).appendTo($valuesSelect);
 
-    $valueTitle
-        .val('');
     $valuesSelect
         .val(valueUID)
         .trigger('change');
 
+    $entryBlock.find(':input[name="value"]').val('');
+    $entryBlock.find(':input[name="title"]').val('');
     $statusBlock.data({doSave: true});
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onDeleteEntryValueClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, uid, statusId } = $button.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    try {
+        const accepted = await popupConfirmAction('delete this entry');
+
+        if (!accepted) return toastr.info(t`Entry deletion cancelled`, extensionName);
+
+        const entry = status.getEntry(uid);
+        const deletionSuccess = entry.delValue();
+
+        if (!deletionSuccess) return;
+
+        const $statusBlock =  $(`#${statusId}`);
+        const $entryBlock = $statusBlock.find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`);
+        const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
+
+        $valuesSelect
+            .find(':selected')
+            .remove();
+        $valuesSelect
+            .val(entry.value_uid)
+            .trigger('change');
+
+        $entryBlock.find(':input[name="value"]').val(entry.get('value').toString());
+        $entryBlock.find(':input[name="title"]').val(entry.get('title').toString());
+        $statusBlock.data({doSave: true});
+    } catch (err) {
+        StatUsMaximus.error(err);
+    }
 }
 
 /**
@@ -632,13 +675,15 @@ function initPopupTriggers() {
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-plus`, onCreateEntryClick);
     // @ts-ignore
-    $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-plus`, onCreateEntryValueClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .menu_button.status-bulk-toggle`, onBulkToggleEntryDrawer);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, onDeleteEntryClick);
     // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole`, onEntryInput);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-plus`, onCreateEntryValueClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-trash-can`, onDeleteEntryValueClick);
     // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole[name="title"]`, onAltTitleInput);
     // @ts-ignore

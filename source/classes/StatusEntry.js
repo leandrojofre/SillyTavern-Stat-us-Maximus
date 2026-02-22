@@ -178,8 +178,9 @@ class StatusEntry {
      */
     delValue(uid) {
         const cleanUID = uid ?? this.value_uid;
+        const invalidUID = isNaN(Number(cleanUID));
 
-        if (isNaN(Number(uid))) return false;
+        if (invalidUID) return false;
 
         const value = this.values[cleanUID];
 

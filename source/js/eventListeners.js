@@ -508,6 +508,7 @@ async function onChatChanged(...args) {
     /** @type {Function} */
     const renderer = StatUsMaximus.renderStatuses;
 
+    StatUsMaximus.getStatuses();
     await renderer();
     scrollChatToBottom();
 }
