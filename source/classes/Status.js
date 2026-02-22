@@ -5,7 +5,8 @@ import {
     getUser,
     getThumbnailUrl,
     context,
-    unEscapeNewlines
+    unEscapeNewlines,
+    parseValue
 } from '../../index.js';
 
 import { StatusEntry, entryTemplate } from './StatusEntry.js';
@@ -110,6 +111,9 @@ class Status {
         if (key === 'entries') return this;
         if (!Object.keys(statusTemplate).includes(key)) return this;
 
+        const targetType = typeof statusTemplate[key];
+
+        if (targetType !== typeof value) value = parseValue(value, targetType);
         if (typeof value === 'string') value = unEscapeNewlines(value);
 
         this[key] = value;

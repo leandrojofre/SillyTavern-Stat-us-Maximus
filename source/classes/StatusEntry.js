@@ -1,5 +1,6 @@
 import {
     getFreeDataUid,
+    parseValue,
     unEscapeNewlines
 } from '../../index.js';
 
@@ -102,13 +103,17 @@ class StatusEntry {
      * @returns {StatusEntry}
      */
     set(key, value, uid) {
+        if (key === 'values') return this;
         if (typeof value === 'string') value = unEscapeNewlines(value);
 
         if ((key === 'value' || key === 'title') && typeof value === 'string')
             return this.setValue(key, value, uid);
 
-        if (key === 'values') return this;
         if (!Object.keys(entryTemplate).includes(key)) return this;
+
+        const targetType = typeof entryTemplate[key];
+
+        if (targetType !== typeof value) value = parseValue(value, targetType);
 
         this[key] = value;
 
@@ -139,7 +144,8 @@ class StatusEntry {
      */
     addValue(title, value) {
         const newUID = getFreeDataUid(this.values);
-
+        title = String(title);
+        value = String(value);
         this.values[newUID] = {title, value};
 
         return newUID;
@@ -148,15 +154,19 @@ class StatusEntry {
     /**
      * Updates one of the values of an entry
      * @param {string} key
-     * @param {string} value
+     * @param {any} value
      * @param {number?} [uid]
      * @returns {StatusEntry}
      */
     setValue(key, value, uid) {
         const cleanUID = uid ?? this.value_uid;
 
-        if (!Object.keys(altEntryTemplate).includes(key)) return this;
         if (!this.values[cleanUID]) return this;
+        if (!Object.keys(altEntryTemplate).includes(key)) return this;
+
+        const targetType = typeof altEntryTemplate[key];
+
+        if (targetType !== typeof value) value = parseValue(value, targetType);
 
         this.values[cleanUID][key] = value;
 

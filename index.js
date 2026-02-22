@@ -509,12 +509,17 @@ function isChatOpen() {
 
 /**
  * @param {string|boolean|number} value
+ * @param {'string'|'boolean'|'number'|string?} [force]
  * @returns {string|boolean|number}
  */
-function parseValue(value) {
+function parseValue(value, force) {
     const allowed = ['string', 'boolean', 'number'];
 
     if (!allowed.includes(typeof value)) return value;
+
+    if (force === 'string') return String(value);
+    if (force === 'number') return Number(value);
+    if (force === 'boolean') return value === 'true';
 
     if (value === 'true' || value === 'false')
         return value === 'true';
@@ -523,7 +528,7 @@ function parseValue(value) {
 
     if (!isNaN(number)) return number;
 
-    return value;
+    return String(value);
 }
 
 function saveMetadataSafe() {
