@@ -15,6 +15,7 @@ import {
     getActiveParticipants,
     extensionSettings,
     getUser,
+    isChatOpen,
     // HTML related
     HTML_TEMPLATES,
     htmlSuffix,
@@ -32,6 +33,10 @@ export {
 /**
  * @template T
  * @typedef {import('./eventListeners.js').EventData<T>} EventData
+ */
+
+/**
+ * @typedef {import('../../index.js').UserCharacter} UserCharacter
  */
 
 // * MARK:Popup Creation
@@ -348,6 +353,8 @@ async function openMultiStatusPopup(avatars = []) {
  * @param {EventData<HTMLImageElement>} e
  */
 async function onGroupMemberListClick(e) {
+    if (!isChatOpen()) return;
+
     const img = e.currentTarget;
     const avatar = img.title;
 
@@ -360,6 +367,8 @@ async function onGroupMemberListClick(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 async function onShortcutClick(e) {
+    if (!isChatOpen()) return;
+
     const $button = $(e.currentTarget);
     const type = $button.attr('type');
 
@@ -379,8 +388,16 @@ async function onShortcutClick(e) {
     const members = StatUsMaximus.getStatuses();
 
     if (type === 'all') {
-        if (!members?.length) return;
-        return await openMultiStatusPopup(members);
+        const { chars, user } = getActiveParticipants(members.map(m => m.avatar));
+
+        /** @type {(Character|UserCharacter|Status)[]} */
+        const participants = [
+            ...members,
+            ...chars
+        ];
+
+        if (user) participants.push(user);
+        return await openMultiStatusPopup(participants);
     }
 
     if (type === 'users') {

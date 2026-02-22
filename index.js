@@ -41,6 +41,7 @@ export {
     showPopper,
     hidePopper,
     getParticipant,
+    isChatOpen,
     extensionSettings,
     metadataName,
     extensionName,
@@ -494,6 +495,15 @@ function generateUUID(extraSuffix) {
     const uuid = !randUUID ? new Date().valueOf().toString() : randUUID.replaceAll('-', '_');
 
     return `${extraSuffix ?? metadataName}_${uuid}`;
+}
+
+/**
+ * @returns {boolean}
+ */
+function isChatOpen() {
+    const { chatId } = context();
+
+    return !chatId ? false : true;
 }
 
 function saveMetadataSafe() {
