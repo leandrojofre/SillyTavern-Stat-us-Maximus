@@ -452,6 +452,23 @@ function onEntryInput(e) {
 }
 
 /**
+ * @param {EventData<HTMLInputElement>} e
+ */
+function onAltTitleInput(e) {
+    const $input = $(e.currentTarget);
+    const newValue = $input.val();
+    const { uid, statusId } = $input.data();
+
+    const $statusBlock =  $(`#${statusId}`);
+    const $valuesOption = $statusBlock
+        .find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`)
+        .find('select[name="value_uid"]')
+        .find(':selected');
+
+    $valuesOption.text(newValue || `UID: ${uid}`);
+}
+
+/**
  * @param {EventData<HTMLSelectElement>} e
  */
 function onEntryValueSwap(e) {
@@ -580,6 +597,8 @@ function initPopupTriggers() {
     $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, onDeleteEntryClick);
     // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole`, onEntryInput);
+    // @ts-ignore
+    $(document).on('input', `.${htmlSuffix}-popup-row .text_pole[name="title"]`, onAltTitleInput);
     // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row select[name="value_uid"]`, onEntryValueSwap);
     // @ts-ignore
