@@ -130,7 +130,7 @@ class StatusEntry {
     /**
      * @param {string} title
      * @param {string} value
-     * @returns {number}
+     * @returns {number} Value UID
      */
     addValue(title, value) {
         const newUID = getFreeDataUid(this.values);
@@ -154,6 +154,14 @@ class StatusEntry {
         this.values[uid][key] = value;
 
         return this;
+    }
+
+    /**
+     * @param {number} uid
+     * @returns {AltValueData}
+     */
+    getValue(uid) {
+        return this.values[uid];
     }
 
     /**

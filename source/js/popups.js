@@ -157,6 +157,10 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
     $valuesSelect.trigger('change');
 
     $entryBlock
+        .find('.status-entry-toolbar .menu_button')
+        .data({uid, avatar, statusId});
+
+    $entryBlock
         .find('.delete-row')
         .data({uid, avatar, statusId});
 
@@ -516,6 +520,42 @@ async function onCreateEntryClick(e) {
 /**
  * @param {EventData<HTMLDivElement>} e
  */
+function onCreateEntryValueClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, uid, statusId } = $button.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const valueUID = status.addEntryValue(uid);
+
+    if (valueUID < 0) return;
+
+    status
+        .getEntry(uid)
+        .swapValue(valueUID);
+
+    const $statusBlock =  $(`#${statusId}`);
+    const $entryBlock = $statusBlock.find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`);
+    const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
+    const $valueTitle = $entryBlock.find('input[name="title"]');
+
+    $('<option>', { text: `UID: ${valueUID}`, value: valueUID }).appendTo($valuesSelect);
+
+    $valueTitle
+        .val('');
+    $valuesSelect
+        .val(valueUID)
+        .trigger('change');
+
+    $statusBlock.data({doSave: true});
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
 async function onDeleteEntryClick(e) {
     const $button = $(e.currentTarget);
     const { uid, avatar, statusId } = $button.data();
@@ -590,7 +630,9 @@ function initPopupTriggers() {
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .menu_button.create-status`, onCreateStatusClick);
     // @ts-ignore
-    $(document).on('click', `.${htmlSuffix}-popup .menu_button.fa-plus`, onCreateEntryClick);
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-plus`, onCreateEntryClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-plus`, onCreateEntryValueClick);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .menu_button.status-bulk-toggle`, onBulkToggleEntryDrawer);
     // @ts-ignore

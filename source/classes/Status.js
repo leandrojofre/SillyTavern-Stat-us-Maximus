@@ -135,6 +135,14 @@ class Status {
 
     /**
      * @param {number} uid
+     * @returns {StatusEntry}
+     */
+    getEntry(uid) {
+        return this.entries[uid];
+    }
+
+    /**
+     * @param {number} uid
      * @returns {boolean}
      */
     delEntry(uid) {
@@ -146,6 +154,35 @@ class Status {
 
         delete this.entries[uid];
         return true;
+    }
+
+    /**
+     * @param {number} uid
+     * @returns {number}
+     */
+    addEntryValue(uid) {
+        const entry = this.getEntry(uid);
+
+        return entry.addValue('', '');
+    }
+
+    /**
+     * @param {number} uid
+     * @param {number} valueUid
+     */
+    getEntryValue(uid, valueUid) {
+        return this.getEntry(uid).getValue(valueUid);
+    }
+
+    /**
+     * @param {number} uid
+     * @param {number} valueUid
+     * @returns {boolean}
+     */
+    delEntryValue(uid, valueUid) {
+        const entry = this.getEntry(uid);
+
+        return entry.delValue(valueUid);
     }
 
     /**
