@@ -157,35 +157,6 @@ class Status {
     }
 
     /**
-     * @param {number} uid
-     * @returns {number}
-     */
-    addEntryValue(uid) {
-        const entry = this.getEntry(uid);
-
-        return entry.addValue('', '');
-    }
-
-    /**
-     * @param {number} uid
-     * @param {number} valueUid
-     */
-    getEntryValue(uid, valueUid) {
-        return this.getEntry(uid).getValue(valueUid);
-    }
-
-    /**
-     * @param {number} uid
-     * @param {number} valueUid
-     * @returns {boolean}
-     */
-    delEntryValue(uid, valueUid) {
-        const entry = this.getEntry(uid);
-
-        return entry.delValue(valueUid);
-    }
-
-    /**
      * @returns {number}
      */
     getMaxDisplayPosition() {
