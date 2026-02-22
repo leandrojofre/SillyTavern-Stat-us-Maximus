@@ -122,6 +122,18 @@ export {
 // }
 
 /**
+ * Gets a drag delay for sortable elements. This is to prevent accidental drags when scrolling.
+ * @returns {number} The delay in milliseconds. 50ms for desktop, 750ms for mobile.
+ */
+function getSortableDelay() {
+    const mobileTypes = ['mobile', 'tablet'];
+    const userAgent = SillyTavern.libs.Bowser.parse(navigator.userAgent);
+    const isMobile = mobileTypes.includes(userAgent?.platform?.type);
+
+    return isMobile ? 750 : 50;
+}
+
+/**
  * @param {string} actionLabel - Are you sure want to...
  * @returns {Promise<boolean>}
  */
@@ -277,6 +289,43 @@ async function getStatusPopupBlock(avatar, is_user = false) {
         const $entryBlock = await createEntryBlock(entry, uid, avatar, statusId);
         $entriesContainer.append($entryBlock);
     }
+
+    // @ts-ignore
+    $statusBlock.sortable({
+        items: '.stat-us-maximus-popup-row',
+        delay: getSortableDelay(),
+        handle: '.drag-handle',
+        stop: function () {
+            const $rows = $statusBlock.find('.stat-us-maximus-popup-row');
+            const UIDsOrder = [];
+            let cancel = false;
+            let order = 0;
+
+            for (const row of $rows.get()) {
+                const $row = $(row);
+                const rowUID = $row.attr('entry-uid');
+                const rowUIDClean = Number(rowUID);
+
+                if (isNaN(rowUIDClean) || !status.getEntry(rowUIDClean)) {
+                    cancel = true;
+                    break;
+                }
+
+                UIDsOrder.push(rowUIDClean);
+            }
+
+            if (cancel) return;
+
+            for (const uid of UIDsOrder) {
+                try {
+                    status.getEntry(uid).set('display_position', order);
+                    order++;
+                } catch (err) {
+                    StatUsMaximus.error(err);
+                }
+            }
+        },
+    });
 
     return $statusBlock;
 }
