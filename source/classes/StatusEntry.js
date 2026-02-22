@@ -1,4 +1,7 @@
-import { getFreeDataUid, unEscapeNewlines } from '../../index.js';
+import {
+    getFreeDataUid,
+    unEscapeNewlines
+} from '../../index.js';
 
 export {
     entryTemplate,
@@ -118,8 +121,10 @@ class StatusEntry {
      * @returns {string|number|boolean|undefined}
      */
     get(key, uid) {
-        if ((key === 'value' || key === 'title') && !isNaN(Number(uid)))
-            return this.values[uid][key];
+        const cleanUID = uid ?? this.value_uid;
+
+        if ((key === 'value' || key === 'title') && !isNaN(Number(cleanUID)))
+            return this.values[cleanUID][key];
 
         if (key === 'values') return undefined;
         if (!Object.keys(entryTemplate).includes(key)) return undefined;
@@ -144,38 +149,48 @@ class StatusEntry {
      * Updates one of the values of an entry
      * @param {string} key
      * @param {string} value
-     * @param {number} uid
+     * @param {number?} [uid]
      * @returns {StatusEntry}
      */
     setValue(key, value, uid) {
-        if (!Object.keys(altEntryTemplate).includes(key)) return this;
-        if (!this.values[uid]) return this;
+        const cleanUID = uid ?? this.value_uid;
 
-        this.values[uid][key] = value;
+        if (!Object.keys(altEntryTemplate).includes(key)) return this;
+        if (!this.values[cleanUID]) return this;
+
+        this.values[cleanUID][key] = value;
 
         return this;
     }
 
     /**
-     * @param {number} uid
+     * @param {number?} [uid]
      * @returns {AltValueData}
      */
     getValue(uid) {
-        return this.values[uid];
+        const cleanUID = uid ?? this.value_uid;
+        return this.values[cleanUID];
     }
 
     /**
-     * @param {number} uid
+     * @param {number?} [uid]
      * @returns {boolean}
      */
     delValue(uid) {
+        const cleanUID = uid ?? this.value_uid;
+
         if (isNaN(Number(uid))) return false;
 
-        const value = this.values[uid];
+        const value = this.values[cleanUID];
 
         if (!value) return true;
 
-        delete this.values[uid];
+        delete this.values[cleanUID];
+
+        const newValueUID = Object.keys(this.values).at(0);
+
+        this.value_uid = Number(newValueUID);
+
         return true;
     }
 
@@ -188,7 +203,7 @@ class StatusEntry {
 
         if (!altValue) return this;
 
-        this.value_uid = uid;
+        this.value_uid = Number(uid);
 
         return this;
     }
