@@ -1,6 +1,8 @@
 import {
+    extensionName,
     getFreeDataUid,
     parseValue,
+    t,
     unEscapeNewlines
 } from '../../index.js';
 
@@ -187,6 +189,13 @@ class StatusEntry {
      * @returns {boolean}
      */
     delValue(uid) {
+        const valuesCount = Object.values(this.values).length;
+
+        if (valuesCount <= 1) {
+            toastr.warning(t`You can't delete all entry values`, extensionName);
+            return false;
+        }
+
         const cleanUID = uid ?? this.value_uid;
         const invalidUID = isNaN(Number(cleanUID));
 
