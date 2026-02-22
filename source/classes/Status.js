@@ -82,13 +82,6 @@ class Status {
             }, {});
         }
 
-        // @ts-ignore
-        if (status?.forceDepth) status.force_depth = status.forceDepth;
-
-        for (const [uid, entry] of Object.entries(status.entries ?? {})) {
-            status.entries[uid] = new StatusEntry(entry);
-        }
-
         /** @type {StatusData} */
         const statusClean = {avatar: ''};
 
@@ -99,6 +92,13 @@ class Status {
         }
 
         Object.assign(this, structuredClone(statusTemplate), structuredClone(statusClean));
+
+        // @ts-ignore
+        if (this?.forceDepth) this.force_depth = this.forceDepth;
+
+        for (const [uid, entry] of Object.entries(this.entries ?? {})) {
+            this.entries[uid] = new StatusEntry(entry);
+        }
     }
 
     /**
