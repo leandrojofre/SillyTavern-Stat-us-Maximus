@@ -186,6 +186,12 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
         .data({uid, avatar, statusId});
 
     $entryBlock
+        .find('.kill-switch')
+        .data({uid, avatar, statusId, enabled: entry.enabled})
+        .toggleClass('fa-toggle-on', entry.enabled)
+        .toggleClass('fa-toggle-off', !entry.enabled);
+
+    $entryBlock
         .find(':input.text_pole')
         .each(function(i, input) {
             const $input = $(input);
@@ -807,6 +813,30 @@ async function onTransferStatusClick(e) {
     }
 }
 
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onToggleEntrySwitch(e) {
+    const $entrySwitch = $(e.currentTarget);
+    const { uid, avatar, statusId, enabled } = $entrySwitch.data();
+    const $statusBlock = $(`#${statusId}`);
+    const nextState = !enabled;
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const entry = status.getEntry(uid);
+
+    if (!entry) return;
+
+    entry.set('enabled', nextState);
+    $statusBlock.data({doSave: true});
+    $entrySwitch
+        .data({enabled: nextState})
+        .toggleClass('fa-toggle-on', nextState)
+        .toggleClass('fa-toggle-off', !nextState);
+}
+
 // * MARK:Init Triggers
 
 function initPopupTriggers() {
@@ -824,19 +854,21 @@ function initPopupTriggers() {
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-truck-arrow-right`, onTransferStatusClick);
     // @ts-ignore
-    $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, onDeleteEntryClick);
-    // @ts-ignore
-    $(document).on('input', `.${htmlSuffix}-popup-row .text_pole`, onEntryInput);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-plus`, onCreateEntryValueClick);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-trash-can`, onDeleteEntryValueClick);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-copy`, onCopyEntryClick);
     // @ts-ignore
+    $(document).on('input', `.${htmlSuffix}-popup-row .text_pole`, onEntryInput);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup-row .fa-solid.kill-switch`, onToggleEntrySwitch)
+    // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole[name="title"]`, onAltTitleInput);
     // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row select[name="value_uid"]`, onEntryValueSwap);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, onDeleteEntryClick);
     // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, onStatusInput);
 

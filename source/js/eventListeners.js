@@ -602,19 +602,19 @@ function registerEvents() {
     // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-entry .status-value-uid`, onOpenSwitchValueList);
     // @ts-ignore
+    $chat.on('input', `.${htmlSuffix}-entry .chat-input-editor[type="range"]`, onRangeSliderMoved);
+    // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-chat-drawer .status-value-uid-options .list-group-item`, onSelectSwitchValueList);
     // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-chat-drawer .inline-drawer-header`, onCollapseStatus);
     // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-chat-drawer .fake-input-arrows`, onClickInputArrow);
     // @ts-ignore
-    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-pen`, onClickEditStatus);
-    // @ts-ignore
     $chat.on('input', `.${htmlSuffix}-chat-drawer .chat-input-editor[type="checkbox"]`, onCheckboxToggle);
     // @ts-ignore
     $chat.on('pointerdown', `.${htmlSuffix}-chat-drawer .fake-input-span`, onSelectChatInput);
     // @ts-ignore
-    $chat.on('input', `.${htmlSuffix}-entry .chat-input-editor[type="range"]`, onRangeSliderMoved);
+    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-pen`, onClickEditStatus);
 
     // @ts-ignore
     $(document).on('click', onDocumentClick);
