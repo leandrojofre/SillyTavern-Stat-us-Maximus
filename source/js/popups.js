@@ -16,6 +16,7 @@ import {
     extensionSettings,
     getUser,
     isChatOpen,
+    exportObjectToClipboard,
     // HTML related
     HTML_TEMPLATES,
     htmlSuffix,
@@ -107,18 +108,6 @@ export {
 //     destroyElement(cloneContainer);
 
 //     return success ? target : false;
-// }
-
-/**
- * Set user clipboard to a stringified version of an object
- * @param {object} obj - Object to be sent to the clipboard as text
- * @returns {Promise<void>}
- */
-// function exportObjectToClipboard(obj = {}) {
-//     let stringObj = JSON.stringify(obj);
-//     stringObj = escapeNewlines(stringObj);
-
-//     return copyText(stringObj);
 // }
 
 /**
@@ -715,6 +704,55 @@ async function onCreateStatusClick(e) {
     $statusBlockEmpty.remove();
 }
 
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onCopyEntryClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, uid } = $button.data();
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const entry = status.getEntry(uid);
+
+    await exportObjectToClipboard(entry);
+    toastr.info(t`Entry copied into the clipboard`, extensionName)
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onCreateEntryFromClipboardClick(e) {
+    if (!navigator.clipboard)
+        return toastr.warning(t`Clipboard API not available in this context.`);
+
+    const $button = $(e.currentTarget);
+    const { avatar, statusId } = $button.data();
+    const $statusBlock = $(`#${statusId}`);
+    const $entriesContainer = $statusBlock.find('.status-entries');
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    let newEntry;
+
+    try {
+        newEntry = await navigator.clipboard.readText();
+        newEntry = JSON.parse(newEntry);
+    } catch (error) {
+        StatUsMaximus.error('Error reading clipboard:', error);
+        return toastr.warning(t`Failed to read clipboard text. Make sure you granted permissions to the page and the text is a JSON object.`, extensionName);
+    }
+
+    const uid = status.addEntry(newEntry);
+    const entry = status.getEntry(uid);
+    const $entryBlock = await createEntryBlock(entry, uid, avatar, statusId);
+    $entriesContainer.append($entryBlock);
+}
+
 // * MARK:Init Triggers
 
 function initPopupTriggers() {
@@ -724,9 +762,11 @@ function initPopupTriggers() {
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .menu_button.create-status`, onCreateStatusClick);
     // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-file-clipboard`, onCreateEntryFromClipboardClick);
+    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-plus`, onCreateEntryClick);
     // @ts-ignore
-    $(document).on('click', `.${htmlSuffix}-popup .menu_button.status-bulk-toggle`, onBulkToggleEntryDrawer);
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.status-bulk-toggle`, onBulkToggleEntryDrawer);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, onDeleteEntryClick);
     // @ts-ignore
@@ -735,6 +775,8 @@ function initPopupTriggers() {
     $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-plus`, onCreateEntryValueClick);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-trash-can`, onDeleteEntryValueClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-copy`, onCopyEntryClick);
     // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole[name="title"]`, onAltTitleInput);
     // @ts-ignore

@@ -215,14 +215,14 @@ function unEscapeNewlines(str) {
 
 /**
  * Set user clipboard to a stringified version of an object
- * @param {object} obj - Object to be sent to the clipboard as text
+ * @param {Object} obj - Object to be sent to the clipboard as text
  * @returns {Promise<void>}
  */
-function exportObjectToClipboard(obj = {}) {
+async function exportObjectToClipboard(obj = {}) {
     let stringObj = JSON.stringify(obj);
     stringObj = escapeNewlines(stringObj);
 
-    return copyText(stringObj);
+    return await copyText(stringObj);
 }
 
 /**

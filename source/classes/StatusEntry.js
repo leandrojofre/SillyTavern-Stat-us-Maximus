@@ -95,6 +95,9 @@ class StatusEntry {
         }
 
         Object.assign(this, structuredClone(entryTemplate), structuredClone(entryClean));
+
+        if (!this.values[this.value_uid])
+            this.value_uid = Number(Object.keys(this.values).at(0));
     }
 
     /**
