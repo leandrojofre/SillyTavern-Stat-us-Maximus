@@ -59,12 +59,16 @@ export {
 /**
  * @typedef {{name:string; description: string; avatar:string; is_user: boolean}} UserCharacter
  * @typedef {import('@popperjs/core/index.js').Instance} Instance
- *
+ * @typedef {{onlyEntries?: boolean; isUser?: boolean;}} TransferStatusOptions
+ */
+
+/**
  * @typedef {Object} StatUsMaxInterface
  * @property {() => Status[]} getStatuses
  * @property {(avatar: string) => false|Status} getStatus
  * @property {(avatar: string, is_user?: boolean) => false|Status} addStatus
  * @property {(status: Status) => boolean|Status} delStatus
+ * @property {(avatar: string, newAvatar: string, options?: TransferStatusOptions) => false|Status} transferStatus
  * @property {typeof Status} Status
  * @property {typeof StatusEntry} StatusEntry
  * @property {(avatar: string, is_user?: boolean) => Promise<void>} openPopupSingle
@@ -73,7 +77,9 @@ export {
  * @property {(...mess: any[]) => void} log
  * @property {(...mess: any[]) => void} debug
  * @property {(...mess: any[]) => void} error
- *
+ */
+
+/**
  * @typedef {Object} ExtensionSettings
  * @property {boolean} enabled
  * @property {boolean} editNumbersFromChat - Legacy name for what now is replace macros with inputs from chat
@@ -747,6 +753,34 @@ globalThis.StatUsMaximus = {
         context().chatMetadata[metadataName] = statuses;
 
         return true;
+    },
+
+    transferStatus: function(avatar, newAvatar, {onlyEntries = false, isUser = false}) {
+        const {
+            getStatus,
+            addStatus
+        } = StatUsMaximus;
+
+        const status = getStatus(avatar);
+
+        if (!status) return false;
+
+        let newStatus = getStatus(newAvatar) || addStatus(newAvatar, isUser);
+
+        if (!newStatus) return false;
+
+        if (!onlyEntries) {
+            for (const key in status) {
+                if (key !== 'avatar') newStatus.set(key, status[key]);
+            }
+        }
+
+        for (const uid in status.entries) {
+            const entry = status.getEntry(Number(uid));
+            if (entry) newStatus.addEntry(entry);
+        }
+
+        return newStatus.set('is_user', isUser);
     },
 
     Status,

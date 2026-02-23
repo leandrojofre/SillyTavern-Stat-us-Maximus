@@ -26,6 +26,10 @@
     }
 }
 
+.popup:has(.stat-us-maximus-popup) {
+    background-color: color-mix(in srgb, var(--SmartThemeBlurTintColor) 100%, black 40%);
+}
+
 #rm_group_members .avatar img {
     cursor: pointer;
 }
@@ -222,6 +226,20 @@
 
     .fw-bolder {
         font-weight: bolder;
+    }
+
+    select.fs-ellipsis {
+        padding-right: 2ch;
+    }
+
+    select.fs-ellipsis option,
+    .fs-ellipsis {
+        flex: 1 1 auto;
+        white-space: nowrap;
+        overflow: hidden;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+        display: block;
     }
 
     .separator-bottom {

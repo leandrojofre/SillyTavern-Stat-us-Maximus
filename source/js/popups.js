@@ -17,6 +17,8 @@ import {
     getUser,
     isChatOpen,
     exportObjectToClipboard,
+    powerUserSettings,
+    context,
     // HTML related
     HTML_TEMPLATES,
     htmlSuffix,
@@ -43,72 +45,90 @@ export {
 // * MARK:Popup Creation
 
 /** Clones the status data of the selected `char`
-    @param {object} char
-    @returns {Promise<boolean|object>}
+    @param {Character|UserCharacter} char
+    @returns {Promise<{status: false|Status; keepOriginal: boolean; onlyEntries: boolean;}>}
 */
-// async function clonePopup(char) {
-//     const cloneContainer = document.createElement("div");
-//     cloneContainer.classList.add("stat-us-max-popup");
+async function cloneStatusPopup(char) {
+    const {
+        characters
+    } = context();
 
-//     const cloneWrapper = document.createElement("div");
-//     cloneWrapper.classList.add("d-flex", "flex-col");
-//     cloneWrapper.innerHTML = `<span>${t`Clone ${char.name} stats`}</span>`;
+    const users = Object
+        .entries(powerUserSettings.personas)
+        .map(([key, value]) => ({name: value, avatar: key, is_user: true}));
 
-//     const defOption = document.createElement("option");
-//     defOption.value = null;
-//     defOption.innerText = t`--Select target--`;
+    const participants = [
+        ...users,
+        ...characters
+    ].filter(c => c.avatar !== char.avatar);
 
-//     const selectParticipant = document.createElement("select");
-//     selectParticipant.classList.add("flex-grow-1", "px-5px", "m-0");
-//     selectParticipant.append(defOption);
+    const $popupBlock = (await HTML_TEMPLATES.get('popupStatusClone')).clone();
 
-//     const participants = [
-//         ...Object
-//             .entries(power_user.personas)
-//             .map(([key, value]) => {return {name: value, avatar: key, is_user: true}}),
-//         ...characters
-//     ].filter(c => c.avatar !== char.avatar);
+    $popupBlock
+        .find('.transfer-popup-title')
+        .text(t`Clone ${char.name} stats`);
 
-//     for (const participant of participants) {
-//         const option = document.createElement("option");
-//         option.value = String(participant.avatar);
-//         option.innerText = String(participant.name);
-//         selectParticipant.append(option);
-//     }
+    const $select = $popupBlock.find('select');
+    const $checkboxOnlyEntries = $popupBlock.find('input.transfer-only-entries');
+    const $keepOriginalData = $popupBlock.find('input.keep-original-data');
 
-//     const inputOnlyEntries = document.createElement("input");
-//     inputOnlyEntries.type = "checkbox";
+    for (const participant of participants) {
+        $('<option>', { text: `${participant.name} - ${participant.avatar}`, value: participant.avatar }).appendTo($select);
+    }
 
-//     const spanOnlyEntries = document.createElement("span");
-//     spanOnlyEntries.innerText = t`Transfer only entries`;
+    const failedResponse = {status: false, keepOriginal: false, onlyEntries: false};
+    const popupResult = await callGenericPopup($popupBlock, POPUP_TYPE.CONFIRM, "", {
+        wider: true,
+        okButton: t`Confirm`,
+        cancelButton: t`Cancel`
+    });
 
-//     const labelOnlyEntries = document.createElement("label");
-//     labelOnlyEntries.classList.add("flex-container");
-//     labelOnlyEntries.append(
-//         inputOnlyEntries,
-//         spanOnlyEntries
-//     );
+    if (!popupResult) {
+        toastr.info(t`Transfer cancelled`, extensionName);
+        // @ts-ignore
+        return failedResponse;
+    }
 
-//     cloneWrapper.append(labelOnlyEntries, selectParticipant);
-//     cloneContainer.append(cloneWrapper);
+    const target = participants.find(c => c.avatar === $select.val());
 
-//     const popupResult = await callGenericPopup(cloneContainer, POPUP_TYPE.CONFIRM, "", {
-//         okButton: t`Confirm`,
-//         cancelButton: t`Cancel`
-//     });
+    if (!target) {
+        toastr.error(t`An error occurred - The character/persona could not be found`, extensionName);
+        // @ts-ignore
+        return failedResponse;
+    }
 
-//     if (!popupResult) return false;
+    const oldStatus = StatUsMaximus.getStatus(char.avatar);
+    const isUser = users.some(p => p.avatar === target.avatar);
+    const onlyEntries = $checkboxOnlyEntries.prop('checked');
+    const keepOriginalData = $keepOriginalData.prop('checked');
 
-//     const target = participants.find(c => c.avatar === selectParticipant.value);
-//     const success = !target ? false : transferCharStatus(char, target, {onlySendEntries: inputOnlyEntries.checked});
+    StatUsMaximus.log(target, users, isUser)
 
-//     if (success) toastr.success(t`Status clone successfully`);
-//     else toastr.error(t`An error occurred - Status could not be clone`);
+    if (!oldStatus) {
+        toastr.info(t`An error occurred - The original Status could not be found`, extensionName);
+        // @ts-ignore
+        return failedResponse;
+    }
 
-//     destroyElement(cloneContainer);
+    const newStatus = StatUsMaximus.transferStatus(char.avatar, target.avatar, {onlyEntries, isUser});
 
-//     return success ? target : false;
-// }
+    if (!newStatus) {
+        toastr.error(t`An error occurred - The Status could not be cloned`, extensionName);
+        // @ts-ignore
+        return failedResponse;
+    }
+
+    if (!keepOriginalData) {
+        if (onlyEntries)
+            for (const uid in oldStatus.entries)
+                oldStatus.delEntry(Number(uid));
+        else StatUsMaximus.delStatus(oldStatus);
+    }
+
+    toastr.success(t`Status cloned successfully`);
+
+    return {status: newStatus, keepOriginal: keepOriginalData, onlyEntries};
+}
 
 /**
  * Gets a drag delay for sortable elements. This is to prevent accidental drags when scrolling.
@@ -608,9 +628,9 @@ async function onDeleteEntryValueClick(e) {
     if (!status) return;
 
     try {
-        const accepted = await popupConfirmAction('delete this entry');
+        const accepted = await popupConfirmAction('delete this entry value');
 
-        if (!accepted) return toastr.info(t`Entry deletion cancelled`, extensionName);
+        if (!accepted) return toastr.info(t`Entry value deletion cancelled`, extensionName);
 
         const entry = status.getEntry(uid);
         const deletionSuccess = entry.delValue();
@@ -753,6 +773,40 @@ async function onCreateEntryFromClipboardClick(e) {
     $entriesContainer.append($entryBlock);
 }
 
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onTransferStatusClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, statusId } = $button.data();
+    const $statusBlock = $(`#${statusId}`);
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const {
+        status: newStatus,
+        keepOriginal,
+        onlyEntries
+    } = await cloneStatusPopup(status.getCharacter());
+
+    if (!newStatus) return;
+
+    const $newStatusBlock = await getStatusPopupBlock(newStatus.avatar, newStatus.is_user);
+
+    if (!$newStatusBlock) return;
+
+    $statusBlock.after($newStatusBlock);
+
+    if (!keepOriginal) {
+        if (onlyEntries) $statusBlock
+            .find('.stat-us-maximus-popup-row')
+            .remove();
+        else $statusBlock.remove();
+    }
+}
+
 // * MARK:Init Triggers
 
 function initPopupTriggers() {
@@ -767,6 +821,8 @@ function initPopupTriggers() {
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-plus`, onCreateEntryClick);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.status-bulk-toggle`, onBulkToggleEntryDrawer);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-truck-arrow-right`, onTransferStatusClick);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, onDeleteEntryClick);
     // @ts-ignore
