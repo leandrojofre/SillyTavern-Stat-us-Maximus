@@ -861,6 +861,8 @@ function initPopupTriggers() {
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .menu_button.create-status`, onCreateStatusClick);
     // @ts-ignore
+    $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, onStatusInput);
+    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-file-clipboard`, onCreateEntryFromClipboardClick);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-plus`, onCreateEntryClick);
@@ -884,8 +886,6 @@ function initPopupTriggers() {
     $(document).on('input', `.${htmlSuffix}-popup-row select[name="value_uid"]`, onEntryValueSwap);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, onDeleteEntryClick);
-    // @ts-ignore
-    $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, onStatusInput);
 
     // * Right Menu Button
 

@@ -144,7 +144,7 @@ const defaultSettings = {
     enabled: true,
     editNumbersFromChat: false,
     autoDetectParticipants: true,
-    hideInputLabels: false,
+    hideInputLabels: true,
     rangeInputWidth: 'auto',
     showWhiteSpaces: false,
     minPromptDepth: 0,
@@ -799,6 +799,12 @@ const settingsCallbacks = {
     /**	Triggers on enabled setting change. */
     enabled: () => {
         // Nothing by the moment
+    },
+
+    hideInputLabels: function() {
+        const newDisplay = extensionSettings.hideInputLabels ? 'none' : 'block';
+
+        document.documentElement.style.setProperty('--stum-input-label-display', newDisplay);
     }
 }
 

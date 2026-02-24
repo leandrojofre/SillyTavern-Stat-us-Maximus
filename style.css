@@ -185,6 +185,10 @@
         margin-left: 15px;
     }
 
+    .me-5px {
+        margin-right: 5px;
+    }
+
     .mb-5px {
         margin-bottom: 5px;
     }
@@ -199,6 +203,10 @@
 
     .text-muted {
         color: color-mix(in srgb, currentColor 85%, black);
+    }
+
+    .text-nowrap {
+        text-wrap-mode: nowrap
     }
 
     .disabled {
@@ -226,6 +234,10 @@
 
     .fw-bolder {
         font-weight: bolder;
+    }
+
+    .lh-normal {
+        line-height: normal;
     }
 
     select.fs-ellipsis {
@@ -416,5 +428,22 @@
         z-index: 40;
         overflow-y: scroll;
         max-height: 15vh;
+    }
+
+    .status-input-label {
+        display: var(--stum-input-label-display);
+    }
+}
+
+@media screen and (min-width: 1440px) {
+    .stat-us-maximus-custom-css {
+        .flex-lg-row {
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .mw-lg-fit {
+            max-width: fit-content;
+        }
     }
 }
