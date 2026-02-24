@@ -235,16 +235,16 @@ class Status {
      * @returns {Status}
      */
     refreshDepth({ isGenerating = false } = {}) {
+        if (isGenerating) return this.set('depth', 0);
+
         const { chat } = context();
         const { is_user } = this;
-
-        if (isGenerating) return this.set('depth', 0);
 
         const character = this.getCharacter();
         const chatShown = chat.filter(m => !m.is_system);
         const lastID = chatShown.findLastIndex(m => messageBelongsToChar(m, character, is_user));
 
-        if (lastID < 0) this.set('depth', -1);
+        if (lastID < 0) return this.set('depth', -1);
 
         const chatLength = chatShown.length;
         const chatEmpty = chatLength < 1;

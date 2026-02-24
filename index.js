@@ -568,7 +568,7 @@ function renderStatusesSafe() {
 }
 
 /**
- * MARK:Render Char Status
+ * MARK:renderCharStatus()
  * Renders the status block of the selected character in the last message from the character rendered in the chat log.
  * @param {Status} status
  */

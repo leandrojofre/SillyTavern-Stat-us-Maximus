@@ -598,11 +598,11 @@ function onGenerationAfterCommands(...args) {
             isCharGenerating = true;
 
         StatUsMaximus.log(genType, chid, allCharacters[chid]?.avatar, status.avatar, isCharGenerating);
+        status.refreshDepth({ isGenerating: isCharGenerating });
 
-        const depth = status.force_depth >= 0 ?
-            status.force_depth :
-            status.refreshDepth({ isGenerating: isCharGenerating }).depth;
+        if (status.depth < 0 && !extensionSettings.alwaysIncludeUnmutedMembers) continue;
 
+        const depth = status.force_depth >= 0 ? status.force_depth : status.depth;
         const depthNormalized = Math.max(depth, extensionSettings.minPromptDepth);
 
         setExtensionPrompt(
