@@ -4,6 +4,8 @@ import {
     callGenericPopup,
     POPUP_TYPE,
     Popup,
+    powerUserSettings,
+    copyText,
     t,
     // Normal imports
     extensionName,
@@ -17,7 +19,6 @@ import {
     getUser,
     isChatOpen,
     exportObjectToClipboard,
-    powerUserSettings,
     context,
     // HTML related
     HTML_TEMPLATES,
@@ -842,8 +843,8 @@ function onToggleEntrySwitch(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 async function onDeleteStatusClick(e) {
-    const $entrySwitch = $(e.currentTarget);
-    const { avatar, statusId } = $entrySwitch.data();
+    const $button = $(e.currentTarget);
+    const { avatar, statusId } = $button.data();
     const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
@@ -888,6 +889,35 @@ async function onDeleteStatusClick(e) {
     }
 }
 
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onMacroShortcutClick(e) {
+    const $button = $(e.currentTarget);
+    const macro = $button.attr('macro');
+    const { uid, avatar, statusId } = $button.data();
+
+    if (!extensionSettings.altMacroTemplateBehavior)
+        return copyText(macro);
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const $statusBlock = $(`#${statusId}`);
+    const $input = $statusBlock
+        .find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`)
+        .find(':input[name="value"]');
+
+    const newValue = $input.val() + macro;
+
+    $input.val(newValue);
+
+    status
+        .getEntry(Number(uid))
+        .setValue('value', newValue);
+}
+
 // * MARK:Init Triggers
 
 function initPopupTriggers() {
@@ -909,11 +939,13 @@ function initPopupTriggers() {
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-trash-can`, onDeleteStatusClick);
     // @ts-ignore
-    $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-plus`, onCreateEntryValueClick);
+    $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-plus`, onCreateEntryValueClick);
     // @ts-ignore
-    $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-trash-can`, onDeleteEntryValueClick);
+    $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-trash-can`, onDeleteEntryValueClick);
     // @ts-ignore
-    $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-copy`, onCopyEntryClick);
+    $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-copy`, onCopyEntryClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button[macro]`, onMacroShortcutClick);
     // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole`, onEntryInput);
     // @ts-ignore
