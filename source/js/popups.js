@@ -483,6 +483,21 @@ async function onShortcutClick(e) {
 // * MARK:Input Listeners
 
 /**
+ * @param {string} field
+ * @param {string|number} value
+ * @returns {string|number}
+ */
+function cleanWonkyStatusValues(field, value) {
+    const numValue = Number(value);
+    const isEmpty = (value ?? '') === '';
+
+    if (field === 'force_depth' && isEmpty) return -1;
+    if (field === 'force_depth') return numValue;
+
+    return value;
+}
+
+/**
  * @param {EventData<HTMLInputElement|HTMLTextAreaElement>} e
  */
 function onStatusInput(e) {
@@ -496,7 +511,7 @@ function onStatusInput(e) {
 
     if (!status) return;
 
-    status.set(field, newValue);
+    status.set(field, cleanWonkyStatusValues(field, newValue));
     $(`#${statusId}`).data({doSave: true});
 }
 

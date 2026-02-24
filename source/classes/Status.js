@@ -24,7 +24,7 @@ const statusTemplate = Object.freeze({
     prefix: '',
     suffix: '',
     depth: -1,
-    force_depth: '',
+    force_depth: -1,
     last_mes_id: -1,
     is_user: false,
     is_collapsed: false,
@@ -40,7 +40,7 @@ const statusTemplate = Object.freeze({
  * @property {string} [prefix]
  * @property {string} [suffix]
  * @property {number} [depth]
- * @property {string|number} [force_depth]
+ * @property {number} [force_depth]
  * @property {number} [last_mes_id]
  * @property {boolean} [is_user]
  * @property {boolean} [is_collapsed]
@@ -59,7 +59,7 @@ class Status {
     /** @property {string} */ prefix
     /** @property {string} */ suffix
     /** @property {number} */ depth
-    /** @property {string|number} */ force_depth
+    /** @property {number} */ force_depth
     /** @property {number} */ last_mes_id
     /** @property {boolean} */ is_user
     /** @property {boolean} */ is_collapsed
@@ -83,6 +83,9 @@ class Status {
             }, {});
         }
 
+        // @ts-ignore
+        if (status?.forceDepth) status.force_depth = status.forceDepth === '' ? -1 : status.forceDepth;
+
         /** @type {StatusData} */
         const statusClean = {avatar: ''};
 
@@ -93,9 +96,6 @@ class Status {
         }
 
         Object.assign(this, structuredClone(statusTemplate), structuredClone(statusClean));
-
-        // @ts-ignore
-        if (this?.forceDepth) this.force_depth = this.forceDepth;
 
         for (const [uid, entry] of Object.entries(this.entries ?? {})) {
             this.entries[uid] = new StatusEntry(entry);
@@ -112,8 +112,9 @@ class Status {
         if (!Object.keys(statusTemplate).includes(key)) return this;
 
         const targetType = typeof statusTemplate[key];
+        const newType = typeof value;
 
-        if (targetType !== typeof value) value = parseValue(value, targetType);
+        if (targetType !== newType) value = parseValue(value, targetType);
         if (typeof value === 'string') value = unEscapeNewlines(value);
 
         this[key] = value;

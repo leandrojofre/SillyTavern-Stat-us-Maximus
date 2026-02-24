@@ -567,7 +567,7 @@ function onGenerationAfterCommands(...args) {
 
         StatUsMaximus.log(genType, chid, allCharacters[chid]?.avatar, status.avatar, isCharGenerating);
 
-        const depth = (typeof status.force_depth === 'number' && status.force_depth >= 0) ?
+        const depth = status.force_depth >= 0 ?
             status.force_depth :
             status.refreshDepth({ isGenerating: isCharGenerating }).depth;
 
