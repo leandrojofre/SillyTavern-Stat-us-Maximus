@@ -537,7 +537,16 @@ function parseValue(value, force) {
     return String(value);
 }
 
-function saveMetadataSafe() {
+/**
+ * @param {boolean?} [doSave] Wether to save the metadata or not - if false, it'll turn save buttons to red
+ */
+function saveMetadataSafe(doSave = true) {
+    const nextState = doSave ? 'var(--stum-custom-save-color)' : 'red';
+
+    document.documentElement.style.setProperty('--stum-save-state-color', nextState);
+
+    if (!doSave) return;
+
     saveChatDebounced.cancel();
     saveChatDebounced();
 }
@@ -737,7 +746,7 @@ globalThis.StatUsMaximus = {
             statuses.push(status);
 
             context().chatMetadata[metadataName] = statuses;
-            saveMetadataSafe();
+            saveMetadataSafe(extensionSettings.autoSaveMetadata);
         }
 
         return status;
@@ -751,6 +760,7 @@ globalThis.StatUsMaximus = {
         statuses = statuses.filter(s => s.avatar !== status.avatar);
 
         context().chatMetadata[metadataName] = statuses;
+        saveMetadataSafe(extensionSettings.autoSaveMetadata);
 
         return true;
     },
@@ -805,6 +815,12 @@ const settingsCallbacks = {
         const newDisplay = extensionSettings.hideInputLabels ? 'none' : 'block';
 
         document.documentElement.style.setProperty('--stum-input-label-display', newDisplay);
+    },
+
+    autoSaveMetadata: function() {
+        const doSave = extensionSettings.autoSaveMetadata;
+
+        if (doSave) saveMetadataSafe(true);
     }
 }
 

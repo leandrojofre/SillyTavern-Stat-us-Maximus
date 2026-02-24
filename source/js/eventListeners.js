@@ -10,7 +10,6 @@ import {
     getActiveParticipants,
     extensionSettings,
     generateUUID,
-    saveMetadataSafe,
     showPopper,
     hidePopper,
     metadataName,
@@ -150,7 +149,6 @@ function updateEntryFromInput(inputTrigger) {
     });
 
     entry.set(field, parsedValue, value_uid);
-    saveMetadataSafe();
 }
 
 /**
@@ -178,8 +176,6 @@ function onToggleEntry(e) {
         .toggleClass('fa-toggle-off', !nextState)
         .closest(`.${htmlSuffix}-entry`)
         .toggleClass('disabled', !nextState);
-
-    saveMetadataSafe();
 }
 
 /**
@@ -199,7 +195,6 @@ function onCollapseStatus(e) {
         .hasClass('up');
 
     status.set('is_collapsed', doClose);
-    saveMetadataSafe();
 }
 
 /**
@@ -446,7 +441,6 @@ async function onSelectSwitchValueList(e) {
         .html(`<span class="d-inline">${valueClean}</span>`);
 
     await hidePopper(popperInstance, optionList);
-    saveMetadataSafe();
 }
 
 /**

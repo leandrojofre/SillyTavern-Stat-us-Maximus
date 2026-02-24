@@ -6,6 +6,8 @@ import {
     getThumbnailUrl,
     context,
     unEscapeNewlines,
+    saveMetadataSafe,
+    extensionSettings,
     parseValue
 } from '../../index.js';
 
@@ -115,9 +117,13 @@ class Status {
         const newType = typeof value;
 
         if (targetType !== newType) value = parseValue(value, targetType);
-        if (typeof value === 'string') value = unEscapeNewlines(value);
+        if (newType === 'string') value = unEscapeNewlines(value);
+
+        if (this[key] === value) return this;
 
         this[key] = value;
+
+        saveMetadataSafe(extensionSettings.autoSaveMetadata);
 
         return this;
     }
@@ -134,6 +140,8 @@ class Status {
         rawEntry.display_position = this.getMaxDisplayPosition();
 
         this.entries[newUid] = rawEntry;
+
+        saveMetadataSafe(extensionSettings.autoSaveMetadata);
 
         return newUid;
     }
@@ -158,6 +166,9 @@ class Status {
         if (!entry) return true;
 
         delete this.entries[uid];
+
+        saveMetadataSafe(extensionSettings.autoSaveMetadata);
+
         return true;
     }
 

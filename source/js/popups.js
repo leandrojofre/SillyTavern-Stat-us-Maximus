@@ -359,10 +359,6 @@ async function openSingleStatusPopup(avatar, is_user = false) {
         allowVerticalScrolling: true,
         wide: true,
         onClose: () => {
-            const doSave = $statusBlock.data().doSave;
-
-            if (doSave) saveMetadataSafe();
-
             $statusBlock.remove();
         }
     });
@@ -400,12 +396,7 @@ async function openMultiStatusPopup(avatars = []) {
         wide: true,
         onClose: () => {
             $statusesWrapper.each(function(i, elem) {
-                const $statusBlock = $(elem);
-                const doSave = $statusBlock.data().doSave;
-
-                if (doSave) saveMetadataSafe();
-
-                $statusBlock.remove();
+                $(elem).remove();
             });
 
             $statusesWrapper.remove();
@@ -512,7 +503,6 @@ function onStatusInput(e) {
     if (!status) return;
 
     status.set(field, cleanWonkyStatusValues(field, newValue));
-    $(`#${statusId}`).data({doSave: true});
 }
 
 /**
@@ -534,7 +524,6 @@ function onEntryInput(e) {
     const valueClean = field === 'value_uid' ? Number(newValue) : newValue;
 
     entry.set(field, valueClean, entry.value_uid);
-    $(`#${statusId}`).data({doSave: true});
 }
 
 /**
@@ -596,7 +585,6 @@ async function onCreateEntryClick(e) {
     const $container = $statusBlock.find('.status-entries').first();
 
     $container.append($entryBlock);
-    $statusBlock.data({doSave: true});
 }
 
 /**
@@ -633,7 +621,6 @@ function onCreateEntryValueClick(e) {
 
     $entryBlock.find(':input[name="value"]').val('');
     $entryBlock.find(':input[name="title"]').val('');
-    $statusBlock.data({doSave: true});
 }
 
 /**
@@ -671,7 +658,6 @@ async function onDeleteEntryValueClick(e) {
 
         $entryBlock.find(':input[name="value"]').val(entry.get('value').toString());
         $entryBlock.find(':input[name="title"]').val(entry.get('title').toString());
-        $statusBlock.data({doSave: true});
     } catch (err) {
         StatUsMaximus.error(err);
     }
@@ -700,7 +686,6 @@ async function onDeleteEntryClick(e) {
         const $container = $statusBlock.find(`.${htmlSuffix}-popup-row[entry-uid="${uid}"]`).first();
 
         $container.remove();
-        $statusBlock.data({doSave: true});
     } catch (err) {
         StatUsMaximus.error(err);
     }
@@ -845,7 +830,6 @@ function onToggleEntrySwitch(e) {
     if (!entry) return;
 
     entry.set('enabled', nextState);
-    $statusBlock.data({doSave: true});
     $entrySwitch
         .data({enabled: nextState})
         .toggleClass('fa-toggle-on', nextState)

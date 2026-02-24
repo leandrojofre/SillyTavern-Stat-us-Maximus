@@ -1,6 +1,8 @@
 import {
     extensionName,
     getFreeDataUid,
+    saveMetadataSafe,
+    extensionSettings,
     parseValue,
     t,
     unEscapeNewlines
@@ -108,19 +110,24 @@ class StatusEntry {
      * @returns {StatusEntry}
      */
     set(key, value, uid) {
-        if (key === 'values') return this;
-        if (typeof value === 'string') value = unEscapeNewlines(value);
+        const targetType = typeof entryTemplate[key];
+        const newType = typeof value;
 
-        if ((key === 'value' || key === 'title') && typeof value === 'string')
+        if (key === 'values') return this;
+        if (newType === 'string') value = unEscapeNewlines(value);
+
+        if ((key === 'value' || key === 'title') && newType === 'string')
             return this.setValue(key, value, uid);
 
         if (!Object.keys(entryTemplate).includes(key)) return this;
 
-        const targetType = typeof entryTemplate[key];
+        if (targetType !== newType) value = parseValue(value, targetType);
 
-        if (targetType !== typeof value) value = parseValue(value, targetType);
+        if (this[key] === value) return this;
 
         this[key] = value;
+
+        saveMetadataSafe(extensionSettings.autoSaveMetadata);
 
         return this;
     }
@@ -153,6 +160,8 @@ class StatusEntry {
         value = String(value);
         this.values[newUID] = {title, value};
 
+        saveMetadataSafe(extensionSettings.autoSaveMetadata);
+
         return newUID;
     }
 
@@ -170,10 +179,15 @@ class StatusEntry {
         if (!Object.keys(altEntryTemplate).includes(key)) return this;
 
         const targetType = typeof altEntryTemplate[key];
+        const newType = typeof value;
 
-        if (targetType !== typeof value) value = parseValue(value, targetType);
+        if (targetType !== newType) value = parseValue(value, targetType);
+
+        if (this.values[cleanUID][key] === value) return this;
 
         this.values[cleanUID][key] = value;
+
+        saveMetadataSafe(extensionSettings.autoSaveMetadata);
 
         return this;
     }
@@ -210,9 +224,11 @@ class StatusEntry {
 
         delete this.values[cleanUID];
 
+        saveMetadataSafe(extensionSettings.autoSaveMetadata);
+
         const newValueUID = Object.keys(this.values).at(0);
 
-        this.value_uid = Number(newValueUID);
+        this.set('value_uid', Number(newValueUID));
 
         return true;
     }
@@ -226,7 +242,7 @@ class StatusEntry {
 
         if (!altValue) return this;
 
-        this.value_uid = Number(uid);
+        this.set('value_uid', Number(uid));
 
         return this;
     }

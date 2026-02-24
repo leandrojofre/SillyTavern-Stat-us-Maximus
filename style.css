@@ -1,7 +1,8 @@
 :root {
     --stum-input-label-display: block;
     --stum-range-input-width: auto;
-    --stum-save-state-color: transparent;
+    --stum-custom-save-color: var(--SmartThemeBlurTintColor);
+    --stum-save-state-color: var(--stum-custom-save-color);
 }
 
 @keyframes stumcaretblink {
@@ -57,6 +58,18 @@
     --stat-us-avatar-border-radius: 50%;
     --stat-us-separator-bottom: linear-gradient(90deg, var(--transparent), color-mix(in srgb, var(--SmartThemeBodyColor), transparent 80%), var(--transparent)) 1;
     --stat-us-show-spaces-color: color-mix(in srgb, var(--SmartThemeBotMesBlurTintColor), var(--SmartThemeQuoteColor) 12%);
+
+    .fa-floppy-disk {
+        --stum-custom-save-color: var(--SmartThemeBlurTintColor);
+
+        background-color: var(--stum-save-state-color);
+    }
+
+    .fa-floppy-disk.bg-bot {
+        --stum-custom-save-color: var(--SmartThemeBotMesBlurTintColor);
+
+        background-color: var(--stum-save-state-color);
+    }
 
     .d-none {
         display: none !important;
