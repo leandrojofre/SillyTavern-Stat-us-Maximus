@@ -24,7 +24,6 @@ import {
 import { Status } from '../classes/Status.js';
 import { StatusEntry } from '../classes/StatusEntry.js';
 import { CUSTOM_MACROS } from './macros.js';
-import { openSingleStatusPopup } from './popups.js';
 
 export {
     registerEvents
@@ -388,7 +387,7 @@ function onClickEditStatus(e) {
 
     const { avatar } = $button.data();
 
-    if (avatar) openSingleStatusPopup(avatar);
+    if (avatar) StatUsMaximus.openPopupSingle(avatar);
 }
 
 /**
@@ -465,6 +464,9 @@ function onHidePopperLists(e) {
     });
 }
 
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
 function onRefreshBlockClick(e) {
     const $button = $(e.currentTarget);
     const { avatar } = $button.data();
@@ -474,6 +476,30 @@ function onRefreshBlockClick(e) {
     if (!status) return;
 
     StatUsMaximus.renderStatusSafe(status);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onOpenPopupWithEntryOpen(e) {
+    e.preventDefault();
+
+    const entrySwitch = $(e.currentTarget);
+    const { avatar, uid } = entrySwitch.data();
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    await StatUsMaximus.openPopupSingle(avatar, {
+        is_user: status.is_user,
+        onOpen: function() {
+            $(`.stat-us-maximus-popup[avatar="${avatar}"][is_user="${status.is_user}"]`)
+                .find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`)
+                .find('.inline-drawer-toggle')
+                .trigger('click');
+        }
+    });
 }
 
 /**
@@ -607,6 +633,8 @@ function registerEvents() {
 
     // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-entry .kill-switch`, onToggleEntry);
+    // @ts-ignore
+    $chat.on('contextmenu', `.${htmlSuffix}-entry .kill-switch`, onOpenPopupWithEntryOpen);
     // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-entry .status-value-uid`, onOpenSwitchValueList);
     // @ts-ignore

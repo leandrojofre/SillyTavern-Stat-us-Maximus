@@ -213,6 +213,7 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
 }
 
 /**
+ * MARK:getStatusPopupBlock()
  * @param {string} avatar
  * @param {boolean?} [is_user]
  * @returns {Promise<JQuery<HTMLElement>>}
@@ -264,9 +265,10 @@ async function getStatusPopupBlock(avatar, is_user = false) {
         .entries(status.entries)
         .sort(([uidA, entryA], [uidB, entryB]) => entryA.display_position - entryB.display_position);
 
-    if (status.is_user) $statusBlock.attr('is_user', 'true');
-
-    $statusBlock.attr('id', statusId);
+    $statusBlock
+        .attr('id', statusId)
+        .attr('avatar', avatar)
+        .attr('is_user', String(status.is_user));
 
     $statusBlock
         .find(`.${htmlSuffix}-name`)
@@ -347,9 +349,9 @@ async function getStatusPopupBlock(avatar, is_user = false) {
 
 /**
  * @param {string} avatar
- * @param {boolean?} [is_user]
+ * @param {{is_user?: boolean; onOpen?: () => void}} [options]
  */
-async function openSingleStatusPopup(avatar, is_user = false) {
+async function openSingleStatusPopup(avatar, {is_user = false, onOpen = () => {}} = {}) {
     const $statusBlock = await getStatusPopupBlock(avatar, is_user);
 
     if (!$statusBlock) return;
@@ -358,6 +360,7 @@ async function openSingleStatusPopup(avatar, is_user = false) {
         okButton: t`Close Status`,
         allowVerticalScrolling: true,
         wide: true,
+        onOpen,
         onClose: () => {
             $statusBlock.remove();
         }
@@ -436,7 +439,7 @@ async function onShortcutClick(e) {
     if (type === 'user') {
         const user = getUser();
         const avatar = user.avatar;
-        return await openSingleStatusPopup(avatar, true);
+        return await openSingleStatusPopup(avatar, {is_user: true});
     }
 
     if (type === 'characters') {

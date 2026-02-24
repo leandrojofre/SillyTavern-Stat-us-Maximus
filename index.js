@@ -71,7 +71,7 @@ export {
  * @property {(avatar: string, newAvatar: string, options?: TransferStatusOptions) => false|Status} transferStatus
  * @property {typeof Status} Status
  * @property {typeof StatusEntry} StatusEntry
- * @property {(avatar: string, is_user?: boolean) => Promise<void>} openPopupSingle
+ * @property {(avatar: string, options?: {is_user?: boolean; onOpen?: () => void;}) => Promise<void>} openPopupSingle
  * @property {() => Promise<void>} renderStatuses
  * @property {(status: Status) => Promise<void>} renderStatusSafe
  * @property {() => void} renderStatusesSafe
@@ -557,9 +557,9 @@ function saveMetadataSafe(doSave = true) {
 /**
  * @param {Status} status
  */
-function renderStatusSafe(status) {
+async function renderStatusSafe(status) {
     renderStatusDebounced.cancel();
-    renderStatusDebounced(status);
+    await renderStatusDebounced(status);
 }
 
 function renderStatusesSafe() {
