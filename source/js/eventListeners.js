@@ -584,11 +584,13 @@ function onGenerationAfterCommands(...args) {
 function registerEvents() {
     const $chat = $('#chat').first();
 
-    $chat.on('click', `.${htmlSuffix}-toolbar`, function(e){
+    $chat.on('click', `.${htmlSuffix}-toolbar`, function(e) {
+        if ($(e.target).is('.inline-drawer-icon')) return;
+
         e.stopPropagation();
     });
 
-    $chat.on('pointerdown', `.${htmlSuffix}-chat-drawer .fake-selection`, function(e){
+    $chat.on('pointerdown', `.${htmlSuffix}-chat-drawer .fake-selection`, function(e) {
         e.stopPropagation();
     });
 
