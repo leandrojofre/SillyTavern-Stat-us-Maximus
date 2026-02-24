@@ -10,6 +10,7 @@ import {
     getActiveParticipants,
     extensionSettings,
     generateUUID,
+    saveMetadataSafe,
     showPopper,
     hidePopper,
     metadataName,
@@ -609,6 +610,8 @@ function registerEvents() {
     $chat.on('pointerdown', `.${htmlSuffix}-chat-drawer .fake-input-span`, onSelectChatInput);
     // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-pen`, onClickEditStatus);
+    // @ts-ignore
+    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-floppy-disk`, saveMetadataSafe);
 
     // @ts-ignore
     $(document).on('click', onDocumentClick);

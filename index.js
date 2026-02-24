@@ -541,6 +541,8 @@ function parseValue(value, force) {
  * @param {boolean?} [doSave] Wether to save the metadata or not - if false, it'll turn save buttons to red
  */
 function saveMetadataSafe(doSave = true) {
+    if (typeof doSave !== 'boolean') doSave = true;
+
     const nextState = doSave ? 'var(--stum-custom-save-color)' : 'red';
 
     document.documentElement.style.setProperty('--stum-save-state-color', nextState);
