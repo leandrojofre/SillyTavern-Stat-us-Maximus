@@ -465,6 +465,17 @@ function onHidePopperLists(e) {
     });
 }
 
+function onRefreshBlockClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar } = $button.data();
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    StatUsMaximus.renderStatusSafe(status);
+}
+
 /**
  * @param {EventData<HTMLElement>} e
  */
@@ -612,6 +623,8 @@ function registerEvents() {
     $chat.on('pointerdown', `.${htmlSuffix}-chat-drawer .fake-input-span`, onSelectChatInput);
     // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-pen`, onClickEditStatus);
+    // @ts-ignore
+    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-arrows-rotate`, onRefreshBlockClick);
     // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-floppy-disk`, saveMetadataSafe);
 

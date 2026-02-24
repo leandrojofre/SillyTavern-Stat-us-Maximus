@@ -73,6 +73,7 @@ export {
  * @property {typeof StatusEntry} StatusEntry
  * @property {(avatar: string, is_user?: boolean) => Promise<void>} openPopupSingle
  * @property {() => Promise<void>} renderStatuses
+ * @property {(status: Status) => Promise<void>} renderStatusSafe
  * @property {() => void} renderStatusesSafe
  * @property {(...mess: any[]) => void} log
  * @property {(...mess: any[]) => void} debug
@@ -553,6 +554,14 @@ function saveMetadataSafe(doSave = true) {
     saveChatDebounced();
 }
 
+/**
+ * @param {Status} status
+ */
+function renderStatusSafe(status) {
+    renderStatusDebounced.cancel();
+    renderStatusDebounced(status);
+}
+
 function renderStatusesSafe() {
     renderStatusesDebounced.cancel();
     renderStatusesDebounced();
@@ -606,7 +615,7 @@ async function renderCharStatus(status) {
         .data({avatar: status.avatar});
 
     statusBlock
-        .find(`.${htmlSuffix}-toolbar .menu_button.fa-pen`)
+        .find(`.${htmlSuffix}-toolbar .menu_button`)
         .data({avatar: status.avatar});
 
     /** @type {[string, StatusEntry][]} */
@@ -706,6 +715,7 @@ async function renderStatuses() {
 }
 
 const saveChatDebounced = lodash.debounce(saveChat, debounceTimeout.MED);
+const renderStatusDebounced = lodash.debounce(renderCharStatus, debounceTimeout.MED);
 const renderStatusesDebounced = lodash.debounce(renderStatuses, debounceTimeout.MED);
 const updateCaretDisplayDebounced = lodash.debounce(updateCaretDisplay, debounceTimeout.MICRO);
 
@@ -799,6 +809,7 @@ globalThis.StatUsMaximus = {
     StatusEntry,
     openPopupSingle: openSingleStatusPopup,
     renderStatuses,
+    renderStatusSafe,
     renderStatusesSafe,
     log,
     debug,
