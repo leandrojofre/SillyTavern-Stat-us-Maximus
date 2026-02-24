@@ -151,6 +151,10 @@
         max-width: fit-content;
     }
 
+    .mw-25 {
+        max-width: 25%;
+    }
+
     .p-0 {
         padding: 0;
     }
