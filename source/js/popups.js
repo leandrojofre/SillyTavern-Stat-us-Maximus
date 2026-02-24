@@ -818,8 +818,7 @@ async function onTransferStatusClick(e) {
  */
 function onToggleEntrySwitch(e) {
     const $entrySwitch = $(e.currentTarget);
-    const { uid, avatar, statusId, enabled } = $entrySwitch.data();
-    const $statusBlock = $(`#${statusId}`);
+    const { uid, avatar, enabled } = $entrySwitch.data();
     const nextState = !enabled;
     const status = StatUsMaximus.getStatus(avatar);
 
@@ -834,6 +833,56 @@ function onToggleEntrySwitch(e) {
         .data({enabled: nextState})
         .toggleClass('fa-toggle-on', nextState)
         .toggleClass('fa-toggle-off', !nextState);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onDeleteStatusClick(e) {
+    const $entrySwitch = $(e.currentTarget);
+    const { avatar, statusId } = $entrySwitch.data();
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    try {
+        const accepted = await popupConfirmAction('delete Status data for this character');
+
+        if (!accepted) return toastr.info(t`Status deletion cancelled`, extensionName);
+
+        const { is_user } = status;
+        const character = status.getCharacter();
+        const thumbnail = status.getThumbnail();
+
+        const $statusBlock = $(`#${statusId}`);
+        const $statusBlockEmpty = $(await HTML_TEMPLATES.get('popupStatusEmpty')).clone();
+        const newStatusId = `${generateUUID()}_stat_block`;
+
+        $statusBlockEmpty
+            .attr('id', newStatusId);
+
+        $statusBlockEmpty
+            .find(`.${htmlSuffix}-name`)
+            .text(character.name);
+
+        $statusBlockEmpty
+            .find(`.${htmlSuffix}-avatar`)
+            .attr('src', thumbnail)
+            .attr('title', avatar);
+
+        $statusBlockEmpty
+            .find(`.create-status`)
+            .data({avatar, is_user, statusId: newStatusId});
+
+        const deleteSuccess = StatUsMaximus.delStatus(status);
+
+        if (!deleteSuccess) return;
+
+        $statusBlock.after($statusBlockEmpty);
+        $statusBlock.remove();
+    } catch (err) {
+        StatUsMaximus.error(err);
+    }
 }
 
 // * MARK:Init Triggers
@@ -854,6 +903,8 @@ function initPopupTriggers() {
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.status-bulk-toggle`, onBulkToggleEntryDrawer);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-truck-arrow-right`, onTransferStatusClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-trash-can`, onDeleteStatusClick);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-entry-toolbar .menu_button.fa-plus`, onCreateEntryValueClick);
     // @ts-ignore
