@@ -79,7 +79,14 @@ class StatusEntry {
                     value
                 } = safeAlt;
 
-                acc[uid] = {title, value};
+                const parsedValue = String(value)
+                    .replaceAll('{{text:: ', '{{text::{{noop}} ')
+                    .replaceAll(/(\{\{text::[^}]+ )(\}\})/gs, '$1{{noop}}$2');
+
+                acc[uid] = {
+                    title,
+                    value: parsedValue
+                };
 
                 return acc;
             }, {});
