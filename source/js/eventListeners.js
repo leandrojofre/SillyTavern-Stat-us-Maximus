@@ -605,9 +605,13 @@ function onGenerationAfterCommands(...args) {
         const depth = status.force_depth >= 0 ? status.force_depth : status.depth;
         const depthNormalized = Math.max(depth, extensionSettings.minPromptDepth);
 
+        if (!prompt) continue;
+
         setExtensionPrompt(
             uuid,
-            macro(prompt, char.name),
+            macro(prompt, char.name)
+                .replace(/\/\/.*\/\//g, '')
+                .replace(/\/\/.*$/gm, ''),
             Position.IN_DEPTH,
             depthNormalized,
             true,
