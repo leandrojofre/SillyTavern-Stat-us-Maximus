@@ -557,9 +557,11 @@ function onGenerationAfterCommands(...args) {
     }
 
     /** @type {(Character|UserCharacter)[]} */
-    const characters = [...activeParticipants.chars];
+    const characters = [];
 
     if (activeParticipants.user) characters.push(activeParticipants.user);
+
+    characters.push(...activeParticipants.chars);
 
     const macro = CUSTOM_MACROS.getValues;
 

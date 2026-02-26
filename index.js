@@ -1,4 +1,4 @@
-import { extension_prompt_roles } from '../../../../script.js';
+import { extension_prompt_roles, user_avatar } from '../../../../script.js';
 import { copyText } from '../../../utils.js';
 import { getGroupMembers } from '../../../group-chats.js';
 
@@ -239,7 +239,7 @@ async function exportObjectToClipboard(obj = {}) {
  * @param {string[]?} [options.ignoreAvatars] - Only used in search by `name`
  * @returns {UserCharacter|null}
  */
-function getUser(value, {searchKey = 'avatar', ignoreAvatars = []} = {}) {
+function getUser(value = user_avatar, {searchKey = 'avatar', ignoreAvatars = []} = {}) {
     const { powerUserSettings: power_user } = context();
 
     if (!value) value = power_user.default_persona;
