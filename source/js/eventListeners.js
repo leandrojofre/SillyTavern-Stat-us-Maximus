@@ -621,6 +621,27 @@ function onGenerationAfterCommands(...args) {
     }
 }
 
+/**
+ * @param {Object} currentChat
+ * @param {string} oldAvatar
+ * @param {string} newAvatar
+ */
+async function onCharacterRenamed(currentChat, oldAvatar, newAvatar) {
+    StatUsMaximus.log(eventTypes.CHARACTER_RENAMED_IN_PAST_CHAT, currentChat, oldAvatar, newAvatar);
+
+    const metadata = currentChat[0][metadataName] ?? false;
+
+    if (!metadata) return;
+    if (!metadata[metadataName]) return;
+
+    metadata[metadataName] = metadata[metadataName].map(stat => {
+        if (String(stat.avatar) === String(oldAvatar))
+            stat.avatar = String(newAvatar);
+
+        return stat;
+    });
+}
+
 // * MARK:Init Listeners
 
 function registerEvents() {
@@ -665,6 +686,10 @@ function registerEvents() {
     $(document).on('click', onDocumentClick);
 
     eventSource.makeLast(eventTypes.CHAT_CHANGED, onChatChanged);
+    eventSource.makeLast(eventTypes.CHAT_CREATED, onChatChanged);
+    eventSource.makeLast(eventTypes.GROUP_CHAT_CREATED, onChatChanged);
+
+    eventSource.on(eventTypes.CHARACTER_RENAMED_IN_PAST_CHAT, onCharacterRenamed);
 
     eventSource.on(eventTypes.MORE_MESSAGES_LOADED, onMessageRendered);
     eventSource.on(eventTypes.MESSAGE_UPDATED, onMessageRendered);
