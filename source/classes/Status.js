@@ -86,7 +86,7 @@ class Status {
         }
 
         // @ts-ignore
-        if (status?.forceDepth) status.force_depth = status.forceDepth === '' ? -1 : status.forceDepth;
+        if (status?.forceDepth !== undefined) status.force_depth = status.forceDepth === '' ? -1 : Number(status.forceDepth);
 
         /** @type {StatusData} */
         const statusClean = {avatar: ''};
