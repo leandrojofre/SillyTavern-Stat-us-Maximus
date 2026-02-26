@@ -565,8 +565,7 @@ function onGenerationAfterCommands(...args) {
 
     const macro = CUSTOM_MACROS.getValues;
 
-    for (const char of characters) {
-        /** @type {Status|false} */
+    for (const [id, char] of characters.entries()) {
         const status = StatUsMaximus.getStatus(char.avatar);
 
         if (!status) continue;
@@ -589,7 +588,7 @@ function onGenerationAfterCommands(...args) {
             return text;
         });
 
-        const uuid = generateUUID();
+        const uuid = `${metadataName}_${id}`;
         const prompt = status.prefix + entries.join(status.separator) + status.suffix;
         let isCharGenerating = false;
 
