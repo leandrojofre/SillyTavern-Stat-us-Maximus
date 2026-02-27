@@ -615,6 +615,10 @@ async function renderCharStatus(status) {
         .data({avatar: status.avatar});
 
     statusBlock
+        .find(`.${htmlSuffix}-toolbar .kill-switch`)
+        .toggleClass('toggleEnabled', status.enabled);
+
+    statusBlock
         .find(`.${htmlSuffix}-toolbar .menu_button`)
         .data({avatar: status.avatar});
 

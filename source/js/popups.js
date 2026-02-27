@@ -281,6 +281,10 @@ async function getStatusPopupBlock(avatar, is_user = false) {
         .attr('title', status.avatar);
 
     $statusBlock
+        .find('.status-toolbar .menu_button.kill-switch')
+        .toggleClass('toggleEnabled', status.enabled);
+
+    $statusBlock
         .find('.status-toolbar .menu_button')
         .data({avatar, statusId});
 
@@ -820,6 +824,21 @@ async function onTransferStatusClick(e) {
 /**
  * @param {EventData<HTMLDivElement>} e
  */
+function onToggleStatusClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar } = $button.data();
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    status.set('enabled', !status.enabled);
+    $button.toggleClass('toggleEnabled', status.enabled);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
 function onToggleEntrySwitch(e) {
     const $entrySwitch = $(e.currentTarget);
     const { uid, avatar, enabled } = $entrySwitch.data();
@@ -928,6 +947,8 @@ function initPopupTriggers() {
     $(document).on('click', `.${htmlSuffix}-popup .menu_button.create-status`, onCreateStatusClick);
     // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, onStatusInput);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.kill-switch`, onToggleStatusClick);
     // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-file-clipboard`, onCreateEntryFromClipboardClick);
     // @ts-ignore

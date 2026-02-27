@@ -28,6 +28,7 @@ const statusTemplate = Object.freeze({
     depth: -1,
     force_depth: -1,
     last_mes_id: -1,
+    enabled: true,
     is_user: false,
     is_collapsed: false,
     entries: {}
@@ -44,6 +45,7 @@ const statusTemplate = Object.freeze({
  * @property {number} [depth]
  * @property {number} [force_depth]
  * @property {number} [last_mes_id]
+ * @property {boolean} [enabled]
  * @property {boolean} [is_user]
  * @property {boolean} [is_collapsed]
  * @property {Object.<string, StatusEntry>} [entries]
@@ -63,6 +65,7 @@ class Status {
     /** @property {number} */ depth
     /** @property {number} */ force_depth
     /** @property {number} */ last_mes_id
+    /** @property {boolean} */ enabled
     /** @property {boolean} */ is_user
     /** @property {boolean} */ is_collapsed
     /** @property {Object.<string, StatusEntry>} */ entries

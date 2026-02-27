@@ -152,7 +152,22 @@ function updateEntryFromInput(inputTrigger) {
 }
 
 /**
- * @param {Event} e
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onToggleStatus(e) {
+    const $button = $(e.currentTarget);
+    const { avatar } = $button.data();
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    status.set('enabled', !status.enabled);
+    $button.toggleClass('toggleEnabled', status.enabled);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
  */
 function onToggleEntry(e) {
     const entrySwitch = $(e.currentTarget);
@@ -569,6 +584,7 @@ function onGenerationAfterCommands(...args) {
         const status = StatUsMaximus.getStatus(char.avatar);
 
         if (!status) continue;
+        if (!status.enabled) continue;
 
         const entries = Object.values(status.entries)
         .sort((a, b) => a.display_position - b.display_position)
@@ -675,6 +691,8 @@ function registerEvents() {
     $chat.on('input', `.${htmlSuffix}-chat-drawer .chat-input-editor[type="checkbox"]`, onCheckboxToggle);
     // @ts-ignore
     $chat.on('pointerdown', `.${htmlSuffix}-chat-drawer .fake-input-span`, onSelectChatInput);
+    // @ts-ignore
+    $chat.on('click', `.${htmlSuffix}-toolbar .kill-switch`, onToggleStatus);
     // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-pen`, onClickEditStatus);
     // @ts-ignore
