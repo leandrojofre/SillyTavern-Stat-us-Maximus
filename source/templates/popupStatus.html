@@ -1,0 +1,72 @@
+<div class="stat-us-maximus-custom-css stat-us-maximus-popup flex-container flexFlowColumn gap5px bordered-box">
+    <div class="flex-container flex-column flex-center-col gap-5px">
+        <span class="stat-us-maximus-name text-quote"></span>
+
+        <div class="flex-container flex-center-row w-100">
+            <img class="stat-us-maximus-avatar me-5px" src="" alt="Avatar" title="Avatar">
+
+            <div class="flex-container flex-column flex-lg-row flex-grow-1 status-fields">
+                <div class="flex-container flex-center-row flex-grow-1">
+                    <label class="flex-container flex-column flex-center-col flex1 mw-lg-fit">
+                        <small class="status-input-label text-nowrap lh-normal">Role</small>
+                        <select class="text_pole flex1 m-0" name="role" aria-placeholder="Role"></select>
+                    </label>
+
+                    <label class="flex-container flex-column flex-center-col flex1">
+                        <small class="status-input-label text-nowrap lh-normal" title="Forces the entry to be injected at a constant depth. If set to -1, the entry will be dynamically placed above the last message of the character.">
+                            <span>Force depth</span>
+                            <i class="fa-solid fa-circle-question interactable"></i>
+                        </small>
+                        <input class="text_pole flex1 m-0" type="number" name="force_depth" min="-1" autocomplete="off" placeholder="Force depth">
+                    </label>
+
+                    <label class="flex-container flex-column flex-center-col flex1">
+                        <small class="status-input-label text-nowrap lh-normal">Entries separator</small>
+                        <input class="text_pole flex1 m-0" type="text" name="separator" autocomplete="off" placeholder="Entries separator" data-macros>
+                    </label>
+                </div>
+
+                <div class="flex-container flex-center-row flex-grow-1">
+                    <label class="flex-container flex-column flex-center-col flex1">
+                        <small class="status-input-label text-nowrap lh-normal" title="Default separator between an entry key and its value, used when creating a new entry.">
+                            <span>Def. separator</span>
+                            <i class="fa-solid fa-circle-question interactable"></i>
+                        </small>
+                        <input class="text_pole flex1 m-0" type="text" name="def_entry_separator" autocomplete="off" placeholder="Def. separator" data-macros>
+                    </label>
+
+                    <label class="flex-container flex-column flex-center-col flex1">
+                        <small class="status-input-label text-nowrap lh-normal">Status prefix</small>
+                        <input class="text_pole flex1 m-0" type="text" name="prefix" autocomplete="off" placeholder="Prefix" data-macros>
+                    </label>
+
+                    <label class="flex-container flex-column flex-center-col flex1">
+                        <small class="status-input-label text-nowrap lh-normal">Status suffix</small>
+                        <input class="text_pole flex1 m-0" type="text" name="suffix" autocomplete="off" placeholder="Suffix" data-macros>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex-container flex-column flex-center-col status-toolbar">
+                <small class="status-input-label text-nowrap lh-normal">Toolbar</small>
+
+                <div class="flex-container flex-column flex-lg-row">
+                    <div class="flex-container flex-center-row">
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-power-off togglable kill-switch" title="Toggle entry's active state" data-i18n="[title]Toggle entry's active state"></div>
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-file-clipboard"></div>
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-plus"></div>
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-compress status-bulk-toggle"></div>
+                    </div>
+
+                    <div class="flex-container flex-center-row">
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-expand status-bulk-toggle"></div>
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-truck-arrow-right"></div>
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-trash-can redWarningBG"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-container flex-column flex-center-col gap-5px status-entries"></div>
+</div>

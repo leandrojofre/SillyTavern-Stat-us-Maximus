@@ -1,0 +1,50 @@
+<div class="stat-us-maximus-popup-row flex-container flex-column flex-center-col gap-5px inline-drawer w-100 bordered-box">
+    <div class="inline-drawer-header flex-center gap-5px p-0 w-100">
+        <span class="drag-handle fa-solid fa-bars"></span>
+        <div class="inline-drawer-toggle fa-fw fa-solid fa-circle-chevron-down inline-drawer-icon down interactable"></div>
+        <div class="fa-solid fa-toggle-on kill-switch fs-lr"></div>
+
+        <div class="flex-container flex-center-row gap-5px flex-grow-1">
+            <input class="text_pole flex1 m-0" type="text" name="key" autocomplete="off" placeholder="Entry key" data-macros>
+            <input class="text_pole flex1 m-0 mw-25" type="text" name="separator" autocomplete="off" placeholder="Separator" data-macros>
+        </div>
+
+        <div class="menu_button fa-fw fa-solid fa-trash-can redWarningBG interactable delete-row"></div>
+    </div>
+
+    <div class="inline-drawer-content flex-column flex-center-col gap-5px p-0 w-100">
+        <div class="flex-container flex-center-row gap-5px w-100">
+            <label class="flex-container flex-column flex-center-col flex1">
+                <small class="status-input-label">Select value</small>
+                <select class="text_pole flex1 m-0" name="value_uid" aria-placeholder="Select value"></select>
+            </label>
+
+            <label class="flex-container flex-column flex-center-col flex1">
+                <small class="status-input-label" title="Not sent in the prompt.">
+                    <span>Value title</span>
+                    <i class="fa-solid fa-circle-question interactable"></i>
+                </small>
+                <input class="text_pole flex1 m-0" type="text" name="title" autocomplete="off" placeholder="Value title">
+            </label>
+
+            <div class="flex-container flex-column flex-center-col">
+                <small class="status-input-label text-nowrap lh-normal">Toolbar</small>
+
+                <div class="flex-container flex-center-row status-entry-toolbar">
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-plus"></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-trash-can redWarningBG"></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-copy ms-15px"></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-t" macro="{{text}}"></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-n" macro="{{number}}"></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-b" macro="{{boolean::true::true::false}}"></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-r" macro="{{range::0::100::1::100}}"></div>
+                </div>
+            </div>
+        </div>
+
+        <label class="flex-container flex-column flex-center-col w-100">
+            <small class="status-input-label">Value</small>
+            <textarea class="text_pole flex1 m-0" type="text" name="value" autocomplete="off" rows="4" placeholder="Entry value" data-macros></textarea>
+        </label>
+    </div>
+</div>
