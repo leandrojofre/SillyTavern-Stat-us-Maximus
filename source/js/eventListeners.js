@@ -90,18 +90,19 @@ function updateEntryFromInput(inputTrigger) {
 
     if (!avatar || isNaN(uid)) return;
 
-    /** @type {Status|false} */
     const status = StatUsMaximus.getStatus(avatar);
     const $inputs = $container.find('.input-value-source');
 
     if (!status) return;
 
-    /** @type {StatusEntry} */
-    const entry = status.entries[uid];
+    const entry = status.getEntry(Number(uid));
 
-    if (!entry || !entry.values[value_uid]) return;
+    if (!entry || !entry.getValue(Number(value_uid))) return;
 
-    const entryValue = field === 'value' ? entry.values[value_uid].value : entry[field];
+    const entryValue = field === 'value' ?
+        entry.getValue(Number(value_uid)).value :
+        entry[field];
+
     let parsedValue = CUSTOM_MACROS.getIndexes(entryValue);
 
     $inputs.each(function(i, input) {
