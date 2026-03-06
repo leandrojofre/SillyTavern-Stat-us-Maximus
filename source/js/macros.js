@@ -267,7 +267,7 @@ const CUSTOM_MACROS = {
                     let hasNestedMacro = false;
 
                     for (const arg of [value, trueText, falseText]) {
-                        hasNestedMacro = arg.match(detectNestedMacro)?.length > 0;
+                        hasNestedMacro = String(arg).match(detectNestedMacro)?.length > 0;
 
                         if (hasNestedMacro) break;
                     }
@@ -280,8 +280,8 @@ const CUSTOM_MACROS = {
                     }
 
                     const checked = resolve(value) === 'true';
-                    const trueValue = resolve(trueText);
-                    const falseValue = resolve(falseText);
+                    const trueValue = resolve(trueText) || DefMacroValue.TRUE;
+                    const falseValue = resolve(falseText) || DefMacroValue.FALSE;
                     const result = checked ? trueValue : falseValue;
                     const checkboxAttr = {};
                     const inputId = generateUUID();

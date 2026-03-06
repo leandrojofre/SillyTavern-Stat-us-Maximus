@@ -456,6 +456,10 @@ async function onSelectSwitchValueList(e) {
         .find('.status-description')
         .html(`<span class="d-inline">${valueClean}</span>`);
 
+    $entryBlock
+        .find('span.fake-inputs-container[data-field="value"]')
+        .data({value_uid: altUid});
+
     await hidePopper(popperInstance, optionList);
 }
 
@@ -679,9 +683,10 @@ function registerEvents() {
     // @ts-ignore
     $chat.on('contextmenu', `.${htmlSuffix}-entry .kill-switch`, onOpenPopupWithEntryOpen);
     // @ts-ignore
-    $chat.on('click', `.${htmlSuffix}-entry .status-value-uid`, onOpenSwitchValueList);
-    // @ts-ignore
     $chat.on('input', `.${htmlSuffix}-entry .chat-input-editor[type="range"]`, onRangeSliderMoved);
+    // @ts-ignore
+    $chat.on('click', `.${htmlSuffix}-entry .status-value-uid`, onOpenSwitchValueList);
+
     // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-chat-drawer .status-value-uid-options .list-group-item`, onSelectSwitchValueList);
     // @ts-ignore
@@ -692,6 +697,7 @@ function registerEvents() {
     $chat.on('input', `.${htmlSuffix}-chat-drawer .chat-input-editor[type="checkbox"]`, onCheckboxToggle);
     // @ts-ignore
     $chat.on('pointerdown', `.${htmlSuffix}-chat-drawer .fake-input-span`, onSelectChatInput);
+
     // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-toolbar .kill-switch`, onToggleStatus);
     // @ts-ignore
