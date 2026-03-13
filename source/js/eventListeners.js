@@ -9,7 +9,6 @@ import {
     context,
     getActiveParticipants,
     extensionSettings,
-    generateUUID,
     saveMetadataSafe,
     showPopper,
     hidePopper,
@@ -120,8 +119,8 @@ function updateEntryFromInput(inputTrigger) {
 
             if (type === InputTypes.TEXT) {
                 parsedValue = String(parsedValue)
-                    .replaceAll(/^ +/g, '{{noop}}$&')
-                    .replaceAll(/ +$/g, '$&{{noop}}');
+                    .replaceAll(/^\s+/g, '{{noop}}$&')
+                    .replaceAll(/\s+$/g, '$&{{noop}}');
             }
 
             newMacro = `{{${type}${separator + parsedValue}}}`;

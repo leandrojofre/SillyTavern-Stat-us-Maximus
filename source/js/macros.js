@@ -188,18 +188,20 @@ const CUSTOM_MACROS = {
 
                     if (!text) spanAttr['data-empty'] = '';
 
+                    text = text.replaceAll('{{noop}}', '');
+
                     const textarea = createElement('textarea', {
                         class: 'fake-input chat-input-editor mw-unset input-value-source',
                         attr: { autocomplete: 'off', tabindex: '-1', id: inputId },
                         data: { type: 'text', original: rawOriginal },
-                        innerText: text.replaceAll('{{noop}}', '')
+                        innerText: text
                     });
 
                     const span = createElement('span', {
                         class: `value fake-input-span text-line text-quote ${extensionSettings.showWhiteSpaces ? 'show-spaces' : ''}`,
                         attr: { ...spanAttr },
                         data: { inputId },
-                        innerText: text.replaceAll('{{noop}}', '')
+                        innerText: text
                     });
 
                     return `${textarea.outerHTML}${span.outerHTML}`;

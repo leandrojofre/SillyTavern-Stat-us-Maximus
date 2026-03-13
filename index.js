@@ -638,7 +638,7 @@ async function renderCharStatus(status) {
         const separatorClean = lodash.escape(substituteParams(separator));
         let valueClean = macro(values[value_uid].value, character);
 
-        if (extensionSettings.editNumbersFromChat) valueClean = valueClean.replaceAll("<br>", "\n");
+        if (extensionSettings.editNumbersFromChat) valueClean = valueClean.replaceAll('<br>', '\n');
 
         $entryBlock.attr({'status-block-id': statusBlockId, uid});
         $entryBlock.find('.status-title').html(`<span class="d-inline">${titleClean}</span>`);

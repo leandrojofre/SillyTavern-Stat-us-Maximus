@@ -199,7 +199,7 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
             const field = $input.attr('name');
             const isValueField = field === 'title' || field === 'value';
             const value = isValueField ? entry.values[entry.value_uid][field] : entry[field];
-            const doEscapeNewlines = typeof value === 'string' && !$input.is('textarea');
+            const doEscapeNewlines = typeof value === 'string';
 
             $input
                 .data({uid, avatar, statusId})
@@ -299,11 +299,11 @@ async function getStatusPopupBlock(avatar, is_user = false) {
             const $input = $(input);
             const field = $input.attr('name');
             const value = status[field];
-            const isString = typeof value === 'string';
+            const doEscapeNewlines = typeof value === 'string';
 
             $input
                 .data({avatar, statusId})
-                .val(isString ? escapeNewlines(value) : value)
+                .val(doEscapeNewlines ? escapeNewlines(value) : value)
                 .trigger('change');
         });
 
@@ -503,7 +503,7 @@ function onStatusInput(e) {
     const $input = $(e.currentTarget);
     const newValue = $input.val();
     const field = $input.attr('name');
-    const { avatar, statusId } = $input.data();
+    const { avatar } = $input.data();
 
     /** @type {Status|false} */
     const status = StatUsMaximus.getStatus(avatar);
@@ -520,7 +520,7 @@ function onEntryInput(e) {
     const $input = $(e.currentTarget);
     const newValue = $input.val();
     const field = $input.attr('name');
-    const { uid, avatar, statusId } = $input.data();
+    const { uid, avatar } = $input.data();
 
     /** @type {Status|false} */
     const status = StatUsMaximus.getStatus(avatar);
