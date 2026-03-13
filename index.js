@@ -30,6 +30,7 @@ export {
     getFreeDataUid,
     escapeNewlines,
     unEscapeNewlines,
+    unEscapeAll,
     exportObjectToClipboard,
     getActiveParticipants,
     context,
@@ -206,7 +207,6 @@ function getFreeDataUid(data = {}) {
 
 function escapeNewlines(str) {
     return str
-        .replace(/\\/g, '\\\\')
         .replace(/\r\n/g, '\\r\\n')
         .replace(/\n/g, '\\n')
         .replace(/\r/g, '\\r');
@@ -568,6 +568,28 @@ function renderStatusesSafe() {
 }
 
 /**
+ * @typedef {Object} UnEscapeOptions
+ * @prop {boolean} [newlines]
+ * @prop {boolean} [macros]
+ * @prop {string} [macroParser]
+ * @prop {string} [character]
+ * @prop {boolean} [html]
+ *
+ * @param {string|number|boolean} str
+ * @param {UnEscapeOptions} [options]
+ * @returns {string}
+ */
+function unEscapeAll(str, { newlines = false, macros = false, macroParser = 'substituteParams', character = '', html = false } = {}) {
+    let escaped = String(str || '');
+
+    if (macros) escaped = CUSTOM_MACROS[macroParser](escaped, character);
+    if (newlines) escaped = unEscapeNewlines(escaped);
+    if (html) escaped = lodash.escape(escaped);
+
+    return escaped;
+}
+
+/**
  * MARK:renderCharStatus()
  * Renders the status block of the selected character in the last message from the character rendered in the chat log.
  * @param {Status} status
@@ -627,18 +649,23 @@ async function renderCharStatus(status) {
         .entries(status.entries)
         .sort(([uidA, entryA], [uidB, entryB]) => entryA.display_position - entryB.display_position);
 
+    const macroParser = extensionSettings.editNumbersFromChat ? 'getInputs' : 'getValues';
+    const replaceMacrosOptions = {newlines: true, macros: true, macroParser, character};
+    const replaceDefOptions = {html: true, ...replaceMacrosOptions};
+
     for (const [uid, entry] of entries) {
-        const {key, separator, values, value_uid, enabled} = entry;
+        const key = entry.get('key');
+        const separator = entry.get('separator');
+        const values = entry.get('values') || {};
+        const value_uid = entry.get('value_uid');
+        const enabled = entry.get('enabled');
+
         const entryBlock = entryBlockTemplate.clone();
         const $entryBlock = $(entryBlock);
 
-        const macro = CUSTOM_MACROS[extensionSettings.editNumbersFromChat ? 'getInputs' : 'getValues'];
-
-        const titleClean = macro(key, character);
-        const separatorClean = lodash.escape(substituteParams(separator));
-        let valueClean = macro(values[value_uid].value, character);
-
-        if (extensionSettings.editNumbersFromChat) valueClean = valueClean.replaceAll('<br>', '\n');
+        const titleClean = unEscapeAll(key, replaceMacrosOptions);
+        const separatorClean = unEscapeAll(separator, replaceDefOptions);
+        let valueClean = unEscapeAll(entry.get('value'), replaceMacrosOptions);
 
         $entryBlock.attr({'status-block-id': statusBlockId, uid});
         $entryBlock.find('.status-title').html(`<span class="d-inline">${titleClean}</span>`);

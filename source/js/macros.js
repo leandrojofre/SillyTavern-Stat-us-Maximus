@@ -6,7 +6,6 @@ import {
     generateUUID,
     t
 } from "../../index.js";
-import { MacroValueType } from "/scripts/macros/macro-system.js";
 
 export {
     CUSTOM_MACROS
@@ -30,11 +29,26 @@ const DefMacroValue = Object.freeze({
 
 const CUSTOM_MACROS = {
     /**
-     * @param {string} text
+     * @param {string|number|boolean} text
+     * @param {string} [charName]
+     * @returns {string}
+     */
+    substituteParams: (text, charName) => substituteParams(String(text), {
+        dynamicMacros: {
+            'name': {
+                handler: function() {
+                    return charName || '{{name}}';
+                }
+            }
+        }
+    }),
+
+    /**
+     * @param {string|number|boolean} text
      * @param {string} charName
      * @returns {string}
      */
-    getValues: (text, charName) => substituteParams(text, {
+    getValues: (text, charName) => substituteParams(String(text), {
         dynamicMacros: {
             'name': {
                 handler: function() {
@@ -161,11 +175,11 @@ const CUSTOM_MACROS = {
     }),
 
     /**
-     * @param {string} text
+     * @param {string|number|boolean} text
      * @param {string} charName
      * @returns {string}
      */
-    getInputs: (text, charName) => substituteParams(text, {
+    getInputs: (text, charName) => substituteParams(String(text), {
         dynamicMacros: {
             'name': {
                 handler: function() {
@@ -410,10 +424,10 @@ const CUSTOM_MACROS = {
     }),
 
     /**
-     * @param {string} text
+     * @param {string|number|boolean} text
      * @returns {string}
      */
-    getIndexes: (text) => substituteParams(text, {
+    getIndexes: (text) => substituteParams(String(text), {
         dynamicMacros: {
             'text': {
                 handler: function() {

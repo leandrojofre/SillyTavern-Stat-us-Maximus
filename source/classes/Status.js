@@ -150,7 +150,7 @@ class Status {
     }
 
     /**
-     * @param {number} uid
+     * @param {number|string} uid
      * @returns {StatusEntry}
      */
     getEntry(uid) {

@@ -121,7 +121,6 @@ class StatusEntry {
         const newType = typeof value;
 
         if (key === 'values') return this;
-        if (newType === 'string') value = unEscapeNewlines(value);
 
         if ((key === 'value' || key === 'title') && newType === 'string')
             return this.setValue(key, value, uid);
@@ -145,15 +144,16 @@ class StatusEntry {
      * @returns {string|number|boolean|undefined}
      */
     get(key, uid) {
-        const cleanUID = uid ?? this.value_uid;
+        const cleanUID = Number(uid ?? this.value_uid);
+        let returnValue = this[key];
 
-        if ((key === 'value' || key === 'title') && !isNaN(Number(cleanUID)))
-            return this.values[cleanUID][key];
+        if (!Object.keys(entryTemplate).includes(key))
+            returnValue = undefined;
 
-        if (key === 'values') return undefined;
-        if (!Object.keys(entryTemplate).includes(key)) return undefined;
+        if (Object.keys(altEntryTemplate).includes(key) && !isNaN(cleanUID))
+            returnValue = this.getValue(cleanUID)[key];
 
-        return this[key];
+        return returnValue;
     }
 
     /**

@@ -199,7 +199,7 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
             const field = $input.attr('name');
             const isValueField = field === 'title' || field === 'value';
             const value = isValueField ? entry.values[entry.value_uid][field] : entry[field];
-            const doEscapeNewlines = typeof value === 'string';
+            const doEscapeNewlines = typeof value === 'string' && field !== 'value';
 
             $input
                 .data({uid, avatar, statusId})
@@ -522,13 +522,11 @@ function onEntryInput(e) {
     const field = $input.attr('name');
     const { uid, avatar } = $input.data();
 
-    /** @type {Status|false} */
     const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 
-    /** @type {StatusEntry} */
-    const entry = status.entries[uid];
+    const entry = status.getEntry(uid);
     const valueClean = field === 'value_uid' ? Number(newValue) : newValue;
 
     entry.set(field, valueClean, entry.value_uid);

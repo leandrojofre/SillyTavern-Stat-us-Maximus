@@ -14,6 +14,7 @@ import {
     hidePopper,
     metadataName,
     htmlSuffix,
+    unEscapeAll,
     // HTML Related
     updateCaretDisplaySafe,
     getSelectedTextInElem,
@@ -449,7 +450,7 @@ async function onSelectSwitchValueList(e) {
     const entryValue = entry.values[entry.value_uid];
     let valueClean = macro(entryValue.value, character);
 
-    if (extensionSettings.editNumbersFromChat) valueClean = valueClean.replaceAll("<br>", "\n");
+    if (extensionSettings.editNumbersFromChat) valueClean = valueClean.replaceAll('<br>', '\n');
 
     $entryBlock
         .find('.status-description')
@@ -589,7 +590,7 @@ function onGenerationAfterCommands(...args) {
 
     characters.push(...activeParticipants.chars);
 
-    const macro = CUSTOM_MACROS.getValues;
+    const replaceMacrosOptions = {newlines: true, macros: true, macroParser: 'getValues'};
 
     for (const [id, char] of characters.entries()) {
         const status = StatUsMaximus.getStatus(char.avatar);
@@ -597,27 +598,40 @@ function onGenerationAfterCommands(...args) {
         if (!status) continue;
         if (!status.enabled) continue;
 
-        const entries = Object.values(status.entries)
+        const entries = Object.keys(status.entries)
+        .map(uid => status.getEntry(uid))
         .sort((a, b) => a.display_position - b.display_position)
         .map(function(entry) {
-            /** @type {StatusEntry} */
-            const { enabled, key, separator, values, value_uid } = entry;
+            const { enabled, value_uid } = entry;
+
+            const key = entry.get('key');
+            const separator = entry.get('separator');
+            const value = entry.getValue(value_uid)?.value;
+
             let text = '';
 
             if (!enabled) return text;
-            if (key) text += macro(key, char.name);
+
+            if (key) text += key;
             if (separator) text += separator;
-
-            const value = values[value_uid]?.value;
-
-            if (value) text += macro(value, char.name);
+            if (value) text += value;
 
             return text;
         })
         .filter(entry => entry?.length);
 
+        if (!entries.length) continue;
+
         const uuid = `${metadataName}_${id}`;
-        const prompt = status.prefix + entries.join(status.separator) + status.suffix;
+        const prompt = unEscapeAll(
+                status.prefix + entries.join(status.separator) + status.suffix,
+                {character: char.name, ...replaceMacrosOptions}
+            )
+            .replace(/\/\/.*\/\//g, '')
+            .replace(/\/\/.*$/gm, '');
+
+        if (!prompt) continue;
+
         let isCharGenerating = false;
 
         if (genType === 'impersonate' && status.is_user)
@@ -635,13 +649,9 @@ function onGenerationAfterCommands(...args) {
         const depth = status.force_depth >= 0 ? status.force_depth : status.depth;
         const depthNormalized = Math.max(depth, extensionSettings.minPromptDepth);
 
-        if (!prompt) continue;
-
         setExtensionPrompt(
             uuid,
-            macro(prompt, char.name)
-                .replace(/\/\/.*\/\//g, '')
-                .replace(/\/\/.*$/gm, ''),
+            prompt,
             Position.IN_DEPTH,
             depthNormalized + depthOffset,
             true,
