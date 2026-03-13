@@ -564,8 +564,15 @@ async function onChatChanged(...args) {
     scrollChatToBottom();
 }
 
+const genTypesWithDepthOffset = [
+    'continue'
+]
+
 function onGenerationAfterCommands(...args) {
     StatUsMaximus.log(eventTypes.GENERATION_AFTER_COMMANDS, args);
+
+    const [type, parameters, isDryRun] = args;
+    const hasDepthOffset = genTypesWithDepthOffset.includes(type);
 
     const [ genType ] = args;
     const { extensionPrompts: extension_prompts, characterId: chid, characters: allCharacters } = context();
@@ -606,7 +613,8 @@ function onGenerationAfterCommands(...args) {
             if (value) text += macro(value, char.name);
 
             return text;
-        });
+        })
+        .filter(entry => entry?.length);
 
         const uuid = `${metadataName}_${id}`;
         const prompt = status.prefix + entries.join(status.separator) + status.suffix;
@@ -623,6 +631,7 @@ function onGenerationAfterCommands(...args) {
 
         if (status.depth < 0 && !extensionSettings.alwaysIncludeUnmutedMembers) continue;
 
+        const depthOffset = hasDepthOffset ? 1 : 0;
         const depth = status.force_depth >= 0 ? status.force_depth : status.depth;
         const depthNormalized = Math.max(depth, extensionSettings.minPromptDepth);
 
@@ -634,7 +643,7 @@ function onGenerationAfterCommands(...args) {
                 .replace(/\/\/.*\/\//g, '')
                 .replace(/\/\/.*$/gm, ''),
             Position.IN_DEPTH,
-            depthNormalized,
+            depthNormalized + depthOffset,
             true,
             status.role
         );
