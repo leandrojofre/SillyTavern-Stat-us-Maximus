@@ -202,13 +202,12 @@ const CUSTOM_MACROS = {
 
                     if (!text) spanAttr['data-empty'] = '';
 
-                    text = text.replaceAll('{{noop}}', '');
+                    text = text.replace(/\{\{noop\}\}/g, '');
 
                     const textarea = createElement('textarea', {
                         class: 'fake-input chat-input-editor mw-unset input-value-source',
                         attr: { autocomplete: 'off', tabindex: '-1', id: inputId },
-                        data: { type: 'text', original: rawOriginal },
-                        innerText: text
+                        data: { type: 'text', original: rawOriginal, defaultValue: text }
                     });
 
                     const span = createElement('span', {

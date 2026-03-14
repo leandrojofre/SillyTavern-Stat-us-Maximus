@@ -447,7 +447,7 @@ function getSelectedTextInElem(elem) {
     @param {HTMLSpanElement} span
     @param {string} text
     @param {number} caretPos
-    @param {number} selectEnd
+    @param {number} [selectEnd]
  */
 function renderCaret(span, text, caretPos, selectEnd = caretPos) {
     const esc = s => lodash.escape(s);
@@ -469,9 +469,9 @@ function renderCaret(span, text, caretPos, selectEnd = caretPos) {
     for (const [k, v] of Object.entries(chunks))
         chunks[k] = typeof v === 'boolean' ? v : esc(v);
 
-    !chunks.selected ?
-        $span.html(`${chunks.start}<span class="fake-caret"></span>${chunks.end}`) :
-        $span.html(`${chunks.start}<span class="fake-selection">${chunks.selected}</span>${chunks.end}`);
+    chunks.selected ?
+        $span.html(`${chunks.start}<span class="fake-selection">${chunks.selected}</span>${chunks.end}`) :
+        $span.html(`${chunks.start}<span class="fake-caret"></span>${chunks.end}`);
 }
 
 /**
@@ -665,12 +665,18 @@ async function renderCharStatus(status) {
 
         const titleClean = unEscapeAll(key, replaceMacrosOptions);
         const separatorClean = unEscapeAll(separator, replaceDefOptions);
-        let valueClean = unEscapeAll(entry.get('value'), replaceMacrosOptions);
+        const valueClean = unEscapeAll(entry.get('value'), replaceMacrosOptions);
 
         $entryBlock.attr({'status-block-id': statusBlockId, uid});
         $entryBlock.find('.status-title').html(`<span class="d-inline">${titleClean}</span>`);
         $entryBlock.find('.status-separator').html(separatorClean);
         $entryBlock.find('.status-description').html(`<span class="d-inline">${valueClean}</span>`);
+
+        $entryBlock.find('textarea.input-value-source').each((_, textarea) => {
+            const $textarea = $(textarea);
+            const val = $textarea.data('defaultValue');
+            $textarea.val(val);
+        });
 
         $entryBlock
             .find('.kill-switch')

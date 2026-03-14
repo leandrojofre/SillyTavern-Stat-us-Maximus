@@ -199,6 +199,8 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
             const field = $input.attr('name');
             const isValueField = field === 'title' || field === 'value';
             const value = isValueField ? entry.values[entry.value_uid][field] : entry[field];
+
+            // ! Escaping is not needed anymore after reworking newlines escaping, but it will be kept for compatibility as older entries don't have newlines escaped
             const doEscapeNewlines = typeof value === 'string' && field !== 'value';
 
             $input
