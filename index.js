@@ -569,18 +569,18 @@ function renderStatusesSafe() {
 
 /**
  * @typedef {Object} UnEscapeOptions
- * @prop {boolean} [newlines]
- * @prop {boolean} [macros]
- * @prop {string} [macroParser]
- * @prop {string} [character]
- * @prop {boolean} [html]
+ * @prop {boolean} [newlines] - Wether to unescape newlines or not
+ * @prop {boolean} [macros] - Wether to replace macros with their values or not
+ * @prop {string} [macroParser] - The macro parser to use from CUSTOM_MACROS, default is `substituteParams`
+ * @prop {string} [character] - Character name for the `{{name}}` macro
+ * @prop {boolean} [html] - Wether to escape HTML with lodash or not
  *
  * @param {string|number|boolean} str
  * @param {UnEscapeOptions} [options]
  * @returns {string}
  */
-function unEscapeAll(str, { newlines = false, macros = false, macroParser = 'substituteParams', character = '', html = false } = {}) {
-    let escaped = String(str || '');
+function unEscapeAll(text, { newlines = false, macros = false, macroParser = 'substituteParams', character = '', html = false } = {}) {
+    let escaped = String(text || '');
 
     if (macros) escaped = CUSTOM_MACROS[macroParser](escaped, character);
     if (newlines) escaped = unEscapeNewlines(escaped);
