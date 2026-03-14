@@ -432,29 +432,32 @@ async function onSelectSwitchValueList(e) {
     const popperInstance = $entryBlock.find('.status-value-uid').first().data('switchValuePopper');
     const optionList = $(`#${listId}`)[0];
 
-    /** @type {Status|false} */
     const status = StatUsMaximus.getStatus(avatar);
 
     if (!status)
         return await hidePopper(popperInstance, optionList);
 
-    /** @type {StatusEntry} */
-    const entry = status.entries[uid];
+    const entry = status.getEntry(uid);
 
     if (Number(entry.value_uid) === Number(altUid))
         return await hidePopper(popperInstance, optionList);
 
     entry.set('value_uid', altUid);
 
-    const macro = CUSTOM_MACROS[extensionSettings.editNumbersFromChat ? 'getInputs' : 'getValues'];
-    const entryValue = entry.values[entry.value_uid];
-    let valueClean = macro(entryValue.value, character);
-
-    if (extensionSettings.editNumbersFromChat) valueClean = valueClean.replaceAll('<br>', '\n');
+    const macroParser = extensionSettings.editNumbersFromChat ? 'getInputs' : 'getValues';
+    const replaceMacrosOptions = {newlines: true, macros: true, macroParser, character};
+    const entryValue = entry.getValue(altUid);
+    const valueClean = unEscapeAll(entryValue.value, replaceMacrosOptions);
 
     $entryBlock
         .find('.status-description')
         .html(`<span class="d-inline">${valueClean}</span>`);
+
+    $entryBlock.find('textarea.input-value-source').each((_, textarea) => {
+        const $textarea = $(textarea);
+        const val = $textarea.data('defaultValue');
+        $textarea.val(val);
+    });
 
     $entryBlock
         .find('span.fake-inputs-container[data-field="value"]')
