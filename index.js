@@ -287,7 +287,8 @@ function getActiveParticipants(discard = []) {
         const group = groups.find(g => g.id == group_id);
         const muted_members = group.disabled_members ?? [];
 
-        toDiscard.push(...muted_members);
+        if (!extensionSettings.alwaysIncludeUnmutedMembers)
+            toDiscard.push(...muted_members);
 
         for (const member of members) {
             if (member) chars.push(member);
@@ -575,7 +576,7 @@ function renderStatusesSafe() {
  * @prop {string} [character] - Character name for the `{{name}}` macro
  * @prop {boolean} [html] - Wether to escape HTML with lodash or not
  *
- * @param {string|number|boolean} str
+ * @param {string|number|boolean} text
  * @param {UnEscapeOptions} [options]
  * @returns {string}
  */
@@ -743,7 +744,23 @@ async function renderCharStatus(status) {
 }
 
 async function renderStatuses() {
-    const statuses = StatUsMaximus.getStatuses();
+    const activeParticipants = getActiveParticipants();
+
+    /** @type {(Character|UserCharacter)[]} */
+    const characters = [];
+
+    if (activeParticipants.user) characters.push(activeParticipants.user);
+
+    characters.push(...activeParticipants.chars);
+
+    const formattedChars = characters.map(c => ({
+        avatar: c.avatar,
+        is_user: c['is_user'] ?? false
+    }));
+
+    const statuses = StatUsMaximus
+        .getStatuses()
+        .filter(s => formattedChars.some(c => s.avatar === c.avatar && s.is_user === c.is_user));
 
     $(`#chat .${htmlSuffix}-custom-css.${htmlSuffix}-chat-drawer`).remove();
 
