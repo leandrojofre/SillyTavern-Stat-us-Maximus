@@ -117,9 +117,13 @@ class Status {
         if (!Object.keys(statusTemplate).includes(key)) return this;
 
         const targetType = typeof statusTemplate[key];
-        const newType = typeof value;
+        let newType = typeof value;
 
-        if (targetType !== newType) value = parseValue(value, targetType);
+        if (targetType !== newType) {
+            value = parseValue(value, targetType);
+            newType = typeof value;
+        }
+
         if (newType === 'string') value = unEscapeNewlines(value);
 
         if (this[key] === value) return this;
