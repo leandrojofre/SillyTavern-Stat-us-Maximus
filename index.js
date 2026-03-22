@@ -245,18 +245,16 @@ function getUser(value = user_avatar, {searchKey = 'avatar', ignoreAvatars = []}
     if (!value) value = power_user.default_persona;
     if (!value) return null;
 
-    let avatar = '';
+    let avatar = value;
     const correctSearchKey = ['avatar', 'name'].includes(searchKey);
 
     if (!correctSearchKey) return null;
-
-    if (searchKey === 'avatar') avatar = value;
 
     if (searchKey === 'name')
         avatar = Object
             .entries(power_user.personas)
             .map(([avatar, name]) => {return {name, avatar}})
-            .find(per => per.name === value && !ignoreAvatars.includes(per.avatar))
+            .find(per => per.name === String(value) && !ignoreAvatars.includes(per.avatar))
             ?.avatar;
 
     if (!avatar || !power_user.personas[avatar]) return null;
@@ -290,9 +288,8 @@ function getActiveParticipants(discard = []) {
         if (!extensionSettings.alwaysIncludeUnmutedMembers)
             toDiscard.push(...muted_members);
 
-        for (const member of members) {
+        for (const member of members)
             if (member) chars.push(member);
-        }
     }
 
     if (chid) {
@@ -999,8 +996,7 @@ async function loadSettingsMenu() {
 
 // * Initialize Extension
 
-$(async function() {
-
+eventSource.once(eventTypes.APP_INITIALIZED, async function() {
     if (!context().extensionSettings[extensionFullName]) {
         context().extensionSettings[extensionFullName] = structuredClone(defaultSettings);
     }
