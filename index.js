@@ -578,7 +578,7 @@ function renderStatusesSafe() {
  * @returns {string}
  */
 function unEscapeAll(text, { newlines = false, macros = false, macroParser = 'substituteParams', character = '', html = false } = {}) {
-    let escaped = String(text || '');
+    let escaped = String(lodash.cloneDeep(text || ''));
 
     if (macros) escaped = CUSTOM_MACROS[macroParser](escaped, character);
     if (newlines) escaped = unEscapeNewlines(escaped);
