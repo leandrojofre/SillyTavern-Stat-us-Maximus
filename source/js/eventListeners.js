@@ -15,6 +15,8 @@ import {
     metadataName,
     htmlSuffix,
     unEscapeAll,
+    generateUUID,
+    lodash,
     // HTML Related
     updateCaretDisplaySafe,
     getSelectedTextInElem,
@@ -23,7 +25,6 @@ import {
 
 import { Status } from '../classes/Status.js';
 import { StatusEntry } from '../classes/StatusEntry.js';
-import { CUSTOM_MACROS } from './macros.js';
 
 export {
     registerEvents
@@ -99,32 +100,34 @@ function updateEntryFromInput(inputTrigger) {
 
     if (!entry || !entry.getValue(Number(value_uid))) return;
 
-    const entryValue = field === 'value' ?
+    let fieldValue = lodash.cloneDeep(
+        field === 'value' ?
         entry.getValue(Number(value_uid)).value :
-        entry[field];
+        entry[field]
+    );
 
-    let parsedValue = CUSTOM_MACROS.getIndexes(entryValue);
+    const operationUID = generateUUID(`${metadataName}_macro_parsing_done`);
 
     $inputs.each(function(i, input) {
         const $input = $(input);
 
-        const { type } = $input.data();
+        const { type, original: inputIndex } = $input.data();
 
-        const inputIndex = `{{${String(type).toUpperCase()}}}`;
+        if (!inputIndex) return;
+
         let newMacro = '';
 
         if (type === InputTypes.TEXT || type === InputTypes.NUMBER) {
-            const value = $input.val() ?? '';
+            let value = $input.val() ?? '';
             const separator = !value ? '' : '::';
-            let parsedValue = value;
 
             if (type === InputTypes.TEXT) {
-                parsedValue = String(parsedValue)
+                value = String(value)
                     .replaceAll(/^\s+/g, '{{noop}}$&')
                     .replaceAll(/\s+$/g, '$&{{noop}}');
             }
 
-            newMacro = `{{${type}${separator + parsedValue}}}`;
+            newMacro = `{{${type}${separator}${value}::${operationUID}}}`;
         }
 
         if (type === InputTypes.BOOLEAN) {
@@ -134,7 +137,7 @@ function updateEntryFromInput(inputTrigger) {
 
             const { trueValue, falseValue } = $span.data();
 
-            newMacro = `{{${type}::${value}::${trueValue}::${falseValue}}}`;
+            newMacro = `{{${type}::${value}::${trueValue}::${falseValue}::${operationUID}}}`;
         }
 
         if (type === InputTypes.RANGE) {
@@ -143,13 +146,14 @@ function updateEntryFromInput(inputTrigger) {
             const max = $input.attr('max') ?? 100;
             const step = $input.attr('step') ?? 1;
 
-            newMacro = `{{${type}::${min}::${max}::${step}::${value}}}`;
+            newMacro = `{{${type}::${min}::${max}::${step}::${value}::${operationUID}}}`;
         }
 
-        parsedValue = parsedValue.replace(inputIndex, newMacro);
+        fieldValue = fieldValue.replace(inputIndex, newMacro);
     });
 
-    entry.set(field, parsedValue, value_uid);
+    fieldValue = fieldValue.replaceAll(`::${operationUID}}}`, '}}');
+    entry.set(field, fieldValue, value_uid);
 }
 
 /**
@@ -546,10 +550,7 @@ function onMessageRendered() {
 async function onNewMessageRendered() {
     StatUsMaximus.log('onMessageRendered');
 
-    /** @type {Function} */
-    const renderer = StatUsMaximus.renderStatuses;
-
-    await renderer();
+    await StatUsMaximus.renderStatuses();
     if (powerUserSettings.auto_scroll_chat_to_bottom) scrollChatToBottom();
 }
 
@@ -560,11 +561,9 @@ async function onChatChanged(...args) {
 
     if (!chat_id) return;
 
-    /** @type {Function} */
-    const renderer = StatUsMaximus.renderStatuses;
-
     StatUsMaximus.getStatuses();
-    await renderer();
+    await StatUsMaximus.renderStatuses();
+
     scrollChatToBottom();
 }
 
