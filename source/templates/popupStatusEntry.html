@@ -2,25 +2,25 @@
     <div class="inline-drawer-header flex-center gap-5px p-0 w-100">
         <span class="drag-handle fa-solid fa-bars"></span>
         <div class="inline-drawer-toggle fa-fw fa-solid fa-circle-chevron-down inline-drawer-icon down interactable"></div>
-        <div class="fa-solid fa-toggle-on kill-switch fs-lr"></div>
+        <div class="fa-solid fa-toggle-on kill-switch fs-lr" title="Toggle entry's active state" data-i18n="[title]Toggle entry's active state"></div>
 
         <div class="flex-container flex-center-row gap-5px flex-grow-1">
-            <input class="text_pole flex1 m-0" type="text" name="key" autocomplete="off" placeholder="Entry key" data-macros>
-            <input class="text_pole flex1 m-0 mw-25" type="text" name="separator" autocomplete="off" placeholder="Separator" data-macros>
+            <input class="text_pole flex1 m-0" type="text" name="key" autocomplete="off" placeholder="Entry key" title="Title of the entry, sent into the prompt."  data-i18n="[title]Title of the entry, sent into the prompt." data-macros>
+            <input class="text_pole flex1 m-0 mw-25" type="text" name="separator" autocomplete="off" placeholder="Separator" title="Separator between the entry key and value." data-i18n="[title]Separator between the entry key and value." data-macros>
         </div>
 
-        <div class="menu_button fa-fw fa-solid fa-trash-can redWarningBG interactable delete-row"></div>
+        <div class="menu_button fa-fw fa-solid fa-trash-can redWarningBG interactable delete-row" title="Delete this entry. WARNING: This cannot be undone." data-i18n="[title]Delete this entry. WARNING: This cannot be undone."></div>
     </div>
 
     <div class="inline-drawer-content flex-column flex-center-col gap-5px p-0 w-100">
         <div class="flex-container flex-center-row gap-5px w-100">
-            <label class="flex-container flex-column flex-center-col flex1">
+            <label class="flex-container flex-column flex-center-col flex1" title="Swap between alternative entry values." data-i18n="[title]Swap between alternative entry values.">
                 <small class="status-input-label">Select value</small>
                 <select class="text_pole flex1 m-0" name="value_uid" aria-placeholder="Select value"></select>
             </label>
 
-            <label class="flex-container flex-column flex-center-col flex1">
-                <small class="status-input-label" title="Not sent in the prompt.">
+            <label class="flex-container flex-column flex-center-col flex1" title="Give the currently selected value a title. This is not sent into the prompt, only used in the selector menu.">
+                <small class="status-input-label">
                     <span>Value title</span>
                     <i class="fa-solid fa-circle-question interactable"></i>
                 </small>
@@ -31,18 +31,18 @@
                 <small class="status-input-label text-nowrap lh-normal">Toolbar</small>
 
                 <div class="flex-container flex-center-row status-entry-toolbar">
-                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-plus"></div>
-                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-trash-can redWarningBG"></div>
-                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-copy ms-15px"></div>
-                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-t" macro="{{text}}"></div>
-                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-n" macro="{{number}}"></div>
-                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-b" macro="{{boolean::true::true::false}}"></div>
-                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-r" macro="{{range::0::100::1::100}}"></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-plus" title="Create a new alternative value for the entry." data-i18n="[title]Create a new alternative value for the entry."></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-trash-can redWarningBG" title="Delete the currently active alternative value. WARNING: This cannot be undone." data-i18n="[title]Delete the currently active alternative value. WARNING: This cannot be undone."></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-copy ms-15px" title="Copy this entry into the clipboard. It is copied as a JSON object." data-i18n="[title]Copy this entry into the clipboard. It is copied as a JSON object."></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-t" macro="{{text}}" title="Shortcut for the text macro replaced by an input in the status block rendered in the chat. By default, is will be sent into your clipboard, unless you enable the alternative behavior from the extension settings."></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-n" macro="{{number}}" title="Shortcut for the number macro replaced by an input in the status block rendered in the chat. By default, is will be sent into your clipboard, unless you enable the alternative behavior from the extension settings."></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-b" macro="{{boolean::true::true::false}}" title="Shortcut for the boolean macro replaced by an input in the status block rendered in the chat. By default, is will be sent into your clipboard, unless you enable the alternative behavior from the extension settings."></div>
+                    <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-r" macro="{{range::0::100::1::100}}" title="Shortcut for the range macro replaced by an input in the status block rendered in the chat. By default, is will be sent into your clipboard, unless you enable the alternative behavior from the extension settings."></div>
                 </div>
             </div>
         </div>
 
-        <label class="flex-container flex-column flex-center-col w-100">
+        <label class="flex-container flex-column flex-center-col w-100" title="The currently selected value of the entry."  data-i18n="[title]The currently selected value of the entry.">
             <small class="status-input-label">Value</small>
             <textarea class="text_pole m-0" type="text" name="value" autocomplete="off" rows="4" placeholder="Entry value" data-macros></textarea>
         </label>
