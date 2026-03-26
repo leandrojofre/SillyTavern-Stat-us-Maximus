@@ -567,19 +567,12 @@ async function onChatChanged(...args) {
     scrollChatToBottom();
 }
 
-const genTypesWithDepthOffset = [
-    'continue'
-]
-
 function onGenerationAfterCommands(...args) {
     StatUsMaximus.log(eventTypes.GENERATION_AFTER_COMMANDS, args);
 
-    const [type, parameters, isDryRun] = args;
-    const hasDepthOffset = genTypesWithDepthOffset.includes(type);
-
     const [ genType ] = args;
     const { extensionPrompts: extension_prompts, characterId: chid, characters: allCharacters } = context();
-    const activeParticipants = getActiveParticipants();
+    const { chars, user } = getActiveParticipants();
 
     for (const key of Object.keys(extension_prompts)) {
         if (key.includes(metadataName)) delete extension_prompts[key];
@@ -588,9 +581,9 @@ function onGenerationAfterCommands(...args) {
     /** @type {(Character|UserCharacter)[]} */
     const characters = [];
 
-    if (activeParticipants.user) characters.push(activeParticipants.user);
+    if (user) characters.push(user);
 
-    characters.push(...activeParticipants.chars);
+    characters.push(...chars);
 
     const replaceMacrosOptions = {newlines: true, macros: true, macroParser: 'getValues'};
 
@@ -642,24 +635,27 @@ function onGenerationAfterCommands(...args) {
         else if (typeof chid === 'string' && allCharacters[chid].avatar === status.avatar)
             isCharGenerating = true;
 
-        StatUsMaximus.log(genType, chid, allCharacters[chid]?.avatar, status.avatar, isCharGenerating);
+        StatUsMaximus.log({ genType, chid, charSelected: allCharacters[chid]?.avatar, avatar: status.avatar, isCharGenerating });
         status.refreshDepth({ isGenerating: isCharGenerating });
 
         if (status.depth < 0 && !extensionSettings.alwaysIncludeUnmutedMembers) continue;
 
-        const depthOffset = hasDepthOffset ? 1 : 0;
         const depth = status.force_depth >= 0 ? status.force_depth : status.depth;
         const depthNormalized = Math.max(depth, extensionSettings.minPromptDepth);
+
+        StatUsMaximus.log({ depth, depthNormalized });
 
         setExtensionPrompt(
             uuid,
             prompt,
             Position.IN_DEPTH,
-            depthNormalized + depthOffset,
+            depthNormalized,
             true,
             status.role
         );
     }
+
+    StatUsMaximus.log({ extension_prompts });
 }
 
 /**
