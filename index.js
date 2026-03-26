@@ -569,6 +569,7 @@ function renderStatusesSafe() {
  * @typedef {Object} UnEscapeOptions
  * @prop {boolean} [newlines] - Wether to unescape newlines or not
  * @prop {boolean} [macros] - Wether to replace macros with their values or not
+ * @prop {boolean} [comments] - Wether to remove comments from the text content
  * @prop {string} [macroParser] - The macro parser to use from CUSTOM_MACROS, default is `substituteParams`
  * @prop {string} [character] - Character name for the `{{name}}` macro
  * @prop {boolean} [html] - Wether to escape HTML with lodash or not
@@ -577,12 +578,16 @@ function renderStatusesSafe() {
  * @param {UnEscapeOptions} [options]
  * @returns {string}
  */
-function unEscapeAll(text, { newlines = false, macros = false, macroParser = 'substituteParams', character = '', html = false } = {}) {
+function unEscapeAll(text, { newlines = false, macros = false, comments = false, macroParser = 'substituteParams', character = '', html = false } = {}) {
     let escaped = String(lodash.cloneDeep(text || ''));
 
     if (macros) escaped = CUSTOM_MACROS[macroParser](escaped, character);
     if (newlines) escaped = unEscapeNewlines(escaped);
     if (html) escaped = lodash.escape(escaped);
+    if (comments) escaped = escaped
+        .replace(/\/\*.*?\*\//gs, '')
+        .replace(/\/\/.*\/\//g, '')
+        .replace(/\/\/.*$/gm, '');
 
     return escaped;
 }

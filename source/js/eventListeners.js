@@ -585,7 +585,7 @@ function onGenerationAfterCommands(...args) {
 
     characters.push(...chars);
 
-    const replaceMacrosOptions = {newlines: true, macros: true, macroParser: 'getValues'};
+    const replaceMacrosOptions = {newlines: true, macros: true, comments: true, macroParser: 'getValues'};
 
     for (const [id, char] of characters.entries()) {
         const status = StatUsMaximus.getStatus(char.avatar);
@@ -619,11 +619,9 @@ function onGenerationAfterCommands(...args) {
 
         const uuid = `${metadataName}_${id}`;
         const prompt = unEscapeAll(
-                status.prefix + entries.join(status.separator) + status.suffix,
-                {character: char.name, ...replaceMacrosOptions}
-            )
-            .replace(/\/\/.*\/\//g, '')
-            .replace(/\/\/.*$/gm, '');
+            status.prefix + entries.join(status.separator) + status.suffix,
+            {character: char.name, ...replaceMacrosOptions}
+        );
 
         if (!prompt) continue;
 
