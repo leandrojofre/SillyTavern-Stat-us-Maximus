@@ -211,7 +211,7 @@ const CUSTOM_MACROS = {
                     });
 
                     const span = createElement('span', {
-                        class: `value fake-input-span text-line text-quote ${extensionSettings.showWhiteSpaces ? 'show-spaces' : ''}`,
+                        class: `value fake-input-span text-line text-quote${extensionSettings.showWhiteSpaces ? ' show-spaces' : ''}`,
                         attr: { ...spanAttr },
                         data: { inputId },
                         innerText: text
