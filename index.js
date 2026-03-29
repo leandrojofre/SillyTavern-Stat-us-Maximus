@@ -586,7 +586,6 @@ function unEscapeAll(text, { newlines = false, macros = false, comments = false,
     if (html) escaped = lodash.escape(escaped);
     if (comments) escaped = escaped
         .replace(/\/\*.*?\*\//gs, '')
-        .replace(/\/\/.*\/\//g, '')
         .replace(/\/\/.*$/gm, '');
 
     return escaped;
