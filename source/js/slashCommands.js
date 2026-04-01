@@ -7,7 +7,8 @@ import {
     getUser,
     powerUserSettings,
     saveMetadataSafe,
-    metadataName
+    metadataName,
+    unEscapeAll
 } from '../../index.js';
 
 import { Status } from '../classes/Status.js';
@@ -308,7 +309,9 @@ async function commandSetStatusField(args, value = '') {
         if (!acceptedFields.some(key => key === field)) throw new Error(`Invalid Status field "${field}"`);
         if (!status) throw new Error(`The character "${char}" could not be found in the metadata`);
 
-        status.set(field, String(value));
+        value = unEscapeAll(value, {newlines: true});
+
+        status.set(field, value);
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
         StatUsMaximus.error(error);
@@ -468,7 +471,9 @@ async function commandSetEntryField(args, value = '') {
 
         if (!entry) return '';
 
-        entry.set(field, String(value), entry.value_uid);
+        value = unEscapeAll(value, {newlines: true});
+
+        entry.set(field, value, entry.value_uid);
         StatUsMaximus.renderStatusesSafe();
     } catch (error) {
         toastr.error(t`Failed to save Status Metadata: ${error.message}`);
@@ -732,6 +737,8 @@ async function commandSetAltEntryField(args, value = '') {
         if (!entry) return '';
 
         const doSwitch = entry.value_uid !== cleanAltUID;
+
+        value = unEscapeAll(value, {newlines: true});
 
         entry.setValue(field, value, cleanAltUID);
 
