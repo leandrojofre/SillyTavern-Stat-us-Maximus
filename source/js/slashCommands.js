@@ -26,11 +26,6 @@ const {
     Fuse
 } = SillyTavern.libs;
 
-/**
- * @typedef {import('../classes/Status.js').UserCharacter} UserCharacter
- * @typedef {'true'|'false'|'all'} EntityFilter
- */
-
 // * MARK:Utility Methods
 
 /**
@@ -51,7 +46,7 @@ function buildUIDsComment(entry) {
 
 /**
  * Takes an object with a key and value and generates a comment
- * @param {{title: string; value: string;}} alt
+ * @param {AltValueData} alt
  * @returns {string}
  */
 function buildAltUIDsComment(alt) {
@@ -668,7 +663,6 @@ async function commandGetAltEntryUID(args, value = '') {
 
         if (!entry) return '';
 
-        /** @type {[string, {title: string; value:string;}][]} */
         const values = Object.entries(entry.values);
         const search = values
             .map(function([uid, alt]) {

@@ -2,7 +2,6 @@
 *.mdp
 /docs/
 /docs/*
-*.d.ts
 
 # dependencies
 /node_modules

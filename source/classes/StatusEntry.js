@@ -34,31 +34,16 @@ const altEntryTemplate = Object.freeze({
     value: ''
 });
 
-/**
- * @typedef {Object} AltValueData
- * @property {string} [title]
- * @property {string} [value]
- */
-
-/**
- * @typedef {Object} EntryData
- * @property {boolean} [enabled]
- * @property {string} [key]
- * @property {string} [separator]
- * @property {number} [value_uid]
- * @property {number} [display_position]
- * @property {Object<string, AltValueData>} [values]
- */
 class StatusEntry {
     static template = entryTemplate;
     static valueTemplate = altEntryTemplate;
 
-    /** @property {boolean} */ enabled
-    /** @property {string} */ key
-    /** @property {string} */ separator
-    /** @property {number} */ value_uid
-    /** @property {number} */ display_position
-    /** @property {Object<string, AltValueData>} */ values
+    /** @property @type {boolean} */ enabled
+    /** @property @type {string} */ key
+    /** @property @type {string} */ separator
+    /** @property @type {number} */ value_uid
+    /** @property @type {number} */ display_position
+    /** @property @type {Record<string, AltValueData>} */ values
 
     /**
      * @param {EntryData?} [entry={}] - The status data to initialize the Status object with. If not provided, default values will be used.
@@ -67,9 +52,7 @@ class StatusEntry {
         entry = structuredClone(entry);
 
         // If it has alts as array, turn into object - Compatibility with older data versions - Remove in months
-        // @ts-ignore
         if (entry.alt_values && Array.isArray(entry.alt_values)) {
-            // @ts-ignore
             entry.values = entry.alt_values.reduce((acc, alt) => {
                 const safeAlt = Object.assign({}, structuredClone(altEntryTemplate), structuredClone(alt));
                 const uid = String(safeAlt.uid ?? getFreeDataUid(acc));

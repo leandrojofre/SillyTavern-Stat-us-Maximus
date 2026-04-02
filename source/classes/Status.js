@@ -34,41 +34,22 @@ const statusTemplate = Object.freeze({
     entries: {}
 });
 
-/**
- * @typedef {Object} StatusData
- * @property {string} avatar
- * @property {number} [role]
- * @property {string} [separator]
- * @property {string} [def_entry_separator]
- * @property {string} [prefix]
- * @property {string} [suffix]
- * @property {number} [depth]
- * @property {number} [force_depth]
- * @property {number} [last_mes_id]
- * @property {boolean} [enabled]
- * @property {boolean} [is_user]
- * @property {boolean} [is_collapsed]
- * @property {Object.<string, StatusEntry>} [entries]
- *
- * @typedef {import('./StatusEntry.js').EntryData} EntryData
- * @typedef {import('../../index.js').UserCharacter} UserCharacter
- */
 class Status {
     static template = statusTemplate;
 
-    /** @property {string} */ avatar
-    /** @property {number} */ role
-    /** @property {string} */ separator
-    /** @property {string} */ def_entry_separator
-    /** @property {string} */ prefix
-    /** @property {string} */ suffix
-    /** @property {number} */ depth
-    /** @property {number} */ force_depth
-    /** @property {number} */ last_mes_id
-    /** @property {boolean} */ enabled
-    /** @property {boolean} */ is_user
-    /** @property {boolean} */ is_collapsed
-    /** @property {Object.<string, StatusEntry>} */ entries
+    /** @property @type {string} */ avatar;
+    /** @property @type {number} */ role;
+    /** @property @type {string} */ separator;
+    /** @property @type {string} */ def_entry_separator;
+    /** @property @type {string} */ prefix;
+    /** @property @type {string} */ suffix;
+    /** @property @type {number} */ depth;
+    /** @property @type {number} */ force_depth;
+    /** @property @type {number} */ last_mes_id;
+    /** @property @type {boolean} */ enabled;
+    /** @property @type {boolean} */ is_user;
+    /** @property @type {boolean} */ is_collapsed;
+    /** @property @type {Object.<string, StatusEntry>} */ entries;
 
     /**
      * @param {StatusData?} [status={}] - The status data to initialize the Status object with. If not provided, default values will be used.
@@ -88,8 +69,8 @@ class Status {
             }, {});
         }
 
-        // @ts-ignore
-        if (status?.forceDepth !== undefined) status.force_depth = status.forceDepth === '' ? -1 : Number(status.forceDepth);
+        if (status?.forceDepth !== undefined)
+            status.force_depth = status.forceDepth === '' ? -1 : Number(status.forceDepth);
 
         /** @type {StatusData} */
         const statusClean = {avatar: ''};

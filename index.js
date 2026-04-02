@@ -57,45 +57,6 @@ export {
 
 // * MARK:Extension variables
 
-/**
- * @typedef {{name:string; description: string; avatar:string; is_user: boolean}} UserCharacter
- * @typedef {import('@popperjs/core/index.js').Instance} Instance
- * @typedef {{onlyEntries?: boolean; isUser?: boolean;}} TransferStatusOptions
- */
-
-/**
- * @typedef {Object} StatUsMaxInterface
- * @property {() => Status[]} getStatuses
- * @property {(avatar: string) => false|Status} getStatus
- * @property {(avatar: string, is_user?: boolean) => false|Status} addStatus
- * @property {(status: Status) => boolean|Status} delStatus
- * @property {(avatar: string, newAvatar: string, options?: TransferStatusOptions) => false|Status} transferStatus
- * @property {typeof Status} Status
- * @property {typeof StatusEntry} StatusEntry
- * @property {(avatar: string, options?: {is_user?: boolean; onOpen?: () => void;}) => Promise<void>} openPopupSingle
- * @property {() => Promise<void>} renderStatuses
- * @property {(status: Status) => Promise<void>} renderStatusSafe
- * @property {() => void} renderStatusesSafe
- * @property {(...mess: any[]) => void} log
- * @property {(...mess: any[]) => void} debug
- * @property {(...mess: any[]) => void} error
- */
-
-/**
- * @typedef {Object} ExtensionSettings
- * @property {boolean} enabled
- * @property {boolean} editNumbersFromChat - Legacy name for what now is replace macros with inputs from chat
- * @property {boolean} autoDetectParticipants
- * @property {boolean} hideInputLabels
- * @property {string} rangeInputWidth
- * @property {boolean} showWhiteSpaces
- * @property {number} minPromptDepth
- * @property {boolean} alwaysIncludeUnmutedMembers
- * @property {boolean} altMacroTemplateBehavior
- * @property {boolean} autoSaveMetadata
- * @property {boolean} debug
- */
-
 const context = () => SillyTavern.getContext();
 
 const {

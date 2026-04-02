@@ -34,15 +34,6 @@ export {
     openSingleStatusPopup
 };
 
-/**
- * @template T
- * @typedef {import('./eventListeners.js').EventData<T>} EventData
- */
-
-/**
- * @typedef {import('../../index.js').UserCharacter} UserCharacter
- */
-
 // * MARK:Popup Creation
 
 /** Clones the status data of the selected `char`

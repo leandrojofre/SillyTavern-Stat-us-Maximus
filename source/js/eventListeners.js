@@ -32,7 +32,7 @@ export {
 
 /**
  * @readonly
- * @type {Object.<string, number>}
+ * @type {Record<string, number>}
  */
 const Position = Object.freeze({
     AFTER_PROMPT: 0,
@@ -41,7 +41,7 @@ const Position = Object.freeze({
 
 /**
  * @readonly
- * @type {Object.<string, string>}
+ * @type {Record<string, string>}
  */
 const AllowedNumericKeys = Object.freeze({
     UP: 'ArrowUp',
@@ -50,7 +50,7 @@ const AllowedNumericKeys = Object.freeze({
 
 /**
  * @readonly
- * @type {Object.<string, string>}
+ * @type {Record<string, string>}
  */
 const InputTypes = Object.freeze({
     TEXT: 'text',
@@ -61,21 +61,12 @@ const InputTypes = Object.freeze({
 
 /**
  * @readonly
- * @type {Object.<string, string>}
+ * @type {Record<string, string>}
  */
 const AllowedNumericInputs = Object.freeze({
     NUMBER: InputTypes.NUMBER,
     RANGE: InputTypes.RANGE
 });
-
-/**
- * @template T
- * @typedef {Event & {data: Object; currentTarget: T;}} EventData
- */
-
-/**
- * @typedef {import('../../index.js').UserCharacter} UserCharacter
- */
 
 // * MARK:DOM Listeners
 
@@ -595,6 +586,7 @@ function onGenerationAfterCommands(...args) {
 
         const entries = Object.keys(status.entries)
         .map(uid => status.getEntry(uid))
+        .filter(entry => entry !== false)
         .sort((a, b) => a.display_position - b.display_position)
         .map(function(entry) {
             const { enabled, value_uid } = entry;
