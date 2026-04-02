@@ -112,6 +112,7 @@ const defaultSettings = {
     showWhiteSpaces: false,
     minPromptDepth: 0,
     alwaysIncludeUnmutedMembers: false,
+    forceMutedMembersInclusion: false,
     altMacroTemplateBehavior: false,
     autoSaveMetadata: true,
     debug: false
@@ -151,7 +152,7 @@ function error(...mess) {
 // * MARK:Extension methods
 
 /** The function checks for keys from 0 up to a defined safe limit (1,000,000) and returns the first available integer that is not used as a key in the data object.
- * @param {Object} data
+ * @param {Record<string, any>} data
  * @returns {number} The lowest non-negative integer that is not a key in the provided data object. If the data object is empty, it returns 0.
  */
 function getFreeDataUid(data = {}) {
@@ -246,7 +247,7 @@ function getActiveParticipants(discard = []) {
         const group = groups.find(g => g.id == group_id);
         const muted_members = group.disabled_members ?? [];
 
-        if (!extensionSettings.alwaysIncludeUnmutedMembers)
+        if (!extensionSettings.forceMutedMembersInclusion)
             toDiscard.push(...muted_members);
 
         for (const member of members)
@@ -911,6 +912,7 @@ function settingsNumberButton(event) {
 function displaySettings() {
     debug(`Auto detect participants is ${extensionSettings.autoDetectParticipants ? 'active' : 'not active'}`);
     debug(`Always include unmuted group members is ${extensionSettings.alwaysIncludeUnmutedMembers ? 'active' : 'not active'}`);
+    debug(`Force muted group members inclusion is ${extensionSettings.forceMutedMembersInclusion ? 'active' : 'not active'}`);
     debug(`Auto save metadata is ${extensionSettings.autoSaveMetadata ? 'active' : 'not active'}`);
     debug(`Alternative behavior for macro template buttons is ${extensionSettings.altMacroTemplateBehavior ? 'active' : 'not active'}`);
     debug(`Show input macros in chat is ${extensionSettings.editNumbersFromChat ? 'active' : 'not active'}`);
@@ -931,6 +933,7 @@ async function loadSettingsMenu() {
 
     $(`#${htmlSuffix}-auto-detect-participants`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-always-include-unmuted-members`).on('input', settingsBooleanButton);
+    $(`#${htmlSuffix}-force-muted-members-inclusion`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-auto-save-metadata`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-alt-macro-template-behavior`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-show-input-macros`).on('input', settingsBooleanButton);
@@ -946,6 +949,7 @@ async function loadSettingsMenu() {
 
     $(`#${htmlSuffix}-auto-detect-participants`).prop('checked', extensionSettings.autoDetectParticipants);
     $(`#${htmlSuffix}-always-include-unmuted-members`).prop('checked', extensionSettings.alwaysIncludeUnmutedMembers);
+    $(`#${htmlSuffix}-always-force-muted-members-inclusion`).prop('checked', extensionSettings.alwaysIncludeUnmutedMembers);
     $(`#${htmlSuffix}-auto-save-metadata`).prop('checked', extensionSettings.autoSaveMetadata);
     $(`#${htmlSuffix}-alt-macro-template-behavior`).prop('checked', extensionSettings.altMacroTemplateBehavior);
     $(`#${htmlSuffix}-show-input-macros`).prop('checked', extensionSettings.editNumbersFromChat);
