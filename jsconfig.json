@@ -18,7 +18,9 @@
     "include": [
       "toastr",
       "jquery",
-      "globals.d.ts"
+      "globals.d.ts",
+      "source/**/*.js",
+      "index.js"
     ]
   }
 }
