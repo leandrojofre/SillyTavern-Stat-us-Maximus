@@ -1,17 +1,9 @@
 {
   "compilerOptions": {
     "checkJs": true,
-    "strict": false,
-    "alwaysStrict": false,
-    "noImplicitAny": false,
-    "noImplicitThis": false,
-    "strictBindCallApply": false,
-    "strictBuiltinIteratorReturn": false,
-    "strictFunctionTypes": false,
-    "strictNullChecks": false,
-    "strictPropertyInitialization": false,
-    "useUnknownInCatchVariables": false,
-    "ignoreDeprecations": "6.0",
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node"
   },
   "typeAcquisition": {
     "enable": true,

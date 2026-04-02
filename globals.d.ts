@@ -77,6 +77,7 @@ declare global {
         showWhiteSpaces: boolean;
         minPromptDepth: number;
         alwaysIncludeUnmutedMembers: boolean;
+        forceMutedMembersInclusion: boolean;
         altMacroTemplateBehavior: boolean;
         autoSaveMetadata: boolean;
         debug: boolean;
@@ -89,4 +90,8 @@ declare global {
     type EventData<T> = Event & { data: Record<string, any>; currentTarget: T; };
 
     type EntityFilter = 'true' | 'false' | 'all';
+
+    namespace globalThis {
+        var StatUsMaximus: StatUsMaxInterface;
+    }
 }
