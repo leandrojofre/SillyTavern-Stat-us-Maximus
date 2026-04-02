@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "strict": false,
+    "alwaysStrict": false,
+    "noImplicitAny": false,
+    "noImplicitThis": false,
+    "strictBindCallApply": false,
+    "strictBuiltinIteratorReturn": false,
+    "strictFunctionTypes": false,
+    "strictNullChecks": false,
+    "strictPropertyInitialization": false,
+    "useUnknownInCatchVariables": false,
+    "ignoreDeprecations": "6.0",
+  },
+  "typeAcquisition": {
+    "enable": true,
+    "include": [
+      "toastr",
+      "jquery",
+      "globals.d.ts"
+    ]
+  }
+}
