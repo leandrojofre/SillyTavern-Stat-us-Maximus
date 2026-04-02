@@ -1,18 +1,22 @@
 {
   "compilerOptions": {
     "checkJs": true,
+    "allowJs": true,
     "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "baseUrl": "./"
   },
   "typeAcquisition": {
     "enable": true,
     "include": [
-      "toastr",
       "jquery",
-      "globals.d.ts",
-      "source/**/*.js",
-      "index.js"
+      "toastr"
     ]
-  }
+  },
+  "include": [
+    "globals.d.ts",
+    "source/**/*.js",
+    "index.js"
+  ]
 }
