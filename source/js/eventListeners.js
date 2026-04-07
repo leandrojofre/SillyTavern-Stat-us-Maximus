@@ -586,7 +586,7 @@ function onGenerationAfterCommands(...args) {
 
         const entries = Object.keys(status.entries)
         .map(uid => status.getEntry(uid))
-        .filter(entry => entry !== false)
+        .filter(entry => entry !== undefined)
         .sort((a, b) => a.display_position - b.display_position)
         .map(function(entry) {
             const { enabled, value_uid } = entry;

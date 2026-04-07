@@ -262,9 +262,15 @@ function getActiveParticipants(discard = []) {
     }
 
     const members = {chars, user};
-    const discardUnique = new Set(toDiscard).values().toArray();
+    const charGenerating = typeof chid === 'string' && characters[chid]?.avatar ? characters[chid].avatar : null;
+    const discardUnique = new Set(toDiscard).values().toArray()
+        .filter(avatar => avatar !== charGenerating);
+
+    StatUsMaximus.log({members: structuredClone(members), discardUnique, toDiscard});
 
     members.chars = members.chars.filter(c => !discardUnique.includes(c.avatar));
+
+    StatUsMaximus.log({members});
 
     return members;
 }

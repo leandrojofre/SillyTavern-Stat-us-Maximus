@@ -49,7 +49,7 @@ class Status {
     /** @property @type {boolean} */ enabled;
     /** @property @type {boolean} */ is_user;
     /** @property @type {boolean} */ is_collapsed;
-    /** @property @type {Object.<string, StatusEntry>} */ entries;
+    /** @property @type {Record<string, StatusEntry>} */ entries;
 
     /**
      * @param {StatusData?} [status={}] - The status data to initialize the Status object with. If not provided, default values will be used.
@@ -136,7 +136,7 @@ class Status {
 
     /**
      * @param {number|string} uid
-     * @returns {StatusEntry}
+     * @returns {StatusEntry|undefined}
      */
     getEntry(uid) {
         return this.entries[uid];
