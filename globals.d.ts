@@ -4,6 +4,8 @@ export {};
 
 declare global {
     type Instance = import('@popperjs/core/index.js').Instance;
+    type Status = import('./source/classes/Status.js').Status;
+    type StatusEntry = import('./source/classes/StatusEntry.js').StatusEntry;
 
     type StatusData = {
         avatar: string;
