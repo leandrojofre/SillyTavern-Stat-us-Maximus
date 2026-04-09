@@ -85,7 +85,6 @@ function updateEntryFromInput(inputTrigger) {
     if (!avatar || isNaN(uid)) return;
 
     const status = StatUsMaximus.getStatus(avatar);
-    const $inputs = $container.find('.input-value-source');
 
     if (!status) return;
 
@@ -100,6 +99,7 @@ function updateEntryFromInput(inputTrigger) {
     );
 
     const operationUID = generateUUID(`${metadataName}_macro_parsing_done`);
+    const $inputs = $container.find('.input-value-source');
 
     $inputs.each(function(i, input) {
         const $input = $(input);
@@ -147,6 +147,45 @@ function updateEntryFromInput(inputTrigger) {
 
     fieldValue = fieldValue.replaceAll(`::${operationUID}}}`, '}}');
     entry.set(field, fieldValue, value_uid);
+
+    $inputs.each(function(i, input) {
+        const $input = $(input);
+        const { type } = $input.data();
+
+        let finalMacro = '';
+
+        if (type === InputTypes.TEXT || type === InputTypes.NUMBER) {
+            let value = $input.val() ?? '';
+
+            if (type === InputTypes.TEXT) {
+                value = String(value)
+                    .replaceAll(/^\s+/g, '{{noop}}$&')
+                    .replaceAll(/\s+$/g, '$&{{noop}}');
+            }
+
+            finalMacro = `{{${type}::${value}}}`;
+        }
+
+        if (type === InputTypes.BOOLEAN) {
+            const value = $input.prop('checked') ?? true;
+            const inputId = $input.attr('id');
+            const $span = $(`.fake-input-span[data-input-id="${inputId}"]`);
+            const { trueValue, falseValue } = $span.data();
+
+            finalMacro = `{{${type}::${value}::${trueValue}::${falseValue}}}`;
+        }
+
+        if (type === InputTypes.RANGE) {
+            const value = $input.val() ?? 100;
+            const min = $input.attr('min') ?? 0;
+            const max = $input.attr('max') ?? 100;
+            const step = $input.attr('step') ?? 1;
+
+            finalMacro = `{{${type}::${min}::${max}::${step}::${value}}}`;
+        }
+
+        $input.data('original', finalMacro);
+    });
 }
 
 /**
