@@ -9,6 +9,8 @@ import { initPopupTriggers, openSingleStatusPopup } from './source/js/popups.js'
 import { CUSTOM_MACROS } from './source/js/macros.js';
 import { registerSlashCommands } from './source/js/slashCommands.js';
 
+/// <reference path="./globals.d.ts" />
+
 export {
     // ST re-exports
     extension_prompt_roles,

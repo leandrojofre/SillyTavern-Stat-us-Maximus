@@ -13,6 +13,8 @@ import {
 
 import { StatusEntry, entryTemplate } from './StatusEntry.js';
 
+/// <reference path="../../globals.d.ts" />
+
 export {
     Status
 };

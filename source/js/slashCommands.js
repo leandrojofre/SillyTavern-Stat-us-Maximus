@@ -14,6 +14,8 @@ import {
 import { Status } from '../classes/Status.js';
 import { StatusEntry } from '../classes/StatusEntry.js';
 
+/// <reference path="../../globals.d.ts" />
+
 export {
     registerSlashCommands
 };

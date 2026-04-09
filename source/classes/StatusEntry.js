@@ -8,6 +8,8 @@ import {
     unEscapeNewlines
 } from '../../index.js';
 
+/// <reference path="../../globals.d.ts" />
+
 export {
     entryTemplate,
     StatusEntry
