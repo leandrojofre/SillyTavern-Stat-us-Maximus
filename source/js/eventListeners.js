@@ -26,7 +26,12 @@ import {
 import { Status } from '../classes/Status.js';
 import { StatusEntry } from '../classes/StatusEntry.js';
 
-/// <reference path="../../globals.d.ts" />
+/**
+ * @template T
+ * @typedef {StatUsMaximus.EventData<T>} EventData
+ */
+
+/** @typedef {StatUsMaximus.UserCharacter} UserCharacter */
 
 export {
     registerEvents
@@ -231,7 +236,7 @@ function onToggleEntry(e) {
 }
 
 /**
- * @param {Event} e
+ * @param {EventData<HTMLDivElement>} e
  */
 function onCollapseStatus(e) {
     const drawerHeader = $(e.currentTarget);

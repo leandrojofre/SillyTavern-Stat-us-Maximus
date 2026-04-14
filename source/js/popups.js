@@ -29,12 +29,17 @@ import {
 import {Status} from '../classes/Status.js';
 import {StatusEntry} from '../classes/StatusEntry.js';
 
-/// <reference path="../../globals.d.ts" />
-
 export {
     initPopupTriggers,
     openSingleStatusPopup
 };
+
+/**
+ * @template T
+ * @typedef {StatUsMaximus.EventData<T>} EventData
+ */
+
+/** @typedef {StatUsMaximus.UserCharacter} UserCharacter */
 
 // * MARK:Popup Creation
 

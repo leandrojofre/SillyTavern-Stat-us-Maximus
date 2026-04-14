@@ -14,11 +14,13 @@ import {
 import { Status } from '../classes/Status.js';
 import { StatusEntry } from '../classes/StatusEntry.js';
 
-/// <reference path="../../globals.d.ts" />
-
 export {
     registerSlashCommands
 };
+
+/** @typedef {StatUsMaximus.EntityFilter} EntityFilter */
+/** @typedef {StatUsMaximus.AltValueData} AltValueData */
+/** @typedef {StatUsMaximus.UserCharacter} UserCharacter */
 
 const {
     SlashCommandEnumValue

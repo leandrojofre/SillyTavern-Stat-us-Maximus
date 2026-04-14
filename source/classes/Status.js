@@ -13,11 +13,13 @@ import {
 
 import { StatusEntry, entryTemplate } from './StatusEntry.js';
 
-/// <reference path="../../globals.d.ts" />
-
 export {
     Status
 };
+
+/** @typedef {StatUsMaximus.StatusData} StatusData */
+/** @typedef {StatUsMaximus.EntryData} EntryData */
+/** @typedef {StatUsMaximus.UserCharacter} UserCharacter */
 
 /** @type {StatusData} */
 const statusTemplate = Object.freeze({

@@ -8,12 +8,13 @@ import {
     unEscapeNewlines
 } from '../../index.js';
 
-/// <reference path="../../globals.d.ts" />
-
 export {
     entryTemplate,
     StatusEntry
 };
+
+/** @typedef {StatUsMaximus.AltValueData} AltValueData */
+/** @typedef {StatUsMaximus.EntryData} EntryData */
 
 /** @type {EntryData} */
 const entryTemplate = Object.freeze({

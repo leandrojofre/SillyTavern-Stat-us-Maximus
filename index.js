@@ -9,8 +9,6 @@ import { initPopupTriggers, openSingleStatusPopup } from './source/js/popups.js'
 import { CUSTOM_MACROS } from './source/js/macros.js';
 import { registerSlashCommands } from './source/js/slashCommands.js';
 
-/// <reference path="./globals.d.ts" />
-
 export {
     // ST re-exports
     extension_prompt_roles,
@@ -56,6 +54,11 @@ export {
     renderCaret,
     HTML_TEMPLATES
 };
+
+/** @typedef {StatUsMaximus.UserCharacter} UserCharacter */
+/** @typedef {StatUsMaximus.GlobalInterface} GlobalInterface */
+/** @typedef {StatUsMaximus.Instance} Instance */
+/** @typedef {StatUsMaximus.ExtensionSettings} ExtensionSettings */
 
 // * MARK:Extension variables
 
@@ -746,7 +749,7 @@ const updateCaretDisplayDebounced = lodash.debounce(updateCaretDisplay, debounce
 
 /**
  * MARK:Interface
- * @type {StatUsMaxInterface}
+ * @type {GlobalInterface}
  */
 globalThis.StatUsMaximus = {
     getStatuses: function() {

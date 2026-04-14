@@ -7,8 +7,6 @@ import {
     t
 } from "../../index.js";
 
-/// <reference path="../../globals.d.ts" />
-
 export {
     CUSTOM_MACROS
 };
