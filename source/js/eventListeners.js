@@ -75,6 +75,20 @@ const AllowedNumericInputs = Object.freeze({
     RANGE: InputTypes.RANGE
 });
 
+/**
+ * @readonly
+ * @type {readonly string[]}
+ */
+const genTypesWithOffset = Object.freeze([
+    'continue'
+]);
+
+/**
+ * @readonly
+ * @type {number}
+ */
+const OFFSET_GEN_TYPE_AMOUNT = 1;
+
 // * MARK:DOM Listeners
 
 /**
@@ -610,6 +624,7 @@ function onGenerationAfterCommands(...args) {
     const [ genType ] = args;
     const { extensionPrompts: extension_prompts, characterId: chid, characters: allCharacters } = context();
     const { chars, user } = getActiveParticipants();
+    const genHasOffset = genTypesWithOffset.includes(genType);
 
     for (const key of Object.keys(extension_prompts)) {
         if (key.includes(metadataName)) delete extension_prompts[key];
@@ -678,14 +693,15 @@ function onGenerationAfterCommands(...args) {
 
         const depth = status.force_depth >= 0 ? status.force_depth : status.depth;
         const depthNormalized = Math.max(depth, extensionSettings.minPromptDepth);
+        const depthOffset = depthNormalized === 1 && genHasOffset ? OFFSET_GEN_TYPE_AMOUNT : 0;
 
-        StatUsMaximus.log({ depth, depthNormalized });
+        StatUsMaximus.log({ depth, depthNormalized, depthOffset });
 
         setExtensionPrompt(
             uuid,
             prompt,
             Position.IN_DEPTH,
-            depthNormalized,
+            depthNormalized - depthOffset,
             true,
             status.role
         );
