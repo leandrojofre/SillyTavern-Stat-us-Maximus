@@ -37,6 +37,40 @@ const altEntryTemplate = Object.freeze({
     value: ''
 });
 
+/**
+ * @param {EntryData} entryData
+ * @returns {EntryData}
+ */
+function migrateV0Data(entryData) {
+    entryData = structuredClone(entryData);
+
+    // If it has alts as array, turn into object - Compatibility with older data versions
+    if (entryData.alt_values && Array.isArray(entryData.alt_values)) {
+        entryData.values = entryData.alt_values.reduce((acc, alt) => {
+            const safeAlt = Object.assign({}, structuredClone(altEntryTemplate), structuredClone(alt));
+            const uid = String(safeAlt.uid ?? getFreeDataUid(acc));
+
+            const {
+                key: title,
+                value
+            } = safeAlt;
+
+            const parsedValue = String(value)
+                .replaceAll('{{text:: ', '{{text::{{noop}} ')
+                .replaceAll(/(\{\{text::[^}]+ )(\}\})/gs, '$1{{noop}}$2');
+
+            acc[uid] = {
+                title,
+                value: parsedValue
+            };
+
+            return acc;
+        }, {});
+    }
+
+    return entryData;
+}
+
 class StatusEntry {
     static template = entryTemplate;
     static valueTemplate = altEntryTemplate;
@@ -52,41 +86,17 @@ class StatusEntry {
      * @param {EntryData?} [entry={}] - The status data to initialize the Status object with. If not provided, default values will be used.
      */
     constructor(entry = {}) {
-        entry = structuredClone(entry);
-
-        // If it has alts as array, turn into object - Compatibility with older data versions - Remove in months
-        if (entry.alt_values && Array.isArray(entry.alt_values)) {
-            entry.values = entry.alt_values.reduce((acc, alt) => {
-                const safeAlt = Object.assign({}, structuredClone(altEntryTemplate), structuredClone(alt));
-                const uid = String(safeAlt.uid ?? getFreeDataUid(acc));
-
-                const {
-                    key: title,
-                    value
-                } = safeAlt;
-
-                const parsedValue = String(value)
-                    .replaceAll('{{text:: ', '{{text::{{noop}} ')
-                    .replaceAll(/(\{\{text::[^}]+ )(\}\})/gs, '$1{{noop}}$2');
-
-                acc[uid] = {
-                    title,
-                    value: parsedValue
-                };
-
-                return acc;
-            }, {});
-        }
+        entry = migrateV0Data(entry);
 
         /** @type {EntryData} */
         const entryClean = {};
 
         for (const key in entryTemplate) {
-            if (entry[key] === null || entry[key] === undefined) continue;
+            const hasProperty = key in entry;
 
-            key === 'values' ?
-                entryClean[key] = structuredClone(entry[key]) :
-                entryClean[key] = entry[key];
+            if (!hasProperty) continue;
+            else if (key === 'values') entryClean[key] = structuredClone(entry[key]);
+            else entryClean[key] = entry[key];
         }
 
         Object.assign(this, structuredClone(entryTemplate), structuredClone(entryClean));

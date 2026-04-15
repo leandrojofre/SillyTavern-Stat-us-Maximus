@@ -38,6 +38,31 @@ const statusTemplate = Object.freeze({
     entries: {}
 });
 
+/**
+ * @param {StatusData} statusData
+ * @returns {StatusData}
+ */
+function migrateV0Data(statusData) {
+    statusData = structuredClone(statusData);
+
+    // If it has entries as array, turn into object - Compatibility with older data versions - Remove in months
+    if (statusData.entries && Array.isArray(statusData.entries)) {
+        statusData.entries = statusData.entries.reduce((acc, entry) => {
+            const safeEntry = Object.assign({}, structuredClone(entryTemplate), entry);
+            const uid = String(safeEntry.uid ?? getFreeDataUid(acc));
+
+            acc[uid] = safeEntry;
+
+            return acc;
+        }, {});
+    }
+
+    if ('forceDepth' in statusData)
+        statusData.force_depth = statusData.forceDepth === '' ? -1 : Number(statusData.forceDepth ?? -1);
+
+    return statusData;
+}
+
 class Status {
     static template = statusTemplate;
 
@@ -59,33 +84,19 @@ class Status {
      * @param {StatusData?} [status={}] - The status data to initialize the Status object with. If not provided, default values will be used.
      */
     constructor(status = {avatar: ''}) {
-        status = structuredClone(status);
-
-        // If it has entries as array, turn into object - Compatibility with older data versions - Remove in months
-        if (status.entries && Array.isArray(status.entries)) {
-            status.entries = status.entries.reduce((acc, entry) => {
-                const safeEntry = Object.assign({}, structuredClone(entryTemplate), entry);
-                const uid = String(safeEntry.uid ?? getFreeDataUid(acc));
-
-                acc[uid] = safeEntry;
-
-                return acc;
-            }, {});
-        }
-
-        if (status?.forceDepth !== undefined)
-            status.force_depth = status.forceDepth === '' ? -1 : Number(status.forceDepth);
+        status = migrateV0Data(status);
 
         /** @type {StatusData} */
         const statusClean = {avatar: ''};
 
-        for (const key in statusTemplate) {
-            if (status[key] === null || status[key] === undefined) continue;
+        for (const key in Status.template) {
+            const hasProperty = key in status;
 
-            statusClean[key] = status[key];
+            if (!hasProperty) continue;
+            else statusClean[key] = status[key];
         }
 
-        Object.assign(this, structuredClone(statusTemplate), structuredClone(statusClean));
+        Object.assign(this, structuredClone(Status.template), structuredClone(statusClean));
 
         for (const [uid, entry] of Object.entries(this.entries ?? {})) {
             this.entries[uid] = new StatusEntry(entry);
