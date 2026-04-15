@@ -46,7 +46,7 @@ function migrateV0Data(statusData) {
     statusData = structuredClone(statusData);
 
     // If it has entries as array, turn into object - Compatibility with older data versions - Remove in months
-    if (statusData.entries && Array.isArray(statusData.entries)) {
+    if ('entries' in statusData && Array.isArray(statusData.entries)) {
         statusData.entries = statusData.entries.reduce((acc, entry) => {
             const safeEntry = Object.assign({}, structuredClone(entryTemplate), entry);
             const uid = String(safeEntry.uid ?? getFreeDataUid(acc));

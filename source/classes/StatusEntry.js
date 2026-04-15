@@ -45,7 +45,7 @@ function migrateV0Data(entryData) {
     entryData = structuredClone(entryData);
 
     // If it has alts as array, turn into object - Compatibility with older data versions
-    if (entryData.alt_values && Array.isArray(entryData.alt_values)) {
+    if ('alt_values' in entryData && Array.isArray(entryData.alt_values)) {
         entryData.values = entryData.alt_values.reduce((acc, alt) => {
             const safeAlt = Object.assign({}, structuredClone(altEntryTemplate), structuredClone(alt));
             const uid = String(safeAlt.uid ?? getFreeDataUid(acc));
