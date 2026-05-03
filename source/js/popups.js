@@ -1,889 +1,1027 @@
-import { lodash } from "../../../../../../lib.js";
-import { copyText } from "../../../../../utils.js";
-import { characters, extension_prompt_roles, getThumbnailUrl } from "../../../../../../script.js";
-import { t } from "../../../../../i18n.js";
-import { callGenericPopup, POPUP_TYPE } from "../../../../../popup.js";
-import { power_user } from "../../../../../power-user.js";
-import { getSortableDelay } from "../../../../../utils.js";
-import { destroyElement, fetchStatusDebounced, extensionSettings, setSaveStateFlag } from "../../index.js";
-import { getCharStatus, addCharEntry, removeCharEntry, addCharAltValue, getCharEntry, removeCharAltValue, refreshCharEntryDisplay, createCharStatus, transferCharStatus, deleteCharStatus, parseValue, updateCharEntry, getCharAltValue, flushCharAltValues, updateCharAltValue, evaluateEntry } from "./statusControls.js";
+import {
+    // ST imports
+    extension_prompt_roles,
+    callGenericPopup,
+    POPUP_TYPE,
+    Popup,
+    powerUserSettings,
+    copyText,
+    t,
+    // Normal imports
+    extensionName,
+    escapeNewlines,
+    generateUUID,
+    saveMetadataSafe,
+    getThumbnailUrl,
+    getParticipant,
+    getActiveParticipants,
+    extensionSettings,
+    getUser,
+    isChatOpen,
+    exportObjectToClipboard,
+    context,
+    // HTML related
+    HTML_TEMPLATES,
+    htmlSuffix,
+    createElement
+} from '../../index.js';
 
-/*  # TODO
-    - [X] Select for alt_values
-    - [X] Add for alt_values
-    - [X] Delete for alt_values
-    - [X] Nick for alt_values
-    - [X] Disable row btn
-    - [X] Role button
-    - [X] Confirm screen for delete
-    - [X] Avatar before title
-    - [X] Drag and drop for entries
-    - [X] Per-character open menu buttons on group list and in right nav UI for solo chats
-    - [X] Open/close all entries - per character
-    - [X] Status clone button
-    - [X] Status delete button
-    - [X] Entries block prefix/suffix
-    - [X] Custom depth buttons - dynamic depth if undefined
-    - [X] Fucking labels
-*/
+import {Status} from '../classes/Status.js';
+import {StatusEntry} from '../classes/StatusEntry.js';
 
-export function escapeNewlines(str) {
-    return str
-        .replace(/\\/g, "\\\\")
-        .replace(/\r\n/g, "\\r\\n")
-        .replace(/\n/g, "\\n")
-        .replace(/\r/g, "\\r");
-}
-
-export function un_escapeNewlines(str) {
-    return str
-        .replace(/\\r\\n/g, "\r\n")
-        .replace(/\\n/g, "\n")
-        .replace(/\\r/g, "\r");
-}
-
-async function popupConfirmAction(del_name = "this") {
-    const confirm_title = document.createElement("div");
-    confirm_title.textContent = t`WARNING`;
-    confirm_title.classList.add("fw-bolder");
-
-    const confirm_text = document.createElement("div");
-    confirm_text.textContent = t`Are you sure want to ${del_name}?`;
-
-    const confirm_container = document.createElement("div");
-    confirm_container.classList.add("d-flex", "flex-col", "flex-center", "w-100", "mb-5px", "gap-5px");
-    confirm_container.append(confirm_title, confirm_text);
-
-    const confirm_css_block = document.createElement("div");
-    confirm_css_block.classList.add("stat-us-max-custom-css");
-    confirm_css_block.append(confirm_container);
-
-    return await callGenericPopup(confirm_css_block, POPUP_TYPE.CONFIRM, "", {
-        okButton: t`Confirm`,
-        cancelButton: t`Cancel`,
-        onClose: () => destroyElement(confirm_css_block)
-    });
+export {
+    initPopupTriggers,
+    openSingleStatusPopup
 };
 
+/**
+ * @template T
+ * @typedef {StatUsMaximus.EventData<T>} EventData
+ */
+
+/** @typedef {StatUsMaximus.UserCharacter} UserCharacter */
+
+// * MARK:Popup Creation
+
 /** Clones the status data of the selected `char`
-    @param {object} char
-    @returns {Promise<boolean|object>}
+    @param {Character|UserCharacter} char
+    @returns {Promise<{status: false|Status; keepOriginal: boolean; onlyEntries: boolean;}>}
 */
-async function clonePopup(char) {
-    const cloneContainer = document.createElement("div");
-    cloneContainer.classList.add("stat-us-max-popup");
+async function cloneStatusPopup(char) {
+    const {
+        characters
+    } = context();
 
-    const cloneWrapper = document.createElement("div");
-    cloneWrapper.classList.add("d-flex", "flex-col");
-    cloneWrapper.innerHTML = `<span>${t`Clone ${char.name} stats`}</span>`;
-
-    const defOption = document.createElement("option");
-    defOption.value = null;
-    defOption.innerText = t`--Select target--`;
-
-    const selectParticipant = document.createElement("select");
-    selectParticipant.classList.add("flex-grow-1", "px-5px", "m-0");
-    selectParticipant.append(defOption);
+    const users = Object
+        .entries(powerUserSettings.personas)
+        .map(([key, value]) => ({name: value, avatar: key, is_user: true}));
 
     const participants = [
-        ...Object
-            .entries(power_user.personas)
-            .map(([key, value]) => {return {name: value, avatar: key, is_user: true}}),
+        ...users,
         ...characters
     ].filter(c => c.avatar !== char.avatar);
 
+    const $popupBlock = (await HTML_TEMPLATES.get('popupStatusClone')).clone();
+
+    $popupBlock
+        .find('.transfer-popup-title')
+        .text(t`Clone ${char.name} stats`);
+
+    const $select = $popupBlock.find('select');
+    const $checkboxOnlyEntries = $popupBlock.find('input.transfer-only-entries');
+    const $keepOriginalData = $popupBlock.find('input.keep-original-data');
+
     for (const participant of participants) {
-        const option = document.createElement("option");
-        option.value = String(participant.avatar);
-        option.innerText = String(participant.name);
-        selectParticipant.append(option);
+        $('<option>', { text: `${participant.name} - ${participant.avatar}`, value: participant.avatar }).appendTo($select);
     }
 
-    const inputOnlyEntries = document.createElement("input");
-    inputOnlyEntries.type = "checkbox";
-
-    const spanOnlyEntries = document.createElement("span");
-    spanOnlyEntries.innerText = t`Transfer only entries`;
-
-    const labelOnlyEntries = document.createElement("label");
-    labelOnlyEntries.classList.add("flex-container");
-    labelOnlyEntries.append(
-        inputOnlyEntries,
-        spanOnlyEntries
-    );
-
-    cloneWrapper.append(labelOnlyEntries, selectParticipant);
-    cloneContainer.append(cloneWrapper);
-
-    const popupResult = await callGenericPopup(cloneContainer, POPUP_TYPE.CONFIRM, "", {
+    const failedResponse = {status: false, keepOriginal: false, onlyEntries: false};
+    const popupResult = await callGenericPopup($popupBlock, POPUP_TYPE.CONFIRM, "", {
+        wider: true,
         okButton: t`Confirm`,
         cancelButton: t`Cancel`
     });
 
-    if (!popupResult) return false;
-
-    const target = participants.find(c => c.avatar === selectParticipant.value);
-    const success = !target ? false : transferCharStatus(char, target, {onlySendEntries: inputOnlyEntries.checked});
-
-    // @ts-ignore
-    if (success) toastr.success(t`Status clone successfully`);
-    // @ts-ignore
-    else toastr.error(t`An error occurred - Status could not be clone`);
-
-    destroyElement(cloneContainer);
-
-    return success ? target : false;
-}
-
-/**
- * Set user clipboard to a stringified version of an object
- * @param {object} obj - Object to be sent to the clipboard as text
- * @returns {Promise<void>}
- */
-function exportObjectToClipboard(obj = {}) {
-    let stringObj = JSON.stringify(obj);
-    stringObj = escapeNewlines(stringObj);
-
-    return copyText(stringObj);
-}
-
-function getFullCharAvatar(status) {
-    return getThumbnailUrl(status.is_user ? "persona" : "avatar", status.avatar);
-}
-
-/**
- * @param {HTMLElement} target
- * @param {string} class_name
- * @returns {any}
- */
-function el(target, class_name) {
-    return target.querySelector(class_name);
-}
-
-/**
- * @param {HTMLElement} parent
- * @param {string} selector
- * @param {boolean?} forceState
- * @returns {boolean}
- */
-function toggleSwitch(parent, selector, forceState = null) {
-    // True if the final state is on
-    /** @type {HTMLElement} */
-    const elem = el(parent, selector);
-    const isOn = forceState === null ? !elem.classList.contains("fa-toggle-on") : forceState;
-    elem.classList.toggle("fa-toggle-on", isOn);
-    elem.classList.toggle("fa-toggle-off", !isOn);
-    return isOn;
-};
-
-function refreshAltValues(target, alts, select_uid = 0) {
-    const select = el(target, 'select[name="value_uid"]');
-
-    destroyElement(select.childNodes);
-
-    for (const alt_val of alts) {
-        const option = document.createElement("option");
-        option.value = String(alt_val.uid);
-        option.text = (!alt_val.key ? null : alt_val.key) ?? ("UID " + alt_val.uid);
-
-        if (Number(select_uid) === alt_val.uid) {
-            option.selected = true;
-        }
-
-        select.append(option);
-    }
-};
-
-const evChange = new Event('change', { bubbles: true, cancelable: true });
-
-/**
- * Add a new entry row to the active status popup block
- * @param {object} options
- * @param {object[]} options.data
- * @param {HTMLElement} options.container
- * @param {HTMLElement} options.template
- * @param {object} options.char
- * @returns void
- */
-function addStatusRow({data = [], container, template, char}) {
-    for (const entryData of data) {
-        let entry = getCharEntry(char, entryData.uid);
-        const newRow = /** @type {HTMLFormElement} */ (template.cloneNode(true));
-
+    if (!popupResult) {
+        toastr.info(t`Transfer cancelled`, extensionName);
         // @ts-ignore
-        if (!entry) return toastr.warning(t`Data for new entry is empty - index=${i}`);
-
-        newRow.dataset.uid = String(entry.uid);
-        newRow.dataset.charAvatar = char.avatar;
-        newRow.dataset.modified = String(false);
-        newRow.removeAttribute('action');
-
-        // Set Values
-        const inputEntryEnabled = /** @type {HTMLInputElement} */ (newRow.querySelector('input[name="enabled"]'));
-        inputEntryEnabled.value = String(entry.enabled);
-
-        const inputKey = /** @type {HTMLInputElement} */ (newRow.querySelector('input[name="key"]'));
-        inputKey.value = entry.key;
-
-        const textareaValue = /** @type {HTMLTextAreaElement} */ (newRow.querySelector('textarea[name="value"]'));
-        textareaValue.value = entry.value;
-
-        const inputSeparator = /** @type {HTMLInputElement} */ (newRow.querySelector('input[name="separator"]'));
-        inputSeparator.value = escapeNewlines(entry.separator);
-
-        const selectAltValues = /** @type {HTMLSelectElement} */ (newRow.querySelector('select[name="value_uid"]'));
-        selectAltValues.value = String(entry.value_uid);
-        selectAltValues.dataset.prevValue = String(entry.value_uid);
-        refreshAltValues(newRow, entry.alt_values, entry.value_uid);
-
-        const inputAltKey = /** @type {HTMLInputElement} */ (newRow.querySelector('input[name="alt_key"]'));
-        inputAltKey.value = entry.alt_values.find(alt => alt.uid === entry.value_uid).key;
-
-        if (!entry.enabled) toggleSwitch(newRow, ".kill-switch");
-
-        // Add listeners
-        newRow.addEventListener("input", function() {
-            newRow.dataset.modified = String(true);
-        }, { passive: true });
-
-        newRow.querySelector(".kill-switch").addEventListener("click", function () {
-            const newState = toggleSwitch(newRow, ".kill-switch");
-            inputEntryEnabled.value = String(newState);
-            newRow.dataset.modified = String(true);
-        }, { passive: true });
-
-        selectAltValues.addEventListener("change", function () {
-            const newValue = selectAltValues.value;
-
-            selectAltValues.value = selectAltValues.dataset.prevValue;
-            updateCharEntry(char, entry.uid, new FormData(newRow), false);
-
-            selectAltValues.value = newValue;
-            selectAltValues.dataset.prevValue = newValue;
-            const alt = getCharAltValue(char, entry.uid, selectAltValues.value);
-
-            inputAltKey.value = alt.key;
-            textareaValue.value = alt.value;
-        }, { passive: true });
-
-        inputAltKey.addEventListener("input", function () {
-            /** @type {HTMLOptionElement} */
-            const optionInDisplay = selectAltValues.querySelector(`option[value="${selectAltValues.value}"]`);
-            optionInDisplay.text = inputAltKey.value;
-        }, { passive: true });
-
-        newRow.querySelector(".add_alt_value").addEventListener("click", function () {
-            updateCharEntry(char, entry.uid, new FormData(newRow), false);
-
-            const newAlt = addCharAltValue(char, entry.uid);
-
-            if (!newAlt) return;
-
-            refreshAltValues(newRow, entry.alt_values, newAlt.uid);
-            selectAltValues.value = String(newAlt.uid);
-            selectAltValues.dispatchEvent(evChange);
-        }, { passive: true });
-
-        newRow.querySelector(".del_alt_value").addEventListener("click", async function () {
-            if (await popupConfirmAction("delete the alt value") === 0) return;
-
-            try {
-                updateCharEntry(char, entry.uid, new FormData(newRow), false);
-
-                const success = removeCharAltValue(char, entry.uid, selectAltValues.value);
-
-                if (!success) return;
-
-                entry = getCharEntry(char, entry.uid);
-                const firstAlt = entry.alt_values[0];
-
-                refreshAltValues(newRow, entry.alt_values, firstAlt.uid);
-                selectAltValues.value = String(firstAlt.uid);
-                selectAltValues.dataset.prevValue = String(firstAlt.uid);
-                inputAltKey.value = firstAlt.key;
-                textareaValue.value = firstAlt.value;
-            } catch (error) {
-                // ...
-            }
-        }, { passive: true });
-
-        newRow.querySelector(".menu_button.import").addEventListener("click", async function() {
-            if (await popupConfirmAction("overwrite the data of this entry") === 0) return;
-
-            let newEntry;
-
-            if (!navigator.clipboard)
-                return toastr.warning(t`Clipboard API not available in this context.`);
-
-            try {
-                newEntry = await navigator.clipboard.readText();
-                newEntry = JSON.parse(newEntry);
-            } catch (error) {
-                console.error('Error reading clipboard:', error);
-                return toastr.warning(t`Failed to read clipboard text. Make sure you granted permissions and the text is a JSON object.`);
-            }
-
-            if (!newEntry) return toastr.warning(t`Your clipboard has wrong metadata format: JSON expected`);
-            if (!evaluateEntry(newEntry)) return;
-
-            const newSelect = {
-                alt_values: []
-            };
-
-            for (const [k, v] of Object.entries(newEntry)) {
-                if (k === "display_position" || k === "uid" || k === "value_uid") continue;
-
-                if (k === "alt_values") {
-                    newSelect[k] = v;
-                    continue;
-                }
-
-                /** @type {HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement} */
-                const input = newRow.querySelector(`[name="${k}"]`);
-                input.value = String(v);
-            }
-
-            flushCharAltValues(char, entry.uid, true);
-
-            entry = getCharEntry(char, entry.uid);
-
-            const formDataFirstEntry = new FormData();
-            formDataFirstEntry.set("key", newSelect.alt_values[0].key);
-            formDataFirstEntry.set("value", newSelect.alt_values[0].value);
-
-            updateCharAltValue(char, entry.uid, entry.alt_values[0].uid, formDataFirstEntry);
-
-            for (const alt of newSelect.alt_values.slice(1))
-                addCharAltValue(char, entry.uid, {value: alt.value, key: alt.key});
-
-            entry = getCharEntry(char, entry.uid);
-
-            newSelect.value_uid = entry.value_uid;
-            newSelect.alt_values = entry.alt_values;
-            const selectedAlt = newSelect.alt_values.find(alt => alt.uid === newSelect.value_uid);
-
-            toggleSwitch(newRow, ".kill-switch", newEntry.enabled);
-            refreshAltValues(newRow, newSelect.alt_values, selectedAlt.uid);
-            selectAltValues.value = String(selectedAlt.uid);
-            selectAltValues.dataset.prevValue = String(selectedAlt.uid);
-            inputAltKey.value = String(selectedAlt.key);
-            textareaValue.value = String(selectedAlt.value);
-
-            await updateCharEntry(char, entry.uid, new FormData(newRow), false);
-        }, { passive: true });
-
-        newRow.querySelector(".menu_button.export").addEventListener("click", async function() {
-            const currentEntry = getCharEntry(char, entry.uid);
-
-            await exportObjectToClipboard(currentEntry);
-        }, { passive: true });
-
-        newRow.querySelectorAll(".macro_template").forEach((/**@type {HTMLDivElement}*/btn) => {
-            btn.addEventListener("click", async (e) => {
-                const macroType = /**@type {HTMLDivElement}*/(e.currentTarget).dataset.macroType;
-                let macroTemplate = "";
-
-                if (macroType === "text") macroTemplate = "{{text}}";
-                if (macroType === "number") macroTemplate = "{{number}}";
-                if (macroType === "boolean") macroTemplate = "{{boolean::true::true::false}}";
-                if (macroType === "range") macroTemplate = "{{range::0::100::1::0}}";
-
-                if (extensionSettings.altMacroTemplateBehavior) textareaValue.value += macroTemplate;
-                else await copyText(macroTemplate);
-            }, { passive: true });
-        });
-
-        newRow.querySelector(".delete-row").addEventListener("click", async function () {
-            if (await popupConfirmAction("delete the alt value") === 0) return;
-
-            removeCharEntry(char, entry.uid);
-            destroyElement(newRow);
-        }, { passive: true });
-
-        container.append(newRow);
+        return failedResponse;
     }
+
+    const target = participants.find(c => c.avatar === $select.val());
+
+    if (!target) {
+        toastr.error(t`An error occurred - The character/persona could not be found`, extensionName);
+        // @ts-ignore
+        return failedResponse;
+    }
+
+    const oldStatus = StatUsMaximus.getStatus(char.avatar);
+    const isUser = users.some(p => p.avatar === target.avatar);
+    const onlyEntries = $checkboxOnlyEntries.prop('checked');
+    const keepOriginalData = $keepOriginalData.prop('checked');
+
+    StatUsMaximus.log(target, users, isUser)
+
+    if (!oldStatus) {
+        toastr.info(t`An error occurred - The original Status could not be found`, extensionName);
+        // @ts-ignore
+        return failedResponse;
+    }
+
+    const newStatus = StatUsMaximus.transferStatus(char.avatar, target.avatar, {onlyEntries, isUser});
+
+    if (!newStatus) {
+        toastr.error(t`An error occurred - The Status could not be cloned`, extensionName);
+        // @ts-ignore
+        return failedResponse;
+    }
+
+    if (!keepOriginalData) {
+        if (onlyEntries)
+            for (const uid in oldStatus.entries)
+                oldStatus.delEntry(Number(uid));
+        else StatUsMaximus.delStatus(oldStatus);
+    }
+
+    toastr.success(t`Status cloned successfully`);
+
+    return {status: newStatus, keepOriginal: keepOriginalData, onlyEntries};
 }
 
 /**
- * @returns {HTMLElement}
+ * Gets a drag delay for sortable elements. This is to prevent accidental drags when scrolling.
+ * @returns {number} The delay in milliseconds. 50ms for desktop, 750ms for mobile.
  */
-export function getCharStatusForm(char) {
-    let metadata = getCharStatus(char);
+function getSortableDelay() {
+    const mobileTypes = ['mobile', 'tablet'];
+    const userAgent = SillyTavern.libs.Bowser.parse(navigator.userAgent);
+    const isMobile = mobileTypes.includes(userAgent?.platform?.type);
 
-    if (!metadata) metadata = createCharStatus(char);
+    return isMobile ? 750 : 50;
+}
 
-    // @ts-ignore
-    if (!metadata) return toastr.error(t`No metadata was found for the character -${char?.name}-`);
-
-    const createInputLabel = (/**@type {HTMLInputElement|HTMLSelectElement}*/input, mw = "mw-unset") => {
-        const labelTemplateSpan = document.createElement("small");
-        labelTemplateSpan.dataset.i18n = (input instanceof HTMLInputElement) ? input.placeholder : input.ariaPlaceholder;
-        labelTemplateSpan.innerText = (input instanceof HTMLInputElement) ? input.placeholder : input.ariaPlaceholder;
-        labelTemplateSpan.classList.add("text-center", "input-label", "white-space-nowrap", "mb-3px");
-
-        const labelTemplate = document.createElement("div");
-        labelTemplate.classList.add("d-flex", "flex-col", "gap-0", "flex-grow-1", mw);
-        labelTemplate.append(
-            labelTemplateSpan,
-            input
-        );
-
-        return labelTemplate;
-    }
-
-    /**
-     * Creates a button element with specified classes and title.
-     * @param {string?} title - The title and data-i18n attribute for the button
-     * @param {string[]?} classes - Array of class names to add to the button
-     * @param {object?} data - Additional data attributes to set on the button
-     * @returns {HTMLDivElement} The created button element
-     */
-    const createButton = function(title = "", classes = [], data = {}) {
-        const button = document.createElement("div");
-        button.title = title;
-        button.dataset.i18n = title;
-        button.classList.add("menu_button", "menu_button_icon", "fa-fw", "fa-solid", "interactable", "m-0", ...classes);
-
-        for (const [key, value] of Object.entries(data))
-            button.dataset[key] = value;
-
-        return button;
-    };
-
-    /**
-     * Creates a button element with specified classes and title.
-     * @param {HTMLElement[]?} elements - The title and data-i18n attribute for the button
-     * @param {string[]?} classes - Array of class names to add to the button
-     * @param {object?} data - Additional data attributes to set on the button
-     * @param {string?} element_type - Type of the HTML element to create
-     * @returns {HTMLElement} The created button element
-     */
-    const createRowWrapper = (elements = [], classes = [], data = {}, element_type = "div") => {
-        const row = document.createElement(element_type);
-        row.classList.add("d-flex", ...classes);
-
-        for (const [key, value] of Object.entries(data))
-            row.dataset[key] = value;
-
-        for (const elem of elements)
-            row.append(elem);
-
-        return row;
-    };
-
-    const escapedCharName = lodash.escape(char.name);
-
-    /** Create Menu header. */
-    const charName = document.createElement("span");
-    charName.innerText = escapedCharName;
-    charName.classList.add("popup-char-name", "text-quote");
-
-    const avatar = document.createElement("img");
-    avatar.alt = "Avatar";
-    avatar.title = lodash.escape(metadata.avatar);
-    avatar.src = getFullCharAvatar(metadata);
-
-    const avatarContainer = document.createElement("div");
-    avatarContainer.classList.add("avatar");
-    avatarContainer.append(avatar);
-
-    const selectEntryRole = document.createElement("select");
-    selectEntryRole.ariaPlaceholder = t`Select prompt role`;
-    selectEntryRole.classList.add("flex-grow-1", "px-5px", "m-0");
-
-    for (const role of Object.values(extension_prompt_roles)) {
-        const option = document.createElement("option");
-        option.value = String(role);
-
-        if (extension_prompt_roles.SYSTEM === role) option.text = "System";
-        if (extension_prompt_roles.ASSISTANT === role) option.text = "Assistant";
-        if (extension_prompt_roles.USER === role) option.text = "User";
-
-        if (metadata.role === role) {
-            option.selected = true;
+/**
+ * @param {string} actionLabel - Are you sure want to...
+ * @returns {Promise<boolean>}
+ */
+async function popupConfirmAction(actionLabel = 'continue') {
+    const result = await Popup.show.confirm(
+        t`WARNING`,
+        t`Are you sure want to ${actionLabel}?`,
+        {
+            okButton: t`Confirm`,
+            cancelButton: t`Cancel`
         }
+    );
 
-        selectEntryRole.append(option);
+    return result === 1;
+};
+
+/**
+ * @param {StatusEntry} entry
+ * @param {string|number} uid
+ * @param {string} avatar
+ * @param {string} statusId
+ * @returns {Promise<JQuery<HTMLElement>>}
+ */
+async function createEntryBlock(entry, uid, avatar, statusId) {
+    const $entryBlock = $(await HTML_TEMPLATES.get('popupStatusEntry')).clone();
+    const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
+    const altValues = Object.entries(entry.values);
+
+    for (const [valUid, altValue] of altValues) {
+        $('<option>', { text: altValue.title || `UID: ${valUid}`, value: valUid }).appendTo($valuesSelect);
     }
 
-    const numberAreaForDepth = document.createElement("input");
-    numberAreaForDepth.autocomplete = "off";
-    numberAreaForDepth.type = "number";
-    numberAreaForDepth.placeholder = t`Custom Depth`;
-    numberAreaForDepth.title = t`Overrides the behavior of attaching the in-depth prompt dynamically before the last message, to using a constant depth`;
-    numberAreaForDepth.value = metadata.forceDepth ?? "";
-    numberAreaForDepth.classList.add("text_pole", "m-0");
+    $valuesSelect.trigger('change');
 
-    const textareaStatusSeparator = document.createElement("input");
-    textareaStatusSeparator.autocomplete = "off";
-    textareaStatusSeparator.type = "text";
-    textareaStatusSeparator.placeholder = t`Entries separator`;
-    textareaStatusSeparator.value = escapeNewlines(metadata.separator);
-    textareaStatusSeparator.classList.add("text_pole", "m-0");
+    $entryBlock
+        .find('.status-entry-toolbar .menu_button')
+        .data({uid, avatar, statusId});
 
-    const textareaDefEntrySeparator = document.createElement("input");
-    textareaDefEntrySeparator.autocomplete = "off";
-    textareaDefEntrySeparator.type = "text";
-    textareaDefEntrySeparator.placeholder = t`Def. title/description separator`;
-    textareaDefEntrySeparator.value = escapeNewlines(metadata.def_entry_separator);
-    textareaDefEntrySeparator.classList.add("text_pole", "m-0");
+    $entryBlock
+        .find('.delete-row')
+        .data({uid, avatar, statusId});
 
-    const textareaStatusPrefix = document.createElement("input");
-    textareaStatusPrefix.autocomplete = "off";
-    textareaStatusPrefix.type = "text";
-    textareaStatusPrefix.placeholder = t`Status prefix`;
-    textareaStatusPrefix.value = escapeNewlines(metadata.prefix);
-    textareaStatusPrefix.classList.add("text_pole", "m-0");
+    $entryBlock
+        .find('.kill-switch')
+        .data({uid, avatar, statusId, enabled: entry.enabled})
+        .toggleClass('fa-toggle-on', entry.enabled)
+        .toggleClass('fa-toggle-off', !entry.enabled);
 
-    const textareaStatusSuffix = document.createElement("input");
-    textareaStatusSuffix.autocomplete = "off";
-    textareaStatusSuffix.type = "text";
-    textareaStatusSuffix.placeholder = t`Status suffix`;
-    textareaStatusSuffix.value = escapeNewlines(metadata.suffix);
-    textareaStatusSuffix.classList.add("text_pole", "m-0");
+    $entryBlock
+        .find(':input.text_pole')
+        .each(function(i, input) {
+            const $input = $(input);
+            const field = $input.attr('name');
+            const isValueField = field === 'title' || field === 'value';
+            const value = isValueField ? entry.values[entry.value_uid][field] : entry[field];
 
-    const deleteStatsBtn = createButton("Delete character's Status", ["fa-trash-can", "redWarningBG"]);
-    const cloneStatsBtn = createButton("Clone Status entry into a chat participant", ["fa-truck-arrow-right"]);
-    const expandEntriesBtn = createButton("Expand all entries", ["fa-expand"]);
-    const compressEntriesBtn = createButton("Compress all entries", ["fa-compress"]);
-    const newStatBtn = createButton(`Add an status to ${escapedCharName}`, ["fa-plus"]);
+            // ! Escaping is not needed anymore after reworking newlines escaping, but it will be kept for compatibility as older entries don't have newlines escaped
+            const doEscapeNewlines = typeof value === 'string' && field !== 'value';
 
-    /** Create input template */
-    /** - Key */
-    const dragHandle = document.createElement("span");
-    dragHandle.textContent = "☰";
-    dragHandle.classList.add("drag-handle");
-
-    const drawerToggle = document.createElement("div");
-    drawerToggle.classList.add("inline-drawer-toggle", "fa-fw", "fa-solid", "fa-circle-chevron-down", "inline-drawer-icon", "down", "interactable");
-
-    const enableRowToggle = document.createElement("input");
-    enableRowToggle.type = "hidden";
-    enableRowToggle.name = "enabled";
-
-    const enableRowBtn = document.createElement("div");
-    enableRowBtn.classList.add("fa-solid", "fa-toggle-on", "kill-switch");
-    enableRowBtn.title = "Toggle entry's active state.";
-    enableRowBtn.dataset.i18n = "Toggle entry's active state.";
-
-    const textareaKey = document.createElement("input");
-    textareaKey.autocomplete = "off";
-    textareaKey.type = "text";
-    textareaKey.name = "key";
-    textareaKey.placeholder = t`Entry title`;
-    textareaKey.classList.add("text_pole", "m-0");
-
-    const textareaSeparator = document.createElement("input");
-    textareaSeparator.autocomplete = "off";
-    textareaSeparator.type = "text";
-    textareaSeparator.name = "separator";
-    textareaSeparator.placeholder = t`Title/description separator`;
-    textareaSeparator.classList.add("text_pole", "m-0", "mw-25");
-
-    const deleteStatRowBtn = document.createElement("div");
-    deleteStatRowBtn.title = "Delete Status entry";
-    deleteStatRowBtn.dataset.i18n = "Delete Status entry";
-    deleteStatRowBtn.classList.add("menu_button", "fa-fw", "fa-solid", "fa-trash-can", "redWarningBG", "interactable", "delete-row", "big-button");
-
-    /** - Value */
-    const selectAltValues = document.createElement("select");
-    selectAltValues.ariaPlaceholder = t`Select entry description`;
-    selectAltValues.name = "value_uid";
-    selectAltValues.classList.add("flex-grow-1", "px-5px", "m-0");
-
-    const textareaAltKey = document.createElement("input");
-    textareaAltKey.autocomplete = "off";
-    textareaAltKey.type = "text";
-    textareaAltKey.name = "alt_key";
-    textareaAltKey.placeholder = t`Alt description title`;
-    textareaAltKey.classList.add("text_pole", "m-0");
-
-    const warningAltKey = document.createElement("i");
-    warningAltKey.classList.add("fa-solid", "fa-circle-exclamation", "interactable");
-    warningAltKey.title = "This is only used in the prompt if description is empty";
-    warningAltKey.dataset.i18n = "This is only used in the prompt if description is empty";
-
-    const textareaValue = document.createElement("textarea");
-    textareaValue.name = "value";
-    textareaValue.placeholder = t`Entry description...`;
-    textareaValue.classList.add("text_pole", "m-0");
-
-    /** - Key/Value Block */
-    const entryBodyToolButtons = createRowWrapper([
-        warningAltKey,
-        createButton("Add alt descriptions", ["big-button", "fa-plus", "add_alt_value"]),
-        createButton("Delete current alt description", ["big-button", "fa-trash-can", "del_alt_value", "redWarningBG"]),
-        createButton("Import entry from clipboard", ["big-button", "fa-arrow-right-to-file", "import", "px-5px"]),
-        createButton("Export entry from clipboard", ["big-button", "fa-arrow-right-from-file", "export", "px-5px"]),
-        createButton("Add template for text macro", ["big-button", "fa-t", "macro_template", "px-5px"], {macroType: "text"}),
-        createButton("Add template for number macro", ["big-button", "fa-n", "macro_template", "px-5px"], {macroType: "number"}),
-        createButton("Add template for boolean macro", ["big-button", "fa-b", "macro_template", "px-5px"], {macroType: "boolean"}),
-        createButton("Add template for range macro", ["big-button", "fa-r", "macro_template", "px-5px"], {macroType: "range"}),
-    ], ["flex-center-start", "buttons-wrapper"]);
-
-    const entryBodyToolbar = createRowWrapper([
-        createInputLabel(selectAltValues, "mw-25"),
-        createInputLabel(textareaAltKey, "mw-25"),
-        entryBodyToolButtons
-    ], ["flex-end-start"])
-
-    const drawerContent = document.createElement("div");
-    drawerContent.classList.add("inline-drawer-content", "value", "w-100", "p-0", "mb-5px");
-    drawerContent.append(
-        createRowWrapper([
-            entryBodyToolbar,
-            textareaValue
-        ], ["flex-col"])
-    );
-
-    const formRow = document.createElement("form");
-    formRow.classList.add("stat-us-max-popup-row", "d-flex", "flex-col", "inline-drawer");
-    formRow.append(
-        createRowWrapper([ // Drawer Header
-            dragHandle,
-            drawerToggle,
-            enableRowToggle,
-            enableRowBtn,
-            textareaKey,
-            textareaSeparator,
-            deleteStatRowBtn
-        ], ["inline-drawer-header", "key", "w-100", "flex-center", "p-0"]),
-        drawerContent // Drawer Body
-    );
-
-    /** Create Menu container and assemble Menu */
-    const statusHeaderButtons = createRowWrapper([
-        deleteStatsBtn,
-        cloneStatsBtn,
-        expandEntriesBtn,
-        compressEntriesBtn,
-        newStatBtn
-    ], ["gap-5px", "flex-center-start", "buttons-wrapper"]);
-
-    const statusHeaderInputs = createRowWrapper([
-        createInputLabel(selectEntryRole),
-        createInputLabel(numberAreaForDepth),
-        createInputLabel(textareaStatusSeparator),
-        createInputLabel(textareaDefEntrySeparator),
-        createInputLabel(textareaStatusPrefix),
-        createInputLabel(textareaStatusSuffix),
-        statusHeaderButtons
-    ], ["flex-end-start", "w-100", "gap-5px", "stat-wrapper"], {modified: false, charAvatar: char.avatar}, "form");
-
-    const statusHeaderForm = createRowWrapper([
-        avatarContainer,
-        statusHeaderInputs
-    ], ["flex-center-start", "w-100", "py-5px"]);
-
-    const statusHeader = createRowWrapper([
-        charName,
-        statusHeaderForm
-    ], ["flex-col", "flex-start-center", "gap-5px"]);
-
-    const content = createRowWrapper(undefined, ["flex-col", "gap-5px", "pt-5px"]);
-    const container = createRowWrapper([
-        statusHeader,
-        content
-    ], ["stat-us-max-popup", "flex-col"], {char: metadata.avatar, isUser: metadata.is_user});
-
-    /** Add listeners */
-    expandEntriesBtn.addEventListener("click", () =>
-        content.querySelectorAll(".inline-drawer-toggle.down").forEach((/**@type {HTMLElement}*/toggle) => toggle.click())
-    , { passive: true });
-
-    compressEntriesBtn.addEventListener("click", () =>
-        content.querySelectorAll(".inline-drawer-toggle.up").forEach((/**@type {HTMLElement}*/toggle) => toggle.click())
-    , { passive: true });
-
-    newStatBtn.addEventListener("click", () => {
-        const newEntry = addCharEntry(char, "", "");
-        addStatusRow({
-            data: [newEntry],
-            container: content,
-            template: formRow,
-            char: char
+            $input
+                .data({uid, avatar, statusId})
+                .val(doEscapeNewlines ? escapeNewlines(value) : value)
+                .trigger('change');
         });
-    }, { passive: true });
 
-    selectEntryRole.addEventListener("change", () => {
-        metadata.role = Number(selectEntryRole.value);
-        statusHeaderInputs.dataset.modified = String(true);
-    }, { passive: true });
+    $entryBlock
+        .attr('entry-uid', uid);
 
-    numberAreaForDepth.addEventListener("input", () => {
-        metadata.forceDepth = parseValue(numberAreaForDepth.value);
-        statusHeaderInputs.dataset.modified = String(true);
-    }, { passive: true });
+    return $entryBlock;
+}
 
-    textareaStatusSeparator.addEventListener("input", () => {
-        metadata.separator = un_escapeNewlines(textareaStatusSeparator.value);
-        statusHeaderInputs.dataset.modified = String(true);
-    }, { passive: true });
+/**
+ * MARK:getStatusPopupBlock()
+ * @param {string} avatar
+ * @param {boolean?} [is_user]
+ * @returns {Promise<JQuery<HTMLElement>>}
+ */
+async function getStatusPopupBlock(avatar, is_user = false) {
+    let status = StatUsMaximus.getStatus(avatar);
 
-    textareaDefEntrySeparator.addEventListener("input", () => {
-        metadata.def_entry_separator = un_escapeNewlines(textareaDefEntrySeparator.value);
-        statusHeaderInputs.dataset.modified = String(true);
-    }, { passive: true });
+    if (!status) {
+        if (!extensionSettings.autoDetectParticipants) {
+            const $statusBlockEmpty = $(await HTML_TEMPLATES.get('popupStatusEmpty')).clone();
+            const statusId = `${generateUUID()}_stat_block`;
+            const character = getParticipant(avatar, {is_user});
 
-    textareaStatusPrefix.addEventListener("input", () => {
-        metadata.prefix = un_escapeNewlines(textareaStatusPrefix.value);
-        statusHeaderInputs.dataset.modified = String(true);
-    }, { passive: true });
+            if (!character) return;
 
-    textareaStatusSuffix.addEventListener("input", () => {
-        metadata.suffix = un_escapeNewlines(textareaStatusSuffix.value);
-        statusHeaderInputs.dataset.modified = String(true);
-    }, { passive: true });
+            const thumbnail = getThumbnailUrl(is_user ? 'persona' : 'avatar', character.avatar);
 
-    cloneStatsBtn.addEventListener("click", async () => {
-        const cloneResult = await clonePopup(char);
+            $statusBlockEmpty
+                .attr('id', statusId);
 
-        if (!cloneResult) return;
-    }, { passive: true });
+            $statusBlockEmpty
+                .find(`.${htmlSuffix}-name`)
+                .text(character.name);
 
-    deleteStatsBtn.addEventListener("click", async () => {
-        if (await popupConfirmAction(`delete ${char.name}'s status data`) === 0) return;
+            $statusBlockEmpty
+                .find(`.${htmlSuffix}-avatar`)
+                .attr('src', thumbnail)
+                .attr('title', character.avatar);
 
-        const success = deleteCharStatus(char);
+            $statusBlockEmpty
+                .find(`.create-status`)
+                .data({avatar, is_user, statusId});
 
-        if (success) {
-            const refreshButton = document.createElement("div");
-            refreshButton.title = "Re-create Status data";
-            refreshButton.dataset.i18n = "Re-create Status data";
-            refreshButton.classList.add("menu_button", "menu_button_icon", "fa-solid", "fa-arrows-rotate", "interactable");
-
-            const refreshSpan = document.createElement("span");
-            refreshSpan.dataset.i18n = `Re-create ${escapedCharName}'s Status data`;
-            refreshSpan.innerText = `Re-create ${escapedCharName}'s Status data`;
-
-            const refreshContainer = document.createElement("div");
-            refreshContainer.classList.add("d-flex", "flex-wrap", "flex-center");
-            refreshContainer.append(
-                refreshButton,
-                refreshSpan
-            );
-
-            refreshButton.addEventListener("click", () => {
-                /**@type {HTMLElement}*/
-                const newContainer = getCharStatusForm(char);
-                const nodesArray = Array.from(newContainer.childNodes);
-
-                destroyElement(container.childNodes);
-
-                container.append(...nodesArray);
-            }, { once: true, passive: true });
-
-            destroyElement(container.childNodes);
-
-            container.append(refreshContainer);
+            return $statusBlockEmpty;
         }
-    }, { passive: true });
 
-    /** Add def rows */
-    if (metadata.entries.length > 0) addStatusRow({
-        data: metadata.entries,
-        container: content,
-        template: formRow,
-        char: char
-    });
+        status = StatUsMaximus.addStatus(avatar, is_user);
+
+        if (!status) return;
+    };
+
+    const $statusBlock = $(await HTML_TEMPLATES.get('popupStatus')).clone();
+    const $selectRoles = $statusBlock.find('select[name="role"]');
+    const $entriesContainer = $statusBlock.find('.status-entries');
+    const statusId = `${generateUUID()}_stat_block`;
+
+    /** @type {[string, StatusEntry][]} */
+    const entries = Object
+        .entries(status.entries)
+        .sort(([uidA, entryA], [uidB, entryB]) => entryA.display_position - entryB.display_position);
+
+    $statusBlock
+        .attr('id', statusId)
+        .attr('avatar', avatar)
+        .attr('is_user', String(status.is_user));
+
+    $statusBlock
+        .find(`.${htmlSuffix}-name`)
+        .text(status.getCharacter().name);
+
+    $statusBlock
+        .find(`.${htmlSuffix}-avatar`)
+        .attr('src', status.getThumbnail())
+        .attr('title', status.avatar);
+
+    $statusBlock
+        .find('.status-toolbar .menu_button.kill-switch')
+        .toggleClass('toggleEnabled', status.enabled);
+
+    $statusBlock
+        .find('.status-toolbar .menu_button')
+        .data({avatar, statusId});
+
+    for (const [text, value] of Object.entries(extension_prompt_roles)) {
+        $('<option>', { text, value }).appendTo($selectRoles);
+    }
+
+    $selectRoles.trigger('change');
+    $statusBlock
+        .find('.status-fields :input.text_pole')
+        .each(function(i, input) {
+            const $input = $(input);
+            const field = $input.attr('name');
+            const value = status[field];
+            const doEscapeNewlines = typeof value === 'string';
+
+            $input
+                .data({avatar, statusId})
+                .val(doEscapeNewlines ? escapeNewlines(value) : value)
+                .trigger('change');
+        });
+
+    for (const [uid, entry] of entries) {
+        const $entryBlock = await createEntryBlock(entry, uid, avatar, statusId);
+        $entriesContainer.append($entryBlock);
+    }
 
     // @ts-ignore
-    $(content).sortable({
-        items: '.stat-us-max-popup-row',
+    $statusBlock.sortable({
+        items: '.stat-us-maximus-popup-row',
         delay: getSortableDelay(),
         handle: '.drag-handle',
-        stop: function (_event, _ui) {
-            const forms = content.querySelectorAll("form");
+        stop: function () {
+            const $rows = $statusBlock.find('.stat-us-maximus-popup-row');
+            const UIDsOrder = [];
+            let cancel = false;
+            let order = 0;
 
-            refreshCharEntryDisplay(char, forms);
+            for (const row of $rows.get()) {
+                const $row = $(row);
+                const rowUID = $row.attr('entry-uid');
+                const rowUIDClean = Number(rowUID);
+
+                if (isNaN(rowUIDClean) || !status.getEntry(rowUIDClean)) {
+                    cancel = true;
+                    break;
+                }
+
+                UIDsOrder.push(rowUIDClean);
+            }
+
+            if (cancel) return;
+
+            for (const uid of UIDsOrder) {
+                try {
+                    status.getEntry(uid).set('display_position', order);
+                    order++;
+                } catch (err) {
+                    StatUsMaximus.error(err);
+                }
+            }
         },
     });
 
-    return container;
-}
-
-export async function popupStatusSingleChar(char) {
-    const charForm = await getCharStatusForm(char);
-
-    if (!charForm) return;
-
-    await callGenericPopup(charForm, POPUP_TYPE.TEXT, "", {
-        okButton: t`Close Status`,
-        allowVerticalScrolling: true,
-        wide: true,
-        onClose: async () => {
-            const forms = charForm.querySelectorAll('form');
-            let headerInputsModified = false;
-
-            for (const form of forms) {
-                if (String(form.dataset.modified) !== "true") continue;
-
-                if (form.classList.contains("stat-us-max-popup-row"))
-                    updateCharEntry(char, form.dataset.uid, new FormData(form), false);
-
-                if (form.classList.contains("stat-wrapper"))
-                    headerInputsModified = true;
-            }
-
-            if (headerInputsModified) {
-                setSaveStateFlag(extensionSettings.autoSaveMetadata);
-
-                if (extensionSettings.autoSaveMetadata) SillyTavern.getContext().saveChat();
-            }
-
-            destroyElement(charForm);
-        }
-    });
-
-    fetchStatusDebounced({forceUIUpdate: true});
+    return $statusBlock;
 }
 
 /**
- * @param {object[]} chars
+ * @param {string} avatar
+ * @param {{is_user?: boolean; onOpen?: () => void}} [options]
  */
-export async function popupStatusMultiChar(chars) {
-    const content = document.createElement("div");
-    content.id = "stat-us-max-popup-multi-char";
+async function openSingleStatusPopup(avatar, {is_user = false, onOpen = () => {}} = {}) {
+    const $statusBlock = await getStatusPopupBlock(avatar, is_user);
 
-    for (const char of chars) {
-        const charForm = await getCharStatusForm(char);
+    if (!$statusBlock) return;
 
-        if (!charForm) continue;
-
-        charForm.classList.add("multi-char-popup");
-        content.append(charForm);
-    }
-
-    await callGenericPopup(content, POPUP_TYPE.TEXT, "", {
+    await callGenericPopup($statusBlock, POPUP_TYPE.TEXT, "", {
         okButton: t`Close Status`,
         allowVerticalScrolling: true,
         wide: true,
-        onClose: async () => {
-            const forms = content.querySelectorAll('form');
-            let headerInputsModified = false;
-
-            for (const form of forms) {
-                const char = chars.find(char => char.avatar === form.dataset.charAvatar);
-
-                if (!char) continue;
-                if (String(form.dataset.modified) === "false") continue;
-
-                if (form.classList.contains("stat-us-max-popup-row"))
-                    updateCharEntry(char, form.dataset.uid, new FormData(form), false);
-
-                if (form.classList.contains("stat-wrapper"))
-                    headerInputsModified = true;
-            }
-
-            if (headerInputsModified) {
-                setSaveStateFlag(extensionSettings.autoSaveMetadata);
-
-                if (extensionSettings.autoSaveMetadata) SillyTavern.getContext().saveChat();
-            }
-
-            destroyElement(content);
+        onOpen,
+        onClose: () => {
+            $statusBlock.remove();
         }
     });
 
-    fetchStatusDebounced({forceUIUpdate: true});
+    StatUsMaximus.renderStatusesSafe();
+}
+
+/**
+ * @param {{avatar: string; is_user?: boolean}[]} avatars
+ */
+async function openMultiStatusPopup(avatars = []) {
+    if (!avatars?.length) return;
+
+    const statusesWrapper = createElement('div', {
+        class: `${htmlSuffix}-popup-wrapper flex-container flexFlowColumn flexnowrap gap10px padding0`
+    });
+
+    const $statusesWrapper = $(statusesWrapper);
+    let noBlocksCreated = true;
+
+    for (const {avatar, is_user} of avatars) {
+        const $statusBlock = await getStatusPopupBlock(avatar, is_user);
+
+        if (!$statusBlock) continue;
+
+        $statusesWrapper.append($statusBlock);
+        noBlocksCreated = false;
+    }
+
+    if (noBlocksCreated) return;
+
+    await callGenericPopup($statusesWrapper, POPUP_TYPE.TEXT, "", {
+        okButton: t`Close Status`,
+        allowVerticalScrolling: true,
+        wide: true,
+        onClose: () => {
+            $statusesWrapper.each(function(i, elem) {
+                $(elem).remove();
+            });
+
+            $statusesWrapper.remove();
+        }
+    });
+
+    StatUsMaximus.renderStatusesSafe();
+}
+
+// * MARK:Shortcuts
+
+/**
+ * @param {EventData<HTMLImageElement>} e
+ */
+async function onGroupMemberListClick(e) {
+    if (!isChatOpen()) return;
+
+    const img = e.currentTarget;
+    const avatar = img.title;
+
+    if (!avatar) return;
+
+    await openSingleStatusPopup(avatar);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onShortcutClick(e) {
+    if (!isChatOpen()) return;
+
+    const $button = $(e.currentTarget);
+    const type = $button.attr('type');
+
+    if (type === 'save') return saveMetadataSafe();
+
+    if (type === 'user') {
+        const user = getUser();
+        const avatar = user.avatar;
+        return await openSingleStatusPopup(avatar, {is_user: true});
+    }
+
+    if (type === 'characters') {
+        const { chars } = getActiveParticipants();
+        return await openMultiStatusPopup(chars);
+    }
+
+    const members = StatUsMaximus.getStatuses();
+
+    if (type === 'all') {
+        const { chars, user } = getActiveParticipants(members.map(m => m.avatar));
+
+        /** @type {(Character|UserCharacter|Status)[]} */
+        const participants = [
+            ...members,
+            ...chars
+        ];
+
+        const userIncluded = participants.some(p => p.avatar === user.avatar);
+
+        if (user && !userIncluded) participants.push(user);
+        return await openMultiStatusPopup(participants);
+    }
+
+    if (type === 'users') {
+        const users = members
+            .filter(status => status.is_user);
+
+        if (!users.length) return;
+
+        return await openMultiStatusPopup(users);
+    }
+}
+
+// * MARK:Input Listeners
+
+/**
+ * @param {string} field
+ * @param {string|number} value
+ * @returns {string|number}
+ */
+function cleanWonkyStatusValues(field, value) {
+    const numValue = Number(value);
+    const isEmpty = (value ?? '') === '';
+
+    if (field === 'force_depth' && isEmpty) return -1;
+    if (field === 'force_depth') return numValue;
+
+    return value;
+}
+
+/**
+ * @param {EventData<HTMLInputElement|HTMLTextAreaElement>} e
+ */
+function onStatusInput(e) {
+    const $input = $(e.currentTarget);
+    const newValue = $input.val();
+    const field = $input.attr('name');
+    const { avatar } = $input.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    status.set(field, cleanWonkyStatusValues(field, newValue));
+}
+
+/**
+ * @param {EventData<HTMLInputElement|HTMLTextAreaElement>} e
+ */
+function onEntryInput(e) {
+    const $input = $(e.currentTarget);
+    const newValue = $input.val();
+    const field = $input.attr('name');
+    const { uid, avatar } = $input.data();
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const entry = status.getEntry(uid);
+    const valueClean = field === 'value_uid' ? Number(newValue) : newValue;
+
+    entry.set(field, valueClean, entry.value_uid);
+}
+
+/**
+ * @param {EventData<HTMLInputElement>} e
+ */
+function onAltTitleInput(e) {
+    const $input = $(e.currentTarget);
+    const newValue = $input.val();
+    const { uid, statusId } = $input.data();
+
+    const $statusBlock =  $(`#${statusId}`);
+    const $valuesOption = $statusBlock
+        .find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`)
+        .find('select[name="value_uid"]')
+        .find(':selected');
+
+    $valuesOption.text(newValue || `UID: ${uid}`);
+}
+
+/**
+ * @param {EventData<HTMLSelectElement>} e
+ */
+function onEntryValueSwap(e) {
+    const $select = $(e.currentTarget);
+    const selectedAltValue = String($select.val());
+    const { uid, avatar } = $select.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    /** @type {StatusEntry} */
+    const entry = status.entries[uid];
+    const altValue = entry.values[selectedAltValue];
+
+    const $container = $select.closest('.inline-drawer-content');
+
+    $container.find(':input[name="value"]').val(altValue.value);
+    $container.find(':input[name="title"]').val(altValue.title);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onCreateEntryClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, statusId } = $button.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const uid = status.addEntry();
+    const entry = status.entries[uid];
+    const $entryBlock = await createEntryBlock(entry, uid, avatar, statusId);
+    const $statusBlock = $(`#${statusId}`);
+    const $container = $statusBlock.find('.status-entries').first();
+
+    $container.append($entryBlock);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onCreateEntryValueClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, uid, statusId } = $button.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const valueUID = status
+        .getEntry(uid)
+        .addValue('', '');
+
+    if (typeof valueUID !== 'number' || valueUID < 0) return;
+
+    status
+        .getEntry(uid)
+        .swapValue(valueUID);
+
+    const $statusBlock =  $(`#${statusId}`);
+    const $entryBlock = $statusBlock.find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`);
+    const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
+
+    $('<option>', { text: `UID: ${valueUID}`, value: valueUID }).appendTo($valuesSelect);
+
+    $valuesSelect
+        .val(valueUID)
+        .trigger('change');
+
+    $entryBlock.find(':input[name="value"]').val('');
+    $entryBlock.find(':input[name="title"]').val('');
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onDeleteEntryValueClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, uid, statusId } = $button.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    try {
+        const accepted = await popupConfirmAction('delete this entry value');
+
+        if (!accepted) return toastr.info(t`Entry value deletion cancelled`, extensionName);
+
+        const entry = status.getEntry(uid);
+        const deletionSuccess = entry.delValue();
+
+        if (!deletionSuccess) return;
+
+        const $statusBlock =  $(`#${statusId}`);
+        const $entryBlock = $statusBlock.find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`);
+        const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
+
+        $valuesSelect
+            .find(':selected')
+            .remove();
+        $valuesSelect
+            .val(entry.value_uid)
+            .trigger('change');
+
+        $entryBlock.find(':input[name="value"]').val(entry.get('value').toString());
+        $entryBlock.find(':input[name="title"]').val(entry.get('title').toString());
+    } catch (err) {
+        StatUsMaximus.error(err);
+    }
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onDeleteEntryClick(e) {
+    const $button = $(e.currentTarget);
+    const { uid, avatar, statusId } = $button.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    try {
+        const accepted = await popupConfirmAction('delete this entry');
+
+        if (!accepted) return toastr.info(t`Entry deletion cancelled`, extensionName);
+
+        delete status.entries[uid];
+
+        const $statusBlock = $(`#${statusId}`);
+        const $container = $statusBlock.find(`.${htmlSuffix}-popup-row[entry-uid="${uid}"]`).first();
+
+        $container.remove();
+    } catch (err) {
+        StatUsMaximus.error(err);
+    }
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onBulkToggleEntryDrawer(e) {
+    const $button = $(e.currentTarget);
+    const { statusId } = $button.data();
+    const $statusBlock = $(`#${statusId}`);
+    const $entryContainers = $statusBlock.find(`.${htmlSuffix}-popup-row`);
+
+    $entryContainers.each(function(i, row) {
+        const $rowToggle = $(row).find('.inline-drawer-toggle');
+        const direction = $button.hasClass('fa-compress') ? '.up' : '.down';
+
+        if ($rowToggle.is(direction)) $rowToggle.trigger('click');
+    });
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onCreateStatusClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, is_user, statusId } = $button.data();
+
+    if (!avatar) return;
+
+    const status = StatUsMaximus.addStatus(avatar, is_user);
+
+    if (!status) return;
+
+    const $statusBlockEmpty = $(`#${statusId}`);
+    const $statusBlock = await getStatusPopupBlock(avatar, is_user);
+
+    if (!$statusBlock) return;
+
+    $statusBlockEmpty.after($statusBlock);
+    $statusBlockEmpty.remove();
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onCopyEntryClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, uid } = $button.data();
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const entry = status.getEntry(uid);
+
+    await exportObjectToClipboard(entry);
+    toastr.info(t`Entry copied into the clipboard`, extensionName)
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onCreateEntryFromClipboardClick(e) {
+    if (!navigator.clipboard)
+        return toastr.warning(t`Clipboard API not available in this context.`);
+
+    const $button = $(e.currentTarget);
+    const { avatar, statusId } = $button.data();
+    const $statusBlock = $(`#${statusId}`);
+    const $entriesContainer = $statusBlock.find('.status-entries');
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    let newEntry;
+
+    try {
+        newEntry = await navigator.clipboard.readText();
+        newEntry = JSON.parse(newEntry);
+    } catch (error) {
+        StatUsMaximus.error('Error reading clipboard:', error);
+        return toastr.warning(t`Failed to read clipboard text. Make sure you granted permissions to the page and the text is a JSON object.`, extensionName);
+    }
+
+    const uid = status.addEntry(newEntry);
+    const entry = status.getEntry(uid);
+    const $entryBlock = await createEntryBlock(entry, uid, avatar, statusId);
+    $entriesContainer.append($entryBlock);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onTransferStatusClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, statusId } = $button.data();
+    const $statusBlock = $(`#${statusId}`);
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const {
+        status: newStatus,
+        keepOriginal,
+        onlyEntries
+    } = await cloneStatusPopup(status.getCharacter());
+
+    if (!newStatus) return;
+
+    const $newStatusBlock = await getStatusPopupBlock(newStatus.avatar, newStatus.is_user);
+
+    if (!$newStatusBlock) return;
+
+    $statusBlock.after($newStatusBlock);
+
+    if (!keepOriginal) {
+        if (onlyEntries) $statusBlock
+            .find('.stat-us-maximus-popup-row')
+            .remove();
+        else $statusBlock.remove();
+    }
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onToggleStatusClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar } = $button.data();
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    status.set('enabled', !status.enabled);
+    $button.toggleClass('toggleEnabled', status.enabled);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onToggleEntrySwitch(e) {
+    const $entrySwitch = $(e.currentTarget);
+    const { uid, avatar, enabled } = $entrySwitch.data();
+    const nextState = !enabled;
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const entry = status.getEntry(uid);
+
+    if (!entry) return;
+
+    entry.set('enabled', nextState);
+    $entrySwitch
+        .data({enabled: nextState})
+        .toggleClass('fa-toggle-on', nextState)
+        .toggleClass('fa-toggle-off', !nextState);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onDeleteStatusClick(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, statusId } = $button.data();
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    try {
+        const accepted = await popupConfirmAction('delete Status data for this character');
+
+        if (!accepted) return toastr.info(t`Status deletion cancelled`, extensionName);
+
+        const { is_user } = status;
+        const character = status.getCharacter();
+        const thumbnail = status.getThumbnail();
+
+        const $statusBlock = $(`#${statusId}`);
+        const $statusBlockEmpty = $(await HTML_TEMPLATES.get('popupStatusEmpty')).clone();
+        const newStatusId = `${generateUUID()}_stat_block`;
+
+        $statusBlockEmpty
+            .attr('id', newStatusId);
+
+        $statusBlockEmpty
+            .find(`.${htmlSuffix}-name`)
+            .text(character.name);
+
+        $statusBlockEmpty
+            .find(`.${htmlSuffix}-avatar`)
+            .attr('src', thumbnail)
+            .attr('title', avatar);
+
+        $statusBlockEmpty
+            .find(`.create-status`)
+            .data({avatar, is_user, statusId: newStatusId});
+
+        const deleteSuccess = StatUsMaximus.delStatus(status);
+
+        if (!deleteSuccess) return;
+
+        $statusBlock.after($statusBlockEmpty);
+        $statusBlock.remove();
+    } catch (err) {
+        StatUsMaximus.error(err);
+    }
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onMacroShortcutClick(e) {
+    const $button = $(e.currentTarget);
+    const macro = $button.attr('macro');
+    const { uid, avatar, statusId } = $button.data();
+
+    if (!extensionSettings.altMacroTemplateBehavior)
+        return copyText(macro);
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const $statusBlock = $(`#${statusId}`);
+    const $input = $statusBlock
+        .find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`)
+        .find(':input[name="value"]');
+
+    const newValue = $input.val() + macro;
+
+    $input.val(newValue);
+
+    status
+        .getEntry(Number(uid))
+        .setValue('value', newValue);
+}
+
+// * MARK:Init Triggers
+
+function initPopupTriggers() {
+    // @ts-ignore
+    $('#rm_group_members').on('click', '.avatar img', onGroupMemberListClick);
+
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .menu_button.create-status`, onCreateStatusClick);
+    // @ts-ignore
+    $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, onStatusInput);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.kill-switch`, onToggleStatusClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-file-clipboard`, onCreateEntryFromClipboardClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-plus`, onCreateEntryClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.status-bulk-toggle`, onBulkToggleEntryDrawer);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-truck-arrow-right`, onTransferStatusClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-trash-can`, onDeleteStatusClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-plus`, onCreateEntryValueClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-trash-can`, onDeleteEntryValueClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-copy`, onCopyEntryClick);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button[macro]`, onMacroShortcutClick);
+    // @ts-ignore
+    $(document).on('input', `.${htmlSuffix}-popup-row .text_pole`, onEntryInput);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup-row .fa-solid.kill-switch`, onToggleEntrySwitch)
+    // @ts-ignore
+    $(document).on('input', `.${htmlSuffix}-popup-row .text_pole[name="title"]`, onAltTitleInput);
+    // @ts-ignore
+    $(document).on('input', `.${htmlSuffix}-popup-row select[name="value_uid"]`, onEntryValueSwap);
+    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, onDeleteEntryClick);
+
+    // * Right Menu Button
+
+    const saveMetadataButton = createElement('div', { attr: { role: 'button', type: 'save' }, class: 'menu_button flex1 fa-solid fa-floppy-disk bg-bot' });
+    const charactersButton = createElement('div', { attr: { role: 'button', type: 'characters' }, class: 'menu_button flex1 fa-solid fa-table bg-bot' });
+    const userButton = createElement('div', { attr: { role: 'button', type: 'user' }, class: 'menu_button flex1 fa-solid fa-user-cog bg-bot' });
+    const usersButton = createElement('div', { attr: { role: 'button', type: 'users' }, class: 'menu_button flex1 fa-solid fa-users-cog bg-bot' });
+    const buttonWrapper = createElement('div', {
+        class: 'flex-container flexnowrap gap5px padding0',
+        append: [ saveMetadataButton, charactersButton, userButton, usersButton ]
+    });
+
+    const title = createElement('small', { innerText: extensionName, class: 'paddingTop5' });
+    const toolbar = createElement('div', {
+        attr: { style: 'justify-content: space-between' },
+        class: `${htmlSuffix}-right-menu-toolbar ${htmlSuffix}-custom-css flex-container flexFlowColumn flexnowrap gap0 padding0 paddingLeftRight5 standoutHeader`,
+        append: [ title, buttonWrapper ]
+    });
+
+    $('#rm_group_chats_block .inline-drawer:has(> #groupCurrentMemberListToggle)')
+        .prepend($(toolbar).clone());
+
+    $('#avatar-and-name-block')
+        .after($(toolbar).clone());
+
+    // @ts-ignore
+    $(`.${htmlSuffix}-right-menu-toolbar`).on('click', '.menu_button', onShortcutClick);
+
+    // * Wand Menu Button
+
+    const wandMenuShortcutText = createElement('span', { innerText: extensionName });
+    const wandMenuShortcutIcon = createElement('div', { class: 'fa-solid fa-table extensionsMenuExtensionButton' });
+
+    const wandMenuShortcut = createElement('div', {
+        attr: { role: 'listitem' },
+        class: 'list-group-item flex-container flexGap5 interactable',
+        append: [ wandMenuShortcutIcon, wandMenuShortcutText ]
+    });
+
+    const wandMenuShortcutContainer = createElement('div', {
+        attr: { id: `${htmlSuffix}-wand-menu-shortcut`, tabindex: '0', type: 'all' },
+        class: 'extension_container interactable',
+        append: [ wandMenuShortcut ]
+    });
+
+    $('#extensionsMenu').append(wandMenuShortcutContainer);
+
+    // @ts-ignore
+    $(`#${htmlSuffix}-wand-menu-shortcut`).on('click', onShortcutClick);
 }

@@ -1,0 +1,72 @@
+<div class="stat-us-maximus-custom-css stat-us-maximus-popup flex-container flexFlowColumn gap5px bordered-box">
+    <div class="flex-container flex-column flex-center-col gap-5px">
+        <span class="stat-us-maximus-name text-quote"></span>
+
+        <div class="flex-container flex-center-row w-100">
+            <img class="stat-us-maximus-avatar me-5px" src="" alt="Avatar" title="Avatar">
+
+            <div class="flex-container flex-column flex-lg-row flex-grow-1 status-fields">
+                <div class="flex-container flex-center-row flex-grow-1">
+                    <label class="flex-container flex-column flex-center-col flex1 mw-lg-fit" title="Select the role used to send the prompt." data-i18n="[title]Select the role used to send the prompt.">
+                        <small class="status-input-label text-nowrap lh-normal">Role</small>
+                        <select class="text_pole flex1 m-0" name="role" aria-placeholder="Role"></select>
+                    </label>
+
+                    <label class="flex-container flex-column flex-center-col flex1">
+                        <small class="status-input-label text-nowrap lh-normal" title="Forces the entry to be injected at a constant depth. If set to -1, the entry will be dynamically placed above the last message of the character." data-i18n="[title]Forces the entry to be injected at a constant depth. If set to -1, the entry will be dynamically placed above the last message of the character.">
+                            <span>Force depth</span>
+                            <i class="fa-solid fa-circle-question interactable"></i>
+                        </small>
+                        <input class="text_pole flex1 m-0" type="number" name="force_depth" min="-1" autocomplete="off" placeholder="Force depth">
+                    </label>
+
+                    <label class="flex-container flex-column flex-center-col flex1" title="This will be used to separate entries during the prompt building of the statuses." data-i18n="[title]This will be used to separate entries during the prompt building of the statuses.">
+                        <small class="status-input-label text-nowrap lh-normal">Entries separator</small>
+                        <input class="text_pole flex1 m-0" type="text" name="separator" autocomplete="off" placeholder="Entries separator" data-macros>
+                    </label>
+                </div>
+
+                <div class="flex-container flex-center-row flex-grow-1">
+                    <label class="flex-container flex-column flex-center-col flex1" title="The default entry key/value separator used when creating a new status entry.">
+                        <small class="status-input-label text-nowrap lh-normal" title="Default separator between an entry key and its value, used when creating a new entry." data-i18n="[title]Default separator between an entry key and its value, used when creating a new entry.">
+                            <span>Def. separator</span>
+                            <i class="fa-solid fa-circle-question interactable"></i>
+                        </small>
+                        <input class="text_pole flex1 m-0" type="text" name="def_entry_separator" autocomplete="off" placeholder="Def. separator" data-macros>
+                    </label>
+
+                    <label class="flex-container flex-column flex-center-col flex1" title="Prefix used to wrap the status entries." data-i18n="[title]Prefix used to wrap the entries.">
+                        <small class="status-input-label text-nowrap lh-normal">Status prefix</small>
+                        <input class="text_pole flex1 m-0" type="text" name="prefix" autocomplete="off" placeholder="Prefix" data-macros>
+                    </label>
+
+                    <label class="flex-container flex-column flex-center-col flex1" title="Suffix used to wrap the status entries." data-i18n="[title]Suffix used to wrap the status entries.">
+                        <small class="status-input-label text-nowrap lh-normal">Status suffix</small>
+                        <input class="text_pole flex1 m-0" type="text" name="suffix" autocomplete="off" placeholder="Suffix" data-macros>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex-container flex-column flex-center-col status-toolbar">
+                <small class="status-input-label text-nowrap lh-normal">Toolbar</small>
+
+                <div class="flex-container flex-column flex-lg-row">
+                    <div class="flex-container flex-center-row">
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-power-off togglable kill-switch" title="Toggle the active state of the whole status block." data-i18n="[title]Toggle the active state of the whole status block."></div>
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-file-clipboard" title="Create an entry from clipboard." data-i18n="[title]Create an entry from clipboard."></div>
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-plus" title="Create a blank entry." data-i18n="[title]Create a blank entry."></div>
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-compress status-bulk-toggle" title="Collapse all entry drawers." data-i18n="[title]Collapse all entry drawers."></div>
+                    </div>
+
+                    <div class="flex-container flex-center-row">
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-expand status-bulk-toggle" title="Expand all entry drawers." data-i18n="[title]Expand all entry drawers."></div>
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-truck-arrow-right" title="Transfer (or clone) this status to another character." data-i18n="[title]Transfer (or clone) this status to another character."></div>
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-trash-can redWarningBG" title="Delete this status. WARNING: It cannot be undone." data-i18n="[title]Delete this status. WARNING: It cannot be undone."></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-container flex-column flex-center-col gap-5px status-entries"></div>
+</div>
