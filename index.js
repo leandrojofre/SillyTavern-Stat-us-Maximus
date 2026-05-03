@@ -853,6 +853,20 @@ const settingsCallbacks = {
         // Nothing by the moment
     },
 
+    editNumbersFromChat: function() {
+        StatUsMaximus.renderStatusesSafe();
+    },
+
+    showWhiteSpaces: function() {
+        StatUsMaximus.renderStatusesSafe();
+    },
+
+    rangeInputWidth: function() {
+        const newWidth = extensionSettings.rangeInputWidth || 'auto';
+
+        document.documentElement.style.setProperty('--stum-range-input-width', newWidth);
+    },
+
     hideInputLabels: function() {
         const newDisplay = extensionSettings.hideInputLabels ? 'none' : 'block';
 
@@ -863,7 +877,7 @@ const settingsCallbacks = {
         const doSave = extensionSettings.autoSaveMetadata;
 
         if (doSave) saveMetadataSafe(true);
-    }
+    },
 }
 
 /** Changes a setting value and triggers a callback if there's any on settingsCallbacks. */
@@ -885,9 +899,16 @@ function settingsBooleanButton(event) {
 function settingsTextButton(event) {
     const target = event.target;
     const value = String($(target).val());
-
     const setting = target.getAttribute(`${htmlSuffix}-setting`);
     const callback = settingsCallbacks[setting];
+    const pattern = String(target.getAttribute('pattern') || '');
+
+    if (pattern) {
+        const regex = new RegExp(pattern);
+        const isValid = regex.test(value);
+
+        if (!isValid) return;
+    }
 
     extensionSettings[setting] = value;
 
