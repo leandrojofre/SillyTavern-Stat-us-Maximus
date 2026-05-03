@@ -757,11 +757,12 @@ globalThis.StatUsMaximus = {
 
         if (!statuses) statuses = [];
 
-        statuses = statuses.map(status => status instanceof Status ? status : new Status(status));
+        /** @type {Status[]} */
+        const cleanStatuses = statuses.map(status => status instanceof Status ? status : new Status(status));
 
-        context().chatMetadata[metadataName] = statuses;
+        context().chatMetadata[metadataName] = cleanStatuses;
 
-        return statuses;
+        return cleanStatuses.filter(stat => stat.getCharacter());
     },
 
     getStatus: function(avatar) {

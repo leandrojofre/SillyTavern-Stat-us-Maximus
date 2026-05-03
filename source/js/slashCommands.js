@@ -228,6 +228,14 @@ const ENUMS_STRINGS = {
 // * MARK: Command Methods
 
 /**
+ * @param {Character|UserCharacter} character
+ * @returns {boolean}
+ */
+function isCharacterUser(character) {
+    return 'is_user' in character ? character.is_user : false;
+}
+
+/**
  * Creates status data for a character
  * @param {Object} args
  * @param {string} args.char - Character name
@@ -262,7 +270,7 @@ async function commandCreateStatus(args) {
                 }
 
                 ignoreAvatars.push(character.avatar);
-                const status = StatUsMaximus.addStatus(character.avatar);
+                const status = StatUsMaximus.addStatus(character.avatar, isCharacterUser(character));
 
                 if (!status) break;
 
@@ -273,7 +281,7 @@ async function commandCreateStatus(args) {
 
             if (!character) throw new Error(`The character '${char}' could not be found`);
 
-            const status = StatUsMaximus.addStatus(character.avatar);
+            const status = StatUsMaximus.addStatus(character.avatar, isCharacterUser(character));
 
             if (!status) return 'false';
         }
