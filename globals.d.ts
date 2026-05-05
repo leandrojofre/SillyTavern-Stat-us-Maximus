@@ -85,6 +85,10 @@ declare namespace StatUsMaximus {
         isGenerating?: boolean;
     }
 
+    type HTMLTemplateGetOptions = {
+        clone?: boolean;
+    };
+
     type EventData<T> = Event & { data: Record<string, any>; currentTarget: T; };
 
     type EntityFilter = 'true' | 'false' | 'all';

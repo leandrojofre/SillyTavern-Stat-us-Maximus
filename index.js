@@ -59,6 +59,7 @@ export {
 /** @typedef {StatUsMaximus.GlobalInterface} GlobalInterface */
 /** @typedef {StatUsMaximus.Instance} Instance */
 /** @typedef {StatUsMaximus.ExtensionSettings} ExtensionSettings */
+/** @typedef {StatUsMaximus.HTMLTemplateGetOptions} HTMLTemplateGetOptions */
 
 // * MARK:Extension variables
 
@@ -124,14 +125,50 @@ const defaultSettings = {
 };
 
 const HTML_TEMPLATES = {
-	/** @returns {Promise<JQuery<HTMLElement>>} */
-    get: async function(fileName = 'settings') {
-		const file = HTML_TEMPLATES[fileName] ?? await $.get(`${extensionFolderPath}/source/templates/${fileName}.html`);
+	/**
+     * @param {string} [fileName]
+     * @param {HTMLTemplateGetOptions} [options]
+     * @returns {Promise<JQuery<HTMLElement>>}
+     */
+    get: async function(fileName = 'settings', {clone = false} = {}) {
+		const extensionFolderPath = HTML_TEMPLATES.extensionFolderPath;
 
-		if (!HTML_TEMPLATES[fileName]) HTML_TEMPLATES[fileName] = file;
+		if (!HTML_TEMPLATES[fileName]) {
+			try {
+				await $.get(`${extensionFolderPath}/source/templates/${fileName}.html`)
+					.done(function(response) {
+						HTML_TEMPLATES[fileName] = $(response);
+					})
+			} catch (err) {
+				const is404 = err?.status === 404;
 
-		return $(file);
-    }
+				error('Template rendering error.', {err});
+
+				if (is404 && !HTML_TEMPLATES.didFallbackFetch) {
+					HTML_TEMPLATES.extensionFolderPath = `${HTML_TEMPLATES.extensionFolderPath}.git`;
+					HTML_TEMPLATES.didFallbackFetch = true;
+
+					error(`Failed to fetch ${fileName}.html, attempting fallback path...`, {err, HTML_TEMPLATES: structuredClone({
+						extensionFolderPath: HTML_TEMPLATES.extensionFolderPath,
+						didFallbackFetch: HTML_TEMPLATES.didFallbackFetch,
+					})});
+
+					return await HTML_TEMPLATES.get(fileName, {clone});
+				}
+			}
+        }
+
+        const $file = HTML_TEMPLATES[fileName];
+
+        if (!$file) {
+            toastr.warning(t`HTML template could not be loaded`, extensionName);
+            return $();
+        }
+
+		return clone ? $file.clone() : $file;
+    },
+	didFallbackFetch: false,
+	extensionFolderPath,
 };
 
 // * MARK:Debugs methods
@@ -587,8 +624,8 @@ async function renderCharStatus(status) {
 
     if (!lastMess?.length) return;
 
-    const statusBlock = (await HTML_TEMPLATES.get('chatStatus')).clone();
-    const entryBlockTemplate = (await HTML_TEMPLATES.get('chatStatusEntry')).clone();
+    const statusBlock = await HTML_TEMPLATES.get('chatStatus', {clone: true});
+    const entryBlockTemplate = await HTML_TEMPLATES.get('chatStatusEntry', {clone: true});
     const statusBlockId = `${generateUUID()}_chat_stat_block`;
 
     statusBlock

@@ -61,7 +61,7 @@ async function cloneStatusPopup(char) {
         ...characters
     ].filter(c => c.avatar !== char.avatar);
 
-    const $popupBlock = (await HTML_TEMPLATES.get('popupStatusClone')).clone();
+    const $popupBlock = await HTML_TEMPLATES.get('popupStatusClone', {clone: true});
 
     $popupBlock
         .find('.transfer-popup-title')
@@ -166,7 +166,7 @@ async function popupConfirmAction(actionLabel = 'continue') {
  * @returns {Promise<JQuery<HTMLElement>>}
  */
 async function createEntryBlock(entry, uid, avatar, statusId) {
-    const $entryBlock = $(await HTML_TEMPLATES.get('popupStatusEntry')).clone();
+    const $entryBlock = await HTML_TEMPLATES.get('popupStatusEntry', {clone: true});
     const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
     const altValues = Object.entries(entry.values);
 
@@ -224,7 +224,7 @@ async function getStatusPopupBlock(avatar, is_user = false) {
 
     if (!status) {
         if (!extensionSettings.autoDetectParticipants) {
-            const $statusBlockEmpty = $(await HTML_TEMPLATES.get('popupStatusEmpty')).clone();
+            const $statusBlockEmpty = await HTML_TEMPLATES.get('popupStatusEmpty', {clone: true});
             const statusId = `${generateUUID()}_stat_block`;
             const character = getParticipant(avatar, {is_user});
 
@@ -256,7 +256,7 @@ async function getStatusPopupBlock(avatar, is_user = false) {
         if (!status) return;
     };
 
-    const $statusBlock = $(await HTML_TEMPLATES.get('popupStatus')).clone();
+    const $statusBlock = await HTML_TEMPLATES.get('popupStatus', {clone: true});
     const $selectRoles = $statusBlock.find('select[name="role"]');
     const $entriesContainer = $statusBlock.find('.status-entries');
     const statusId = `${generateUUID()}_stat_block`;
@@ -876,7 +876,7 @@ async function onDeleteStatusClick(e) {
         const thumbnail = status.getThumbnail();
 
         const $statusBlock = $(`#${statusId}`);
-        const $statusBlockEmpty = $(await HTML_TEMPLATES.get('popupStatusEmpty')).clone();
+        const $statusBlockEmpty = await HTML_TEMPLATES.get('popupStatusEmpty', {clone: true});
         const newStatusId = `${generateUUID()}_stat_block`;
 
         $statusBlockEmpty
