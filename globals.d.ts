@@ -78,6 +78,7 @@ declare namespace StatUsMaximus {
         forceMutedMembersInclusion: boolean;
         altMacroTemplateBehavior: boolean;
         autoSaveMetadata: boolean;
+        showMutedMembersBlocks: boolean;
         debug: boolean;
     }
 
@@ -89,7 +90,7 @@ declare namespace StatUsMaximus {
         clone?: boolean;
     };
 
-    type EventData<T> = Event & { data: Record<string, any>; currentTarget: T; };
+    type EventData<T> = JQuery.TypeEventHandler & { data: Record<string, any>; currentTarget: T; };
 
     type EntityFilter = 'true' | 'false' | 'all';
 };

@@ -938,42 +938,24 @@ function onMacroShortcutClick(e) {
 // * MARK:Init Triggers
 
 function initPopupTriggers() {
-    // @ts-ignore
     $('#rm_group_members').on('click', '.avatar img', onGroupMemberListClick);
 
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .menu_button.create-status`, onCreateStatusClick);
-    // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, onStatusInput);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.kill-switch`, onToggleStatusClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-file-clipboard`, onCreateEntryFromClipboardClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-plus`, onCreateEntryClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.status-bulk-toggle`, onBulkToggleEntryDrawer);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-truck-arrow-right`, onTransferStatusClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-trash-can`, onDeleteStatusClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-plus`, onCreateEntryValueClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-trash-can`, onDeleteEntryValueClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-copy`, onCopyEntryClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button[macro]`, onMacroShortcutClick);
-    // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole`, onEntryInput);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .fa-solid.kill-switch`, onToggleEntrySwitch)
-    // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole[name="title"]`, onAltTitleInput);
-    // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row select[name="value_uid"]`, onEntryValueSwap);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, onDeleteEntryClick);
 
     // * Right Menu Button
@@ -1000,7 +982,6 @@ function initPopupTriggers() {
     $('#avatar-and-name-block')
         .after($(toolbar).clone());
 
-    // @ts-ignore
     $(`.${htmlSuffix}-right-menu-toolbar`).on('click', '.menu_button', onShortcutClick);
 
     // * Wand Menu Button
@@ -1022,6 +1003,5 @@ function initPopupTriggers() {
 
     $('#extensionsMenu').append(wandMenuShortcutContainer);
 
-    // @ts-ignore
     $(`#${htmlSuffix}-wand-menu-shortcut`).on('click', onShortcutClick);
 }
