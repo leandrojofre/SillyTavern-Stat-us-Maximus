@@ -623,7 +623,7 @@ function onGenerationAfterCommands(...args) {
 
     const [ genType ] = args;
     const { extensionPrompts: extension_prompts, characterId: chid, characters: allCharacters } = context();
-    const { chars, user } = getActiveParticipants();
+    const { chars, user } = getActiveParticipants([], {forceMutedIn: extensionSettings.forceMutedMembersInclusion});
     const genHasOffset = genTypesWithOffset.includes(genType);
 
     for (const key of Object.keys(extension_prompts)) {

@@ -121,6 +121,7 @@ const defaultSettings = {
     forceMutedMembersInclusion: false,
     altMacroTemplateBehavior: false,
     autoSaveMetadata: true,
+    showMutedMembersBlocks: true,
     debug: false
 };
 
@@ -274,9 +275,11 @@ function getUser(value = user_avatar, {searchKey = 'avatar', ignoreAvatars = []}
 /**
  *
  * @param {string[]?} [discard]
+ * @param {Object} [options]
+ * @param {boolean} [options.forceMutedIn]
  * @returns {{chars: Character[]; user: UserCharacter;}}
  */
-function getActiveParticipants(discard = []) {
+function getActiveParticipants(discard = [], {forceMutedIn = false} = {}) {
     const { groupId: group_id, groups, characterId: chid } = context();
 
     /** @type {Character[]} */
@@ -289,7 +292,7 @@ function getActiveParticipants(discard = []) {
         const group = groups.find(g => g.id == group_id);
         const muted_members = group.disabled_members ?? [];
 
-        if (!extensionSettings.forceMutedMembersInclusion)
+        if (!forceMutedIn)
             toDiscard.push(...muted_members);
 
         for (const member of members)
@@ -305,7 +308,9 @@ function getActiveParticipants(discard = []) {
 
     const members = {chars, user};
     const charGenerating = typeof chid === 'string' && characters[chid]?.avatar ? characters[chid].avatar : null;
-    const discardUnique = new Set(toDiscard).values().toArray()
+    const discardUnique = new Set(toDiscard)
+        .values()
+        .toArray()
         .filter(avatar => avatar !== charGenerating);
 
     StatUsMaximus.log({members: structuredClone(members), discardUnique, toDiscard});
@@ -755,7 +760,7 @@ async function renderCharStatus(status) {
 }
 
 async function renderStatuses() {
-    const activeParticipants = getActiveParticipants();
+    const activeParticipants = getActiveParticipants([], {forceMutedIn: extensionSettings.showMutedMembersBlocks});
 
     /** @type {(Character|UserCharacter)[]} */
     const characters = [];
@@ -980,18 +985,19 @@ function settingsNumberButton(event) {
 
 /**	Logs setting's values. */
 function displaySettings() {
-    debug(`Auto detect participants is ${extensionSettings.autoDetectParticipants ? 'active' : 'not active'}`);
-    debug(`Always include unmuted group members is ${extensionSettings.alwaysIncludeUnmutedMembers ? 'active' : 'not active'}`);
-    debug(`Force muted group members inclusion is ${extensionSettings.forceMutedMembersInclusion ? 'active' : 'not active'}`);
-    debug(`Auto save metadata is ${extensionSettings.autoSaveMetadata ? 'active' : 'not active'}`);
-    debug(`Alternative behavior for macro template buttons is ${extensionSettings.altMacroTemplateBehavior ? 'active' : 'not active'}`);
-    debug(`Show input macros in chat is ${extensionSettings.editNumbersFromChat ? 'active' : 'not active'}`);
-    debug(`Hide input labels is ${extensionSettings.hideInputLabels ? 'active' : 'not active'}`);
-    debug(`Show whitespaces is ${extensionSettings.showWhiteSpaces ? 'active' : 'not active'}`);
+    debug(`Auto detect participants is ${extensionSettings.autoDetectParticipants ? 'enabled' : 'disabled'}`);
+    debug(`Always include unmuted group members is ${extensionSettings.alwaysIncludeUnmutedMembers ? 'enabled' : 'disabled'}`);
+    debug(`Force muted group members inclusion is ${extensionSettings.forceMutedMembersInclusion ? 'enabled' : 'disabled'}`);
+    debug(`Auto save metadata is ${extensionSettings.autoSaveMetadata ? 'enabled' : 'disabled'}`);
+    debug(`Alternative behavior for macro template buttons is ${extensionSettings.altMacroTemplateBehavior ? 'enabled' : 'disabled'}`);
+    debug(`Show input macros in chat is ${extensionSettings.editNumbersFromChat ? 'enabled' : 'disabled'}`);
+    debug(`Hide input labels is ${extensionSettings.hideInputLabels ? 'enabled' : 'disabled'}`);
+    debug(`Show whitespaces is ${extensionSettings.showWhiteSpaces ? 'enabled' : 'disabled'}`);
+    debug(`Show muted group member blocks is ${extensionSettings.showMutedMembersBlocks ? 'enabled' : 'disabled'}`);
     debug(`Range input width is set to ${String(extensionSettings.rangeInputWidth)}`);
     debug(`Min prompt depth is set to ${String(extensionSettings.minPromptDepth)}`);
 
-    debug(`Debug mode is ${extensionSettings.debug ? 'active' : 'not active'}`);
+    debug(`Debug mode is ${extensionSettings.debug ? 'enabled' : 'disabled'}`);
     debug(structuredClone(extensionSettings));
 }
 
@@ -1009,6 +1015,7 @@ async function loadSettingsMenu() {
     $(`#${htmlSuffix}-show-input-macros`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-hide-input-labels`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-show-white-spaces`).on('input', settingsBooleanButton);
+    $(`#${htmlSuffix}-show-muted-members-blocks`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-range-input-width`).on('input', settingsTextButton);
     $(`#${htmlSuffix}-min-prompt-depth`).on('input', settingsNumberButton);
 
@@ -1025,6 +1032,7 @@ async function loadSettingsMenu() {
     $(`#${htmlSuffix}-show-input-macros`).prop('checked', extensionSettings.editNumbersFromChat);
     $(`#${htmlSuffix}-show-white-spaces`).prop('checked', extensionSettings.showWhiteSpaces);
     $(`#${htmlSuffix}-hide-input-labels`).prop('checked', extensionSettings.hideInputLabels).trigger('input');
+    $(`#${htmlSuffix}-show-muted-members-blocks`).prop('checked', extensionSettings.showMutedMembersBlocks).trigger('input');
     $(`#${htmlSuffix}-range-input-width`).val(extensionSettings.rangeInputWidth).trigger('input');
     $(`#${htmlSuffix}-min-prompt-depth`).val(extensionSettings.minPromptDepth);
 

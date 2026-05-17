@@ -438,6 +438,9 @@ async function onShortcutClick(e) {
 
     const $button = $(e.currentTarget);
     const type = $button.attr('type');
+    const getParticipantsOptions = {
+        forceMutedIn: extensionSettings.showMutedMembersBlocks,
+    };
 
     if (type === 'save') return saveMetadataSafe();
 
@@ -448,14 +451,14 @@ async function onShortcutClick(e) {
     }
 
     if (type === 'characters') {
-        const { chars } = getActiveParticipants();
+        const { chars } = getActiveParticipants([], getParticipantsOptions);
         return await openMultiStatusPopup(chars);
     }
 
     const members = StatUsMaximus.getStatuses();
 
     if (type === 'all') {
-        const { chars, user } = getActiveParticipants(members.map(m => m.avatar));
+        const { chars, user } = getActiveParticipants(members.map(m => m.avatar), getParticipantsOptions);
 
         /** @type {(Character|UserCharacter|Status)[]} */
         const participants = [
