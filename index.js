@@ -284,7 +284,6 @@ function getActiveParticipants(discard = [], {forceMutedIn = false} = {}) {
 
     /** @type {Character[]} */
     const chars = [];
-    const toDiscard = discard;
     const user = getUser();
 
     if (group_id) {
@@ -293,7 +292,7 @@ function getActiveParticipants(discard = [], {forceMutedIn = false} = {}) {
         const muted_members = group.disabled_members ?? [];
 
         if (!forceMutedIn)
-            toDiscard.push(...muted_members);
+            discard.push(...muted_members);
 
         for (const member of members)
             if (member) chars.push(member);
@@ -308,12 +307,16 @@ function getActiveParticipants(discard = [], {forceMutedIn = false} = {}) {
 
     const members = {chars, user};
     const charGenerating = typeof chid === 'string' && characters[chid]?.avatar ? characters[chid].avatar : null;
-    const discardUnique = new Set(toDiscard)
+    const discardUnique = new Set(discard)
         .values()
         .toArray()
         .filter(avatar => avatar !== charGenerating);
 
-    StatUsMaximus.log({members: structuredClone(members), discardUnique, toDiscard});
+    StatUsMaximus.log({
+        members: structuredClone(members),
+        discard: structuredClone(discard),
+        discardUnique: structuredClone(discardUnique),
+    });
 
     members.chars = members.chars.filter(c => !discardUnique.includes(c.avatar));
 

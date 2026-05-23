@@ -375,10 +375,10 @@ async function openSingleStatusPopup(avatar, {is_user = false, onOpen = () => {}
 }
 
 /**
- * @param {{avatar: string; is_user?: boolean}[]} avatars
+ * @param {{avatar: string; is_user?: boolean}[]} members
  */
-async function openMultiStatusPopup(avatars = []) {
-    if (!avatars?.length) return;
+async function openMultiStatusPopup(members = []) {
+    if (!members?.length) return;
 
     const statusesWrapper = createElement('div', {
         class: `${htmlSuffix}-popup-wrapper flex-container flexFlowColumn flexnowrap gap10px padding0`
@@ -387,7 +387,7 @@ async function openMultiStatusPopup(avatars = []) {
     const $statusesWrapper = $(statusesWrapper);
     let noBlocksCreated = true;
 
-    for (const {avatar, is_user} of avatars) {
+    for (const {avatar, is_user} of members) {
         const $statusBlock = await getStatusPopupBlock(avatar, is_user);
 
         if (!$statusBlock) continue;
@@ -446,8 +446,7 @@ async function onShortcutClick(e) {
 
     if (type === 'user') {
         const user = getUser();
-        const avatar = user.avatar;
-        return await openSingleStatusPopup(avatar, {is_user: true});
+        return await openSingleStatusPopup(user.avatar, {is_user: true});
     }
 
     if (type === 'characters') {
@@ -458,23 +457,11 @@ async function onShortcutClick(e) {
     const members = StatUsMaximus.getStatuses();
 
     if (type === 'all') {
-        const { chars, user } = getActiveParticipants(members.map(m => m.avatar), getParticipantsOptions);
-
-        /** @type {(Character|UserCharacter|Status)[]} */
-        const participants = [
-            ...members,
-            ...chars
-        ];
-
-        const userIncluded = participants.some(p => p.avatar === user.avatar);
-
-        if (user && !userIncluded) participants.push(user);
-        return await openMultiStatusPopup(participants);
+        return await openMultiStatusPopup(members);
     }
 
     if (type === 'users') {
-        const users = members
-            .filter(status => status.is_user);
+        const users = members.filter(status => status.is_user);
 
         if (!users.length) return;
 
