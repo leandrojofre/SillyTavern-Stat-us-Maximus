@@ -139,7 +139,7 @@ class Status {
         const rawEntry = new StatusEntry(data);
         const newUid = getFreeDataUid(this.entries);
 
-        rawEntry.separator = this.def_entry_separator;
+        rawEntry.separator = data.separator ?? this.def_entry_separator;
         rawEntry.display_position = this.getMaxDisplayPosition();
 
         this.entries[newUid] = rawEntry;
