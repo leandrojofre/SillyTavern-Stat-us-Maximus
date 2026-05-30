@@ -233,7 +233,8 @@ async function getStatusPopupBlock(avatar, is_user = false) {
             const thumbnail = getThumbnailUrl(is_user ? 'persona' : 'avatar', character.avatar);
 
             $statusBlockEmpty
-                .attr('id', statusId);
+                .attr('id', statusId)
+                .attr('avatar', character.avatar);
 
             $statusBlockEmpty
                 .find(`.${htmlSuffix}-name`)
@@ -799,7 +800,14 @@ async function onTransferStatusClick(e) {
 
     if (!$newStatusBlock) return;
 
-    $statusBlock.after($newStatusBlock);
+    const $creationBlock = $(`.stat-us-maximus-popup-empty[avatar="${newStatus.avatar}"]`);
+
+    if ($creationBlock.length > 0) {
+        $creationBlock.before($newStatusBlock);
+        $creationBlock.remove();
+    } else {
+        $statusBlock.after($newStatusBlock);
+    }
 
     if (!keepOriginal) {
         if (onlyEntries) $statusBlock

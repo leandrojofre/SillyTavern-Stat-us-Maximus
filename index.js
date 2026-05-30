@@ -867,7 +867,7 @@ globalThis.StatUsMaximus = {
 
         if (!onlyEntries) {
             for (const key in status) {
-                if (key !== 'avatar') newStatus.set(key, status[key]);
+                if (!['avatar', 'entries'].includes(key)) newStatus.set(key, status[key]);
             }
         }
 
