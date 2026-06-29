@@ -689,7 +689,7 @@ async function renderCharStatus(status) {
         const valueClean = unEscapeAll(entry.get('value'), replaceMacrosOptions);
 
         $entryBlock.attr({'status-block-id': statusBlockId, uid});
-        $entryBlock.find('.status-title').html(`<span class="d-inline">${titleClean}</span>`);
+        $entryBlock.find('.status-title').toggleClass('empty', titleClean.length < 1).html(`<span class="d-inline">${titleClean}</span>`);
         $entryBlock.find('.status-separator').html(separatorClean);
         $entryBlock.find('.status-description').html(`<span class="d-inline">${valueClean}</span>`);
         $entryBlock.find('.private-lamp').toggleClass('d-none', entry.get('private') !== true);
