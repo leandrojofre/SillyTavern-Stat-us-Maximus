@@ -19,6 +19,7 @@ export {
 };
 
 /** @typedef {StatUsMaximus.EntityFilter} EntityFilter */
+/** @typedef {StatUsMaximus.EntryData} EntryData */
 /** @typedef {StatUsMaximus.AltValueData} AltValueData */
 /** @typedef {StatUsMaximus.UserCharacter} UserCharacter */
 
@@ -454,7 +455,7 @@ async function commandGetEntryUID(args, value = '') {
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
- * @param {string} args.field - Field to modify
+ * @param {keyof EntryData|keyof AltValueData} args.field - Field to modify
  * @param {string} value - New value of the selected field
  * @returns {Promise<string>} Empty string
  */
@@ -496,7 +497,7 @@ async function commandSetEntryField(args, value = '') {
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
  * @param {string} args.uid - Entry UID
- * @param {string} args.field - Field to search
+ * @param {keyof EntryData|keyof AltValueData} args.field - Field to search
  * @returns {Promise<string>} Value of the field or empty string
  */
 async function commandGetEntryField(args, value) {

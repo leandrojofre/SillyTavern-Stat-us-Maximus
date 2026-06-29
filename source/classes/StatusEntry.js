@@ -22,6 +22,7 @@ const entryTemplate = Object.freeze({
     key: '',
     separator: '',
     display_position: 0,
+    private: false,
     value_uid: 0,
     values: {
         '0': {
@@ -78,8 +79,9 @@ class StatusEntry {
     /** @property @type {boolean} */ enabled
     /** @property @type {string} */ key
     /** @property @type {string} */ separator
-    /** @property @type {number} */ value_uid
     /** @property @type {number} */ display_position
+    /** @property @type {boolean} */ private
+    /** @property @type {number} */ value_uid
     /** @property @type {Record<string, AltValueData>} */ values
 
     /**
@@ -107,7 +109,7 @@ class StatusEntry {
 
     /**
      * Updates an entry field - it also updates the currently selected value if its field are sent
-     * @param {string} key
+     * @param {keyof EntryData|keyof AltValueData} key
      * @param {string|number|boolean} value
      * @param {number?} [uid]
      * @returns {StatusEntry}
@@ -135,7 +137,7 @@ class StatusEntry {
     }
 
     /**
-     * @param {string} key
+     * @param {keyof EntryData|keyof AltValueData} key
      * @param {number?} [uid]
      * @returns {string|number|boolean|undefined}
      */

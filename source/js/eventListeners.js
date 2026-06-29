@@ -645,9 +645,18 @@ function onGenerationAfterCommands(...args) {
         if (!status) continue;
         if (!status.enabled) continue;
 
+        let charIsGenerating = false;
+
+        if (genType === 'impersonate' && status.is_user)
+            charIsGenerating = true;
+
+        else if (typeof chid === 'string' && allCharacters[chid].avatar === status.avatar)
+            charIsGenerating = true;
+
         const entries = Object.keys(status.entries)
         .map(uid => status.getEntry(uid))
         .filter(entry => entry !== undefined)
+        .filter(entry => !entry.private || charIsGenerating)
         .sort((a, b) => a.display_position - b.display_position)
         .map(function(entry) {
             const { enabled, value_uid } = entry;
@@ -678,16 +687,8 @@ function onGenerationAfterCommands(...args) {
 
         if (!prompt) continue;
 
-        let isCharGenerating = false;
-
-        if (genType === 'impersonate' && status.is_user)
-            isCharGenerating = true;
-
-        else if (typeof chid === 'string' && allCharacters[chid].avatar === status.avatar)
-            isCharGenerating = true;
-
-        StatUsMaximus.log({ genType, chid, charSelected: allCharacters[chid]?.avatar, avatar: status.avatar, isCharGenerating });
-        status.refreshDepth({ isGenerating: isCharGenerating });
+        StatUsMaximus.log({ genType, chid, charSelected: allCharacters[chid]?.avatar, avatar: status.avatar, charIsGenerating });
+        status.refreshDepth({ isGenerating: charIsGenerating });
 
         if (status.depth < 0 && !extensionSettings.alwaysIncludeUnmutedMembers) continue;
 

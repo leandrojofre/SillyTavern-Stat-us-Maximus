@@ -40,6 +40,8 @@ export {
  */
 
 /** @typedef {StatUsMaximus.UserCharacter} UserCharacter */
+/** @typedef {StatUsMaximus.EntryData} EntryData */
+/** @typedef {StatUsMaximus.AltValueData} AltValueData */
 
 // * MARK:Popup Creation
 
@@ -189,6 +191,11 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
         .data({uid, avatar, statusId, enabled: entry.enabled})
         .toggleClass('fa-toggle-on', entry.enabled)
         .toggleClass('fa-toggle-off', !entry.enabled);
+
+    $entryBlock
+        .find('.menu_button.make-private')
+        .data({uid, avatar, statusId, enabled: entry.private})
+        .toggleClass('text-quote', entry.private);
 
     $entryBlock
         .find(':input.text_pole')
@@ -510,7 +517,7 @@ function onStatusInput(e) {
 function onEntryInput(e) {
     const $input = $(e.currentTarget);
     const newValue = $input.val();
-    const field = $input.attr('name');
+    const field = /** @type {keyof EntryData|keyof AltValueData} */($input.attr('name'));
     const { uid, avatar } = $input.data();
 
     const status = StatUsMaximus.getStatus(avatar);
@@ -747,6 +754,27 @@ async function onCopyEntryClick(e) {
 /**
  * @param {EventData<HTMLDivElement>} e
  */
+function onTogglePrivateEntry(e) {
+    const $entrySwitch = $(e.currentTarget);
+    const { uid, avatar, enabled } = $entrySwitch.data();
+    const nextState = !enabled;
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const entry = status.getEntry(uid);
+
+    if (!entry) return;
+
+    entry.set('private', nextState);
+    $entrySwitch
+        .data({enabled: nextState})
+        .toggleClass('text-quote', nextState);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
 async function onCreateEntryFromClipboardClick(e) {
     if (!navigator.clipboard)
         return toastr.warning(t`Clipboard API not available in this context.`);
@@ -949,6 +977,7 @@ function initPopupTriggers() {
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-plus`, onCreateEntryValueClick);
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-trash-can`, onDeleteEntryValueClick);
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-copy`, onCopyEntryClick);
+    $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.make-private`, onTogglePrivateEntry);
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button[macro]`, onMacroShortcutClick);
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole`, onEntryInput);
     $(document).on('click', `.${htmlSuffix}-popup-row .fa-solid.kill-switch`, onToggleEntrySwitch)

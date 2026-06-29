@@ -27,6 +27,7 @@ declare namespace StatUsMaximus {
         separator?: string;
         value_uid?: number;
         display_position?: number;
+        private?: boolean;
         values?: Record<string, AltValueData>;
         /** @deprecated Must transform into a valid 'values' instance */
         alt_values?: ({uid: number; key: string; value: string;})[];
