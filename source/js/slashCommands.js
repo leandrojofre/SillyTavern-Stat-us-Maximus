@@ -151,7 +151,8 @@ const ENUMS_PROVIDER = {
         new SlashCommandEnumValue('key'),
         new SlashCommandEnumValue('separator'),
         new SlashCommandEnumValue('value', 'Value of the currently selected entry swipe'),
-        new SlashCommandEnumValue('title', 'Title of the currently selected entry swipe on the selector')
+        new SlashCommandEnumValue('title', 'Title of the currently selected entry swipe on the selector'),
+        new SlashCommandEnumValue('private', 'If true, it makes the entry only visible for the owner')
     ],
 
     acceptedAltEntryFields: () => [
