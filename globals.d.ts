@@ -80,6 +80,7 @@ declare namespace StatUsMaximus {
         altMacroTemplateBehavior: boolean;
         autoSaveMetadata: boolean;
         showMutedMembersBlocks: boolean;
+        showPrivateLampOnChat: boolean;
         debug: boolean;
     }
 

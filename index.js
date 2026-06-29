@@ -122,6 +122,7 @@ const defaultSettings = {
     altMacroTemplateBehavior: false,
     autoSaveMetadata: true,
     showMutedMembersBlocks: true,
+    showPrivateLampOnChat: true,
     debug: false
 };
 
@@ -924,6 +925,12 @@ const settingsCallbacks = {
 
         if (doSave) saveMetadataSafe(true);
     },
+
+    showPrivateLampOnChat: function() {
+        const newDisplay = extensionSettings.showPrivateLampOnChat ? 'block' : 'none';
+
+        document.documentElement.style.setProperty('--stat-us-private-lamp-display', newDisplay);
+    }
 }
 
 /** Changes a setting value and triggers a callback if there's any on settingsCallbacks. */
@@ -1022,6 +1029,7 @@ async function loadSettingsMenu() {
     $(`#${htmlSuffix}-show-muted-members-blocks`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-range-input-width`).on('input', settingsTextButton);
     $(`#${htmlSuffix}-min-prompt-depth`).on('input', settingsNumberButton);
+    $(`#${htmlSuffix}-show-private-lamp`).on('input', settingsBooleanButton);
 
     $(`#${htmlSuffix}-debug`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-check-configuration`).on('click', displaySettings);
@@ -1039,6 +1047,7 @@ async function loadSettingsMenu() {
     $(`#${htmlSuffix}-show-muted-members-blocks`).prop('checked', extensionSettings.showMutedMembersBlocks).trigger('input');
     $(`#${htmlSuffix}-range-input-width`).val(extensionSettings.rangeInputWidth).trigger('input');
     $(`#${htmlSuffix}-min-prompt-depth`).val(extensionSettings.minPromptDepth);
+    $(`#${htmlSuffix}-show-private-lamp`).prop('checked', extensionSettings.showPrivateLampOnChat);
 
     $(`#${htmlSuffix}-debug`).prop('checked', extensionSettings.debug).trigger('input');
 

@@ -3,6 +3,7 @@
     --stum-range-input-width: auto;
     --stum-custom-save-color: var(--SmartThemeBlurTintColor);
     --stum-save-state-color: var(--stum-custom-save-color);
+    --stat-us-private-lamp-display: block;
 }
 
 @keyframes stumcaretblink {
@@ -449,6 +450,10 @@
 
     .status-input-label {
         display: var(--stum-input-label-display);
+    }
+
+    .private-lamp {
+        display: var(--stat-us-private-lamp-display);
     }
 }
 
