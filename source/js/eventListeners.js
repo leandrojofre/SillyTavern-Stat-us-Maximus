@@ -581,6 +581,27 @@ async function onOpenPopupWithEntryOpen(e) {
 }
 
 /**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onTogglePrivateEntry(e) {
+    const $entrySwitch = $(e.currentTarget);
+    const { uid, avatar, enabled } = $entrySwitch.data();
+    const nextState = !enabled;
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const entry = status.getEntry(uid);
+
+    if (!entry) return;
+
+    entry.set('private', nextState);
+    $entrySwitch
+        .data({enabled: nextState})
+        .toggleClass('text-quote', nextState);
+}
+
+/**
  * @param {EventData<HTMLElement>} e
  */
 function onDocumentClick(e) {
@@ -749,6 +770,7 @@ function registerEvents() {
 
     $chat.on('click', `.${htmlSuffix}-entry .kill-switch`, onToggleEntry);
     $chat.on('contextmenu', `.${htmlSuffix}-entry .kill-switch`, onOpenPopupWithEntryOpen);
+    $chat.on('click', `.${htmlSuffix}-entry .private-lamp`, onTogglePrivateEntry);
     $chat.on('input', `.${htmlSuffix}-entry .chat-input-editor[type="range"]`, onRangeSliderMoved);
     $chat.on('click', `.${htmlSuffix}-entry .status-value-uid`, onOpenSwitchValueList);
 

@@ -1029,6 +1029,5 @@ function initPopupTriggers() {
     });
 
     $('#extensionsMenu').append(wandMenuShortcutContainer);
-
     $(`#${htmlSuffix}-wand-menu-shortcut`).on('click', onShortcutClick);
 }

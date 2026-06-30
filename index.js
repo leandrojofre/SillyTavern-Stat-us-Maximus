@@ -692,7 +692,11 @@ async function renderCharStatus(status) {
         $entryBlock.find('.status-title').toggleClass('empty', titleClean.length < 1).html(`<span class="d-inline">${titleClean}</span>`);
         $entryBlock.find('.status-separator').html(separatorClean);
         $entryBlock.find('.status-description').html(`<span class="d-inline">${valueClean}</span>`);
-        $entryBlock.find('.private-lamp').toggleClass('d-none', entry.get('private') !== true);
+
+        $entryBlock
+            .find('.private-lamp')
+            .toggleClass('text-quote', entry.get('private') === true)
+            .data({avatar: status.avatar, uid, enabled: entry.get('private')});
 
         $entryBlock.find('textarea.input-value-source').each((_, textarea) => {
             const $textarea = $(textarea);

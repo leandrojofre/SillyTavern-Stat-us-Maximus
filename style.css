@@ -140,8 +140,14 @@
         gap: var(--gap-size) !important;
     }
 
+    .gap-10px {
+        --gap-size: 10px;
+        gap: var(--gap-size) !important;
+    }
+
     .gap-15px {
-        gap: 15px;
+        --gap-size: 15px;
+        gap: var(--gap-size) !important;
     }
 
     .w-100 {
@@ -454,6 +460,11 @@
 
     .private-lamp {
         display: var(--stat-us-private-lamp-display);
+    }
+
+    .menu_button {
+        --stum_menu_button_filter: unset;
+        filter: var(--stum_menu_button_filter) !important;
     }
 }
 
