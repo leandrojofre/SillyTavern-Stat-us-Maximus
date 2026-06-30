@@ -192,9 +192,9 @@
         padding-bottom: 5px;
     }
 
-    .px-15px {
-        padding-left: 15px;
-        padding-right: 15px;
+    .px-10px {
+        padding-left: 10px;
+        padding-right: 10px;
     }
 
     .m-0 {
@@ -459,7 +459,7 @@
     }
 
     .private-lamp {
-        display: var(--stat-us-private-lamp-display);
+        display: var(--stat-us-private-lamp-display) !important;
     }
 
     .menu_button {

@@ -1051,7 +1051,7 @@ async function loadSettingsMenu() {
     $(`#${htmlSuffix}-show-muted-members-blocks`).prop('checked', extensionSettings.showMutedMembersBlocks).trigger('input');
     $(`#${htmlSuffix}-range-input-width`).val(extensionSettings.rangeInputWidth).trigger('input');
     $(`#${htmlSuffix}-min-prompt-depth`).val(extensionSettings.minPromptDepth);
-    $(`#${htmlSuffix}-show-private-lamp`).prop('checked', extensionSettings.showPrivateLampOnChat);
+    $(`#${htmlSuffix}-show-private-lamp`).prop('checked', extensionSettings.showPrivateLampOnChat).trigger('input');
 
     $(`#${htmlSuffix}-debug`).prop('checked', extensionSettings.debug).trigger('input');
 
