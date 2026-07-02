@@ -27,6 +27,7 @@ declare namespace StatUsMaximus {
         separator?: string;
         value_uid?: number;
         display_position?: number;
+        private?: boolean;
         values?: Record<string, AltValueData>;
         /** @deprecated Must transform into a valid 'values' instance */
         alt_values?: ({uid: number; key: string; value: string;})[];
@@ -78,6 +79,8 @@ declare namespace StatUsMaximus {
         forceMutedMembersInclusion: boolean;
         altMacroTemplateBehavior: boolean;
         autoSaveMetadata: boolean;
+        showMutedMembersBlocks: boolean;
+        showPrivateLampOnChat: boolean;
         debug: boolean;
     }
 
@@ -89,7 +92,7 @@ declare namespace StatUsMaximus {
         clone?: boolean;
     };
 
-    type EventData<T> = Event & { data: Record<string, any>; currentTarget: T; };
+    type EventData<T> = JQuery.TypeEventHandler & { data: Record<string, any>; currentTarget: T; };
 
     type EntityFilter = 'true' | 'false' | 'all';
 };

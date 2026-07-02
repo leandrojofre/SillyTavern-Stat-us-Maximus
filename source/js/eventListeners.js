@@ -581,6 +581,27 @@ async function onOpenPopupWithEntryOpen(e) {
 }
 
 /**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onTogglePrivateEntry(e) {
+    const $entrySwitch = $(e.currentTarget);
+    const { uid, avatar, enabled } = $entrySwitch.data();
+    const nextState = !enabled;
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const entry = status.getEntry(uid);
+
+    if (!entry) return;
+
+    entry.set('private', nextState);
+    $entrySwitch
+        .data({enabled: nextState})
+        .toggleClass('text-quote', nextState);
+}
+
+/**
  * @param {EventData<HTMLElement>} e
  */
 function onDocumentClick(e) {
@@ -623,7 +644,7 @@ function onGenerationAfterCommands(...args) {
 
     const [ genType ] = args;
     const { extensionPrompts: extension_prompts, characterId: chid, characters: allCharacters } = context();
-    const { chars, user } = getActiveParticipants();
+    const { chars, user } = getActiveParticipants([], {forceMutedIn: extensionSettings.forceMutedMembersInclusion});
     const genHasOffset = genTypesWithOffset.includes(genType);
 
     for (const key of Object.keys(extension_prompts)) {
@@ -645,9 +666,18 @@ function onGenerationAfterCommands(...args) {
         if (!status) continue;
         if (!status.enabled) continue;
 
+        let charIsGenerating = false;
+
+        if (genType === 'impersonate' && status.is_user)
+            charIsGenerating = true;
+
+        else if (typeof chid === 'string' && allCharacters[chid].avatar === status.avatar)
+            charIsGenerating = true;
+
         const entries = Object.keys(status.entries)
         .map(uid => status.getEntry(uid))
         .filter(entry => entry !== undefined)
+        .filter(entry => !entry.private || charIsGenerating)
         .sort((a, b) => a.display_position - b.display_position)
         .map(function(entry) {
             const { enabled, value_uid } = entry;
@@ -678,16 +708,8 @@ function onGenerationAfterCommands(...args) {
 
         if (!prompt) continue;
 
-        let isCharGenerating = false;
-
-        if (genType === 'impersonate' && status.is_user)
-            isCharGenerating = true;
-
-        else if (typeof chid === 'string' && allCharacters[chid].avatar === status.avatar)
-            isCharGenerating = true;
-
-        StatUsMaximus.log({ genType, chid, charSelected: allCharacters[chid]?.avatar, avatar: status.avatar, isCharGenerating });
-        status.refreshDepth({ isGenerating: isCharGenerating });
+        StatUsMaximus.log({ genType, chid, charSelected: allCharacters[chid]?.avatar, avatar: status.avatar, charIsGenerating });
+        status.refreshDepth({ isGenerating: charIsGenerating });
 
         if (status.depth < 0 && !extensionSettings.alwaysIncludeUnmutedMembers) continue;
 
@@ -746,36 +768,23 @@ function registerEvents() {
         e.stopPropagation();
     });
 
-    // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-entry .kill-switch`, onToggleEntry);
-    // @ts-ignore
     $chat.on('contextmenu', `.${htmlSuffix}-entry .kill-switch`, onOpenPopupWithEntryOpen);
-    // @ts-ignore
+    $chat.on('click', `.${htmlSuffix}-entry .private-lamp`, onTogglePrivateEntry);
     $chat.on('input', `.${htmlSuffix}-entry .chat-input-editor[type="range"]`, onRangeSliderMoved);
-    // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-entry .status-value-uid`, onOpenSwitchValueList);
 
-    // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-chat-drawer .status-value-uid-options .list-group-item`, onSelectSwitchValueList);
-    // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-chat-drawer .inline-drawer-header`, onCollapseStatus);
-    // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-chat-drawer .fake-input-arrows`, onClickInputArrow);
-    // @ts-ignore
     $chat.on('input', `.${htmlSuffix}-chat-drawer .chat-input-editor[type="checkbox"]`, onCheckboxToggle);
-    // @ts-ignore
     $chat.on('pointerdown', `.${htmlSuffix}-chat-drawer .fake-input-span`, onSelectChatInput);
 
-    // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-toolbar .kill-switch`, onToggleStatus);
-    // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-pen`, onClickEditStatus);
-    // @ts-ignore
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-arrows-rotate`, onRefreshBlockClick);
-    // @ts-ignore
-    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-floppy-disk`, saveMetadataSafe);
+    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-floppy-disk`, () => saveMetadataSafe);
 
-    // @ts-ignore
     $(document).on('click', onDocumentClick);
 
     eventSource.makeLast(eventTypes.CHAT_CHANGED, onChatChanged);

@@ -3,6 +3,7 @@
     --stum-range-input-width: auto;
     --stum-custom-save-color: var(--SmartThemeBlurTintColor);
     --stum-save-state-color: var(--stum-custom-save-color);
+    --stat-us-private-lamp-display: block;
 }
 
 @keyframes stumcaretblink {
@@ -139,8 +140,14 @@
         gap: var(--gap-size) !important;
     }
 
+    .gap-10px {
+        --gap-size: 10px;
+        gap: var(--gap-size) !important;
+    }
+
     .gap-15px {
-        gap: 15px;
+        --gap-size: 15px;
+        gap: var(--gap-size) !important;
     }
 
     .w-100 {
@@ -185,9 +192,9 @@
         padding-bottom: 5px;
     }
 
-    .px-15px {
-        padding-left: 15px;
-        padding-right: 15px;
+    .px-10px {
+        padding-left: 10px;
+        padding-right: 10px;
     }
 
     .m-0 {
@@ -350,7 +357,7 @@
         }
 
         .status-separator,
-        .status-description {
+        .status-title:not(.empty) ~ .status-description {
             display: none;
         }
     }
@@ -449,6 +456,15 @@
 
     .status-input-label {
         display: var(--stum-input-label-display);
+    }
+
+    .private-lamp {
+        display: var(--stat-us-private-lamp-display) !important;
+    }
+
+    .menu_button {
+        --stum_menu_button_filter: unset;
+        filter: var(--stum_menu_button_filter) !important;
     }
 }
 

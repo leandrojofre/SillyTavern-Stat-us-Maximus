@@ -13,10 +13,13 @@ This is not focused for any task in particular, it's all just text, put what you
 - The table can be collapsed to save space (the collapsed state saves).
 - Every character status is sent in a dynamic depth that will adjust to be on top of the last character message, it can be overriden to be sent at a specific depth.
 - The status can use the roles `system`, `user` or `assistant` - defaults to `system`.
+
+### Status Entry
 - With macros, you can set inputs in the chat UI to quick edit entries without opening menus.
-- You can set swipes (alt values) for each stat entry.
+- You can set swipes (alt values) for each entry.
 - You can transfer entries between characters from the popup Menu (truck button).
 - You can copy and paste entries via clipboard from the popup Menu.
+- You can set entries as private, adding them to the prompt only when the status owner is generating.
 
 ### Menus
 **Magic wand button** - From the magic wand button (left to the input bar), you can open a popup menu to manage every character status in existence.

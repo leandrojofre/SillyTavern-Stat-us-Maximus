@@ -40,6 +40,8 @@ export {
  */
 
 /** @typedef {StatUsMaximus.UserCharacter} UserCharacter */
+/** @typedef {StatUsMaximus.EntryData} EntryData */
+/** @typedef {StatUsMaximus.AltValueData} AltValueData */
 
 // * MARK:Popup Creation
 
@@ -191,6 +193,11 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
         .toggleClass('fa-toggle-off', !entry.enabled);
 
     $entryBlock
+        .find('.menu_button.make-private')
+        .data({uid, avatar, statusId, enabled: entry.private})
+        .toggleClass('text-quote', entry.private);
+
+    $entryBlock
         .find(':input.text_pole')
         .each(function(i, input) {
             const $input = $(input);
@@ -233,7 +240,8 @@ async function getStatusPopupBlock(avatar, is_user = false) {
             const thumbnail = getThumbnailUrl(is_user ? 'persona' : 'avatar', character.avatar);
 
             $statusBlockEmpty
-                .attr('id', statusId);
+                .attr('id', statusId)
+                .attr('avatar', character.avatar);
 
             $statusBlockEmpty
                 .find(`.${htmlSuffix}-name`)
@@ -375,10 +383,10 @@ async function openSingleStatusPopup(avatar, {is_user = false, onOpen = () => {}
 }
 
 /**
- * @param {{avatar: string; is_user?: boolean}[]} avatars
+ * @param {{avatar: string; is_user?: boolean}[]} members
  */
-async function openMultiStatusPopup(avatars = []) {
-    if (!avatars?.length) return;
+async function openMultiStatusPopup(members = []) {
+    if (!members?.length) return;
 
     const statusesWrapper = createElement('div', {
         class: `${htmlSuffix}-popup-wrapper flex-container flexFlowColumn flexnowrap gap10px padding0`
@@ -387,7 +395,7 @@ async function openMultiStatusPopup(avatars = []) {
     const $statusesWrapper = $(statusesWrapper);
     let noBlocksCreated = true;
 
-    for (const {avatar, is_user} of avatars) {
+    for (const {avatar, is_user} of members) {
         const $statusBlock = await getStatusPopupBlock(avatar, is_user);
 
         if (!$statusBlock) continue;
@@ -438,40 +446,30 @@ async function onShortcutClick(e) {
 
     const $button = $(e.currentTarget);
     const type = $button.attr('type');
+    const getParticipantsOptions = {
+        forceMutedIn: extensionSettings.showMutedMembersBlocks,
+    };
 
     if (type === 'save') return saveMetadataSafe();
 
     if (type === 'user') {
         const user = getUser();
-        const avatar = user.avatar;
-        return await openSingleStatusPopup(avatar, {is_user: true});
+        return await openSingleStatusPopup(user.avatar, {is_user: true});
     }
 
     if (type === 'characters') {
-        const { chars } = getActiveParticipants();
+        const { chars } = getActiveParticipants([], getParticipantsOptions);
         return await openMultiStatusPopup(chars);
     }
 
     const members = StatUsMaximus.getStatuses();
 
     if (type === 'all') {
-        const { chars, user } = getActiveParticipants(members.map(m => m.avatar));
-
-        /** @type {(Character|UserCharacter|Status)[]} */
-        const participants = [
-            ...members,
-            ...chars
-        ];
-
-        const userIncluded = participants.some(p => p.avatar === user.avatar);
-
-        if (user && !userIncluded) participants.push(user);
-        return await openMultiStatusPopup(participants);
+        return await openMultiStatusPopup(members);
     }
 
     if (type === 'users') {
-        const users = members
-            .filter(status => status.is_user);
+        const users = members.filter(status => status.is_user);
 
         if (!users.length) return;
 
@@ -519,7 +517,7 @@ function onStatusInput(e) {
 function onEntryInput(e) {
     const $input = $(e.currentTarget);
     const newValue = $input.val();
-    const field = $input.attr('name');
+    const field = /** @type {keyof EntryData|keyof AltValueData} */($input.attr('name'));
     const { uid, avatar } = $input.data();
 
     const status = StatUsMaximus.getStatus(avatar);
@@ -756,6 +754,27 @@ async function onCopyEntryClick(e) {
 /**
  * @param {EventData<HTMLDivElement>} e
  */
+function onTogglePrivateEntry(e) {
+    const $entrySwitch = $(e.currentTarget);
+    const { uid, avatar, enabled } = $entrySwitch.data();
+    const nextState = !enabled;
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const entry = status.getEntry(uid);
+
+    if (!entry) return;
+
+    entry.set('private', nextState);
+    $entrySwitch
+        .data({enabled: nextState})
+        .toggleClass('text-quote', nextState);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
 async function onCreateEntryFromClipboardClick(e) {
     if (!navigator.clipboard)
         return toastr.warning(t`Clipboard API not available in this context.`);
@@ -809,7 +828,14 @@ async function onTransferStatusClick(e) {
 
     if (!$newStatusBlock) return;
 
-    $statusBlock.after($newStatusBlock);
+    const $creationBlock = $(`.stat-us-maximus-popup-empty[avatar="${newStatus.avatar}"]`);
+
+    if ($creationBlock.length > 0) {
+        $creationBlock.before($newStatusBlock);
+        $creationBlock.remove();
+    } else {
+        $statusBlock.after($newStatusBlock);
+    }
 
     if (!keepOriginal) {
         if (onlyEntries) $statusBlock
@@ -938,42 +964,25 @@ function onMacroShortcutClick(e) {
 // * MARK:Init Triggers
 
 function initPopupTriggers() {
-    // @ts-ignore
     $('#rm_group_members').on('click', '.avatar img', onGroupMemberListClick);
 
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .menu_button.create-status`, onCreateStatusClick);
-    // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, onStatusInput);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.kill-switch`, onToggleStatusClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-file-clipboard`, onCreateEntryFromClipboardClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-plus`, onCreateEntryClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.status-bulk-toggle`, onBulkToggleEntryDrawer);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-truck-arrow-right`, onTransferStatusClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-trash-can`, onDeleteStatusClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-plus`, onCreateEntryValueClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-trash-can`, onDeleteEntryValueClick);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-copy`, onCopyEntryClick);
-    // @ts-ignore
+    $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.make-private`, onTogglePrivateEntry);
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button[macro]`, onMacroShortcutClick);
-    // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole`, onEntryInput);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .fa-solid.kill-switch`, onToggleEntrySwitch)
-    // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole[name="title"]`, onAltTitleInput);
-    // @ts-ignore
     $(document).on('input', `.${htmlSuffix}-popup-row select[name="value_uid"]`, onEntryValueSwap);
-    // @ts-ignore
     $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, onDeleteEntryClick);
 
     // * Right Menu Button
@@ -1000,7 +1009,6 @@ function initPopupTriggers() {
     $('#avatar-and-name-block')
         .after($(toolbar).clone());
 
-    // @ts-ignore
     $(`.${htmlSuffix}-right-menu-toolbar`).on('click', '.menu_button', onShortcutClick);
 
     // * Wand Menu Button
@@ -1021,7 +1029,5 @@ function initPopupTriggers() {
     });
 
     $('#extensionsMenu').append(wandMenuShortcutContainer);
-
-    // @ts-ignore
     $(`#${htmlSuffix}-wand-menu-shortcut`).on('click', onShortcutClick);
 }
