@@ -17,6 +17,7 @@ import {
     unEscapeAll,
     generateUUID,
     lodash,
+    getCharFromMessage,
     // HTML Related
     updateCaretDisplaySafe,
     getSelectedTextInElem,
@@ -610,22 +611,32 @@ function onDocumentClick(e) {
 
 // * MARK:ST Listeners
 
-function onMessageRendered() {
-    StatUsMaximus.log('onMessageRendered');
-
-    /** @type {Function} */
-    const renderer = StatUsMaximus.renderStatusesSafe;
-
-    renderer();
+/**
+ * @param  {...any} args
+ */
+function onMessagesRendered(...args) {
+    StatUsMaximus.log('onMessagesRendered', args);
+    StatUsMaximus.renderStatusesSafe();
 }
 
-async function onNewMessageRendered() {
-    StatUsMaximus.log('onMessageRendered');
+/**
+ * @param  {...any} args
+ */
+async function onNewMessageRendered(...args) {
+    StatUsMaximus.log('onMessageRendered', args);
 
-    await StatUsMaximus.renderStatuses();
+    const [ mess_id ] = args;
+    const char = getCharFromMessage(mess_id);
+
+    if (!char) return;
+
+    await StatUsMaximus.renderStatusSafe(StatUsMaximus.getStatus(char.avatar) || null);
     if (powerUserSettings.auto_scroll_chat_to_bottom) scrollChatToBottom();
 }
 
+/**
+ * @param  {...any} args
+ */
 async function onChatChanged(...args) {
     const [ chat_id ] = args;
 
@@ -639,6 +650,9 @@ async function onChatChanged(...args) {
     scrollChatToBottom();
 }
 
+/**
+ * @param  {...any} args
+ */
 function onGenerationAfterCommands(...args) {
     StatUsMaximus.log(eventTypes.GENERATION_AFTER_COMMANDS, args);
 
@@ -793,9 +807,9 @@ function registerEvents() {
 
     eventSource.on(eventTypes.CHARACTER_RENAMED_IN_PAST_CHAT, onCharacterRenamed);
 
-    eventSource.on(eventTypes.MORE_MESSAGES_LOADED, onMessageRendered);
-    eventSource.on(eventTypes.MESSAGE_UPDATED, onMessageRendered);
-    eventSource.on(eventTypes.MESSAGE_DELETED, onMessageRendered);
+    eventSource.on(eventTypes.MORE_MESSAGES_LOADED, onMessagesRendered);
+    eventSource.on(eventTypes.MESSAGE_UPDATED, onMessagesRendered);
+    eventSource.on(eventTypes.MESSAGE_DELETED, onMessagesRendered);
     eventSource.on(eventTypes.USER_MESSAGE_RENDERED, onNewMessageRendered);
     eventSource.on(eventTypes.CHARACTER_MESSAGE_RENDERED, onNewMessageRendered);
 

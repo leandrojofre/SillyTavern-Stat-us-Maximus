@@ -44,6 +44,7 @@ const CUSTOM_MACROS = {
     }),
 
     /**
+     * MARK: getValues()
      * @param {string|number|boolean} text
      * @param {string} charName
      * @returns {string}
@@ -175,6 +176,7 @@ const CUSTOM_MACROS = {
     }),
 
     /**
+     * MARK: getInputs()
      * @param {string|number|boolean} text
      * @param {string} charName
      * @returns {string}

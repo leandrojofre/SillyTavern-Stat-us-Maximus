@@ -44,6 +44,7 @@ export {
     getParticipant,
     isChatOpen,
     parseValue,
+    getCharFromMessage,
     extensionSettings,
     metadataName,
     extensionName,
@@ -413,8 +414,40 @@ async function hidePopper(popperInstance, tooltip) {
 }
 
 /**
+ * @param {string|number} mess_id
+ * @returns {Character|UserCharacter}
+ */
+function getCharFromMessage(mess_id) {
+    const { chat, characters } = context();
+
+    const mes = chat[mess_id] ?? null;
+
+    if (!mes) return null;
+
+    const { force_avatar, original_avatar, is_user } = mes;
+
+    try {
+        const url = new URL(force_avatar, window.location.origin);
+        const fileName = url?.searchParams.get('file') ?? '';
+        let entity;
+
+        if (is_user) entity = getUser(fileName);
+        else entity = characters.find(c => c.avatar === fileName);
+
+        if (!entity && is_user) entity = getUser(original_avatar);
+        if (!entity && !is_user) entity = characters.find(c => c.avatar === original_avatar)
+
+        return entity ?? null;
+    } catch (err) {
+        StatUsMaximus.error(err);
+
+        return null;
+    }
+}
+
+/**
  * @param {ChatMessage} mes
- * @param {Character|Object?} [char]
+ * @param {Character|UserCharacter|Object} [char]
  * @param {boolean?} [is_user]
  * @returns {boolean}
  */
@@ -425,9 +458,9 @@ function messageBelongsToChar(mes, char = {}, is_user = false) {
     if (is_user !== mess_is_user) return false;
 
     const url = new URL(force_avatar, window.location.origin);
-    const urlFile = url?.searchParams.get('file') ?? '';
+    const fileName = url?.searchParams.get('file') ?? '';
 
-    if (avatar === urlFile) return true;
+    if (avatar === fileName) return true;
     if (avatar === original_avatar) return true;
 
     if (!char) return false;
@@ -616,6 +649,8 @@ function unEscapeAll(text, { newlines = false, macros = false, comments = false,
  * @param {Status} status
  */
 async function renderCharStatus(status) {
+    if (!status) return;
+
     $(`#chat .${htmlSuffix}-custom-css[char-target="${status.avatar}"]`).remove();
 
     if (!Object.keys(status.entries).length) return;
