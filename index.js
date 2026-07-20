@@ -651,6 +651,7 @@ function unEscapeAll(text, { newlines = false, macros = false, comments = false,
 async function renderCharStatus(status) {
     if (!status) return;
 
+    $(`#chat .${htmlSuffix}-custom-css[char-target="${status.avatar}"] .input-value-source`).trigger('blur');
     $(`#chat .${htmlSuffix}-custom-css[char-target="${status.avatar}"]`).remove();
 
     if (!Object.keys(status.entries).length) return;

@@ -358,7 +358,6 @@ function onSelectChatInput(e) {
 
     if (!spanInput) return;
 
-    // @ts-ignore
     $(document).one('pointerup', { spanInput }, onSelectChatInputFinish);
 }
 
