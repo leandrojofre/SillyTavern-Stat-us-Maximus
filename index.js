@@ -366,7 +366,7 @@ function getParticipant(value, {search_key = 'avatar', is_user = false} = {}) {
     if (!char)
         char = characters.find(c => c[search_key] === value);
 
-    return char;
+    return char || null;
 }
 
 /**
@@ -437,8 +437,7 @@ async function hidePopper(popperInstance, tooltip) {
  * @returns {Character|UserCharacter}
  */
 function getCharFromMessage(mess_id) {
-    const { chat, characters } = context();
-
+    const { chat } = context();
     const mes = chat[mess_id] ?? null;
 
     if (!mes) return null;
@@ -450,11 +449,8 @@ function getCharFromMessage(mess_id) {
         const fileName = url?.searchParams.get('file') ?? '';
         let entity;
 
-        if (is_user) entity = getUser(fileName);
-        else entity = characters.find(c => c.avatar === fileName);
-
-        if (!entity && is_user) entity = getUser(original_avatar);
-        if (!entity && !is_user) entity = characters.find(c => c.avatar === original_avatar)
+        if (fileName) entity = getParticipant(fileName, {is_user});
+        if (!entity) entity = getParticipant(original_avatar, {is_user});
 
         return entity ?? null;
     } catch (err) {
