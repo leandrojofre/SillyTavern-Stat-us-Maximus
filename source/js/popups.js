@@ -33,6 +33,7 @@ export {
     openSingleStatusPopup,
     createEntryBlock,
     popupConfirmAction,
+    popupRequestInput,
     getStatusPopupBlock,
     cloneStatusPopup,
 };
@@ -47,6 +48,55 @@ export {
 /** @typedef {StatUsMaximus.AltValueData} AltValueData */
 
 // * MARK:Popup Creation
+
+/**
+ * Gets a drag delay for sortable elements. This is to prevent accidental drags when scrolling.
+ * @returns {number} The delay in milliseconds. 50ms for desktop, 750ms for mobile.
+ */
+function getSortableDelay() {
+    const mobileTypes = ['mobile', 'tablet'];
+    const userAgent = SillyTavern.libs.Bowser.parse(navigator.userAgent);
+    const isMobile = mobileTypes.includes(userAgent?.platform?.type);
+
+    return isMobile ? 750 : 50;
+}
+
+/**
+ * @param {string} actionLabel - Are you sure want to...
+ * @returns {Promise<boolean>}
+ */
+async function popupConfirmAction(actionLabel = 'continue') {
+    const result = await Popup.show.confirm(
+        t`WARNING`,
+        t`Are you sure want to ${actionLabel}?`,
+        {
+            okButton: t`Confirm`,
+            cancelButton: t`Cancel`
+        }
+    );
+
+    return result === 1;
+};
+
+/**
+ * @param {Object} [options]
+ * @param {string} [options.defaultValue] Default value for the input
+ * @param {string} [options.actionLabel] Input a new value (def)
+ * @returns {Promise<string>}
+ */
+async function popupRequestInput({actionLabel = 'Input a new value', defaultValue = ''} = {}) {
+    const result = await Popup.show.input(
+        extensionName,
+        t`${actionLabel}?`,
+        defaultValue || '',
+        {
+            okButton: t`Confirm`,
+            cancelButton: t`Cancel`,
+        }
+    );
+
+    return (result || '').trim();
+};
 
 /** Clones the status data of the selected `char`
     @param {Character|UserCharacter} char
@@ -133,35 +183,6 @@ async function cloneStatusPopup(char) {
 
     return {status: newStatus, keepOriginal: keepOriginalData, onlyEntries};
 }
-
-/**
- * Gets a drag delay for sortable elements. This is to prevent accidental drags when scrolling.
- * @returns {number} The delay in milliseconds. 50ms for desktop, 750ms for mobile.
- */
-function getSortableDelay() {
-    const mobileTypes = ['mobile', 'tablet'];
-    const userAgent = SillyTavern.libs.Bowser.parse(navigator.userAgent);
-    const isMobile = mobileTypes.includes(userAgent?.platform?.type);
-
-    return isMobile ? 750 : 50;
-}
-
-/**
- * @param {string} actionLabel - Are you sure want to...
- * @returns {Promise<boolean>}
- */
-async function popupConfirmAction(actionLabel = 'continue') {
-    const result = await Popup.show.confirm(
-        t`WARNING`,
-        t`Are you sure want to ${actionLabel}?`,
-        {
-            okButton: t`Confirm`,
-            cancelButton: t`Cancel`
-        }
-    );
-
-    return result === 1;
-};
 
 /**
  * @param {StatusEntry} entry
@@ -512,6 +533,7 @@ function initPopupTriggers() {
     $(document).on('click', `.${htmlSuffix}-popup .menu_button.create-status`, eventMethods.onCreateStatus);
     $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, eventMethods.onPopupStatusInput);
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.kill-switch`, eventMethods.onToggleStatus);
+    $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.status-rename`, eventMethods.onRenameStatus);
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-file-clipboard`, eventMethods.onCreateEntryFromClipboard);
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-plus`, eventMethods.onCreateEntry);
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.status-bulk-toggle`, eventMethods.onBulkToggleEntryDrawer);

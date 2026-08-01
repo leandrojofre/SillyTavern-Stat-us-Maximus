@@ -23,6 +23,7 @@ import {
 import {
     createEntryBlock,
     popupConfirmAction,
+    popupRequestInput,
     getStatusPopupBlock,
     cloneStatusPopup,
 } from './popups.js';
@@ -43,6 +44,7 @@ export {
     onOpenPopupOnEntry,
     onTogglePrivateEntry,
     onDocumentClick,
+    onRenameStatus,
     // Popup
     onPopupStatusInput,
     onPopupEntryInput,
@@ -282,6 +284,29 @@ function onToggleEntry(e) {
         .toggleClass('fa-toggle-off', !nextState)
         .closest(`.${htmlSuffix}-entry-row`)
         .toggleClass('disabled', !nextState);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onRenameStatus(e) {
+    const { data, status } = getStatusFromInput(e.currentTarget);
+    const { statusId } = data;
+
+    if (!status) return;
+
+    const newName = await popupRequestInput({
+        actionLabel: t`Input a new name for the Status block`,
+        defaultValue: status.name,
+    });
+
+    if (!newName) return;
+
+    status.set('name', newName);
+
+    $(`#${statusId}`)
+        .find(`.${htmlSuffix}-name`)
+        .text(newName);
 }
 
 /**
