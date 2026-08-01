@@ -510,7 +510,7 @@ async function onSelectSwitchValueList(e) {
 
     const {altUid, uid, avatar, character, statusBlockId, listId} = $option.data();
 
-    const $entryBlock = $(`.${htmlSuffix}-entry[status-block-id="${statusBlockId}"][uid="${uid}"]`).first();
+    const $entryBlock = $(`#chat .${htmlSuffix}-entry-row[status-block-id="${statusBlockId}"][uid="${uid}"]`).first();
     const popperInstance = $entryBlock.find('.status-value-uid').first().data('switchValuePopper');
     const optionList = $(`#${listId}`)[0];
 
