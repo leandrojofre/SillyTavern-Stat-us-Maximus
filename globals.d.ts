@@ -52,6 +52,12 @@ declare namespace StatUsMaximus {
         isUser?: boolean;
     }
 
+    type RenderStatusesSafeOptions = {
+        filter?: string;
+        filter_is_user?: boolean;
+        allowDetached?: boolean;
+    }
+
     type GlobalInterface = {
         Status: typeof Status;
         StatusEntry: typeof StatusEntry;
@@ -63,7 +69,7 @@ declare namespace StatUsMaximus {
         openPopupSingle: (avatar: string, options?: { is_user?: boolean; onOpen?: () => void }) => Promise<void>;
         renderStatuses: () => Promise<void>;
         renderStatusSafe: (status: Status) => Promise<void>;
-        renderStatusesSafe: () => void;
+        renderStatusesSafe: (options?: RenderStatusesSafeOptions) => Promise<void>;
         log: (...mess: any[]) => void;
         debug: (...mess: any[]) => void;
         error: (...mess: any[]) => void;

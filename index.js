@@ -61,6 +61,7 @@ export {
 /** @typedef {StatUsMaximus.Instance} Instance */
 /** @typedef {StatUsMaximus.ExtensionSettings} ExtensionSettings */
 /** @typedef {StatUsMaximus.HTMLTemplateGetOptions} HTMLTemplateGetOptions */
+/** @typedef {StatUsMaximus.RenderStatusesSafeOptions} RenderStatusesSafeOptions */
 
 // * MARK:Extension variables
 
@@ -627,9 +628,12 @@ async function renderStatusSafe(status) {
     await renderStatusDebounced(status);
 }
 
-function renderStatusesSafe() {
+/**
+ * @param {RenderStatusesSafeOptions} [options]
+ */
+async function renderStatusesSafe(options) {
     renderStatusesDebounced.cancel();
-    renderStatusesDebounced();
+    await renderStatusesDebounced(options);
 }
 
 /**
@@ -821,21 +825,36 @@ async function renderCharStatus(status) {
     if (!status.is_collapsed) statusBlock.find('.inline-drawer-content').show();
 }
 
-async function renderStatuses() {
-    const activeParticipants = getActiveParticipants([], {forceMutedIn: extensionSettings.showMutedMembersBlocks});
-    const characters = [];
-    const formattedChars = new Map();
+/**
+ * @param {RenderStatusesSafeOptions} [options]
+ */
+async function renderStatuses({filter = '', filter_is_user = false, allowDetached = true} = {}) {
+    const statusesAll = StatUsMaximus.getStatuses();
+    const statusesDetached = statusesAll.filter(s => allowDetached && s.is_detached);
+    const statuses = [];
 
-    if (activeParticipants.user) characters.push(activeParticipants.user);
+    if (filter) {
+        statuses.push(...statusesAll.filter(s =>
+            filter === s.avatar && filter_is_user === s.is_user
+        ));
+    } else {
+        const activeParticipants = getActiveParticipants([], {forceMutedIn: extensionSettings.showMutedMembersBlocks});
+        const characters = [];
+        const formattedChars = new Map();
 
-    characters.push(...activeParticipants.chars);
-    characters.forEach(c => formattedChars.set(c.avatar, c['is_user']));
+        if (activeParticipants.user) characters.push(activeParticipants.user);
 
-    const statuses = StatUsMaximus
-        .getStatuses()
-        .filter(s => s.is_detached || (formattedChars.has(s.avatar) && formattedChars.get(s.avatar) === s.is_user));
+        characters.push(...activeParticipants.chars);
+        characters.forEach(c => formattedChars.set(c.avatar, c['is_user']));
 
-    $(`#chat .${htmlSuffix}-custom-css.${htmlSuffix}-chat-drawer`).remove();
+        statuses.push(...statusesAll.filter(s =>
+            formattedChars.has(s.avatar) && formattedChars.get(s.avatar) === s.is_user
+        ));
+
+        $(`#chat .${htmlSuffix}-custom-css.${htmlSuffix}-chat-drawer`).remove();
+    }
+
+    statuses.push(...statusesDetached);
 
     for (const status of statuses)
         await renderCharStatus(status);

@@ -68,7 +68,11 @@ async function onNewMessageRendered(...args) {
 
     if (!char) return;
 
-    await StatUsMaximus.renderStatusSafe(StatUsMaximus.getStatus(char.avatar) || null);
+    await StatUsMaximus.renderStatusesSafe({
+        filter: char.avatar,
+        filter_is_user: char['is_user'] === true,
+    });
+
     if (powerUserSettings.auto_scroll_chat_to_bottom) scrollChatToBottom();
 }
 
