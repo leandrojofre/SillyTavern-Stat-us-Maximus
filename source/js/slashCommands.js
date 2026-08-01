@@ -142,7 +142,7 @@ const ENUMS_PROVIDER = {
         ...ENUMS_PROVIDER.characters()
     ],
 
-    boolean: () => [
+    boolean: [
         new SlashCommandEnumValue('true'),
         new SlashCommandEnumValue('false')
     ],
@@ -155,24 +155,25 @@ const ENUMS_PROVIDER = {
     ],
 
     acceptedStatusFields: [
-        new SlashCommandEnumValue('separator'),
-        new SlashCommandEnumValue('def_entry_separator'),
-        new SlashCommandEnumValue('prefix'),
-        new SlashCommandEnumValue('suffix')
+        new SlashCommandEnumValue('name', 'Name used for UI display and {{name}} macro'),
+        new SlashCommandEnumValue('separator', 'Separator for the Status entries'),
+        new SlashCommandEnumValue('def_entry_separator', 'Default separator set for entry title/value on creation'),
+        new SlashCommandEnumValue('prefix', 'Prefix for the Status block'),
+        new SlashCommandEnumValue('suffix', 'Suffix for the Status block')
     ],
 
     acceptedEntryFields: [
-        new SlashCommandEnumValue('enabled'),
-        new SlashCommandEnumValue('key'),
-        new SlashCommandEnumValue('separator'),
+        new SlashCommandEnumValue('enabled', 'Whether the entry is sent with the Status block'),
+        new SlashCommandEnumValue('key', 'Main title of the entry'),
+        new SlashCommandEnumValue('separator', 'Separator between entry value and main title'),
         new SlashCommandEnumValue('value', 'Value of the currently selected entry swipe'),
         new SlashCommandEnumValue('title', 'Title of the currently selected entry swipe on the selector'),
         new SlashCommandEnumValue('private', 'If true, it makes the entry only visible for the owner')
     ],
 
     acceptedAltEntryFields: [
-        new SlashCommandEnumValue('value'),
-        new SlashCommandEnumValue('title')
+        new SlashCommandEnumValue('value', 'Value of the Status entry swipe'),
+        new SlashCommandEnumValue('title', 'Title of the Status entry swipe on the selector')
     ],
 
     entryUIDs: (executor, scope) => {
@@ -921,7 +922,7 @@ function registerSlashCommands() {
                     description: 'If multiple characters or personas have the same name, it will create metadata for all - false by default',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.boolean
+                    enumList: ENUMS_PROVIDER.boolean
                 })
             ],
             helpString: `
@@ -1102,7 +1103,7 @@ function registerSlashCommands() {
                     description: 'Do an exact match or a fuzzy match - defaults to false (exact match)',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.boolean
+                    enumList: ENUMS_PROVIDER.boolean
                 })
             ],
             unnamedArgumentList: [
@@ -1427,7 +1428,7 @@ function registerSlashCommands() {
                     description: 'Do an exact match or a fuzzy match - defaults to false (exact match)',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.boolean
+                    enumList: ENUMS_PROVIDER.boolean
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
