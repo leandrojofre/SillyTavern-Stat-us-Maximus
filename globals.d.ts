@@ -5,6 +5,7 @@ declare namespace StatUsMaximus {
 
     type StatusData = {
         avatar: string;
+        name?: string;
         role?: number;
         separator?: string;
         def_entry_separator?: string;
@@ -17,6 +18,7 @@ declare namespace StatUsMaximus {
         last_mes_id?: number;
         enabled?: boolean;
         is_user?: boolean;
+        is_detached?: boolean;
         is_collapsed?: boolean;
         entries?: Record<string, StatusEntry>;
     }
@@ -29,7 +31,7 @@ declare namespace StatUsMaximus {
         display_position?: number;
         private?: boolean;
         values?: Record<string, AltValueData>;
-        /** @deprecated Must transform into a valid 'values' instance */
+        /** @deprecated Must be transformed into a valid 'values' instance */
         alt_values?: ({uid: number; key: string; value: string;})[];
     }
 
@@ -55,7 +57,7 @@ declare namespace StatUsMaximus {
         StatusEntry: typeof StatusEntry;
         getStatuses: () => Status[];
         getStatus: (avatar: string) => false | Status;
-        addStatus: (avatar: string, is_user?: boolean) => false | Status;
+        addStatus: (avatar: string, options: {is_user?: boolean; is_detached?: boolean;}) => false | Status;
         delStatus: (status: Status) => boolean | Status;
         transferStatus: (avatar: string, newAvatar: string, options?: TransferStatusOptions) => false | Status;
         openPopupSingle: (avatar: string, options?: { is_user?: boolean; onOpen?: () => void }) => Promise<void>;
@@ -65,6 +67,7 @@ declare namespace StatUsMaximus {
         log: (...mess: any[]) => void;
         debug: (...mess: any[]) => void;
         error: (...mess: any[]) => void;
+        comment_avatar: 'img/quill.png';
     }
 
     type ExtensionSettings = {

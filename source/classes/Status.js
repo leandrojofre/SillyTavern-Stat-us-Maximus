@@ -24,6 +24,7 @@ export {
 /** @type {StatusData} */
 const statusTemplate = Object.freeze({
     avatar: '',
+    name: '',
     role: extension_prompt_roles.SYSTEM,
     separator: '\n',
     def_entry_separator: '',
@@ -34,6 +35,7 @@ const statusTemplate = Object.freeze({
     last_mes_id: -1,
     enabled: true,
     is_user: false,
+    is_detached: false,
     is_collapsed: false,
     entries: {}
 });
@@ -67,6 +69,7 @@ class Status {
     static template = statusTemplate;
 
     /** @property @type {string} */ avatar;
+    /** @property @type {string} */ name;
     /** @property @type {number} */ role;
     /** @property @type {string} */ separator;
     /** @property @type {string} */ def_entry_separator;
@@ -77,6 +80,7 @@ class Status {
     /** @property @type {number} */ last_mes_id;
     /** @property @type {boolean} */ enabled;
     /** @property @type {boolean} */ is_user;
+    /** @property @type {boolean} */ is_detached;
     /** @property @type {boolean} */ is_collapsed;
     /** @property @type {Record<string, StatusEntry>} */ entries;
 
@@ -197,6 +201,13 @@ class Status {
      * @returns {Character|UserCharacter}
      */
     getCharacter() {
+        if (this.is_detached) return {
+            avatar: this.avatar || StatUsMaximus.comment_avatar,
+            name: this.name || 'Detached',
+            description: '',
+            is_user: false,
+        };
+
         const { avatar, is_user } = this;
         const { characters } = context();
 
@@ -209,6 +220,7 @@ class Status {
      * @returns {string}
      */
     getThumbnail() {
+        if (this.is_detached) return StatUsMaximus.comment_avatar;
         return getThumbnailUrl(this.is_user ? "persona" : "avatar", this.avatar);
     }
 
@@ -216,6 +228,8 @@ class Status {
      * @returns {Status}
      */
     refreshPosition() {
+        if (this.is_detached) return this.set('last_mes_id', this.enabled ? 0 : -1);
+
         const { chat } = context();
         const { is_user } = this;
 
@@ -238,6 +252,7 @@ class Status {
      * @returns {Status}
      */
     refreshDepth({ isGenerating = false } = {}) {
+        if (this.is_detached) return this.set('depth', this.enabled ? 0 : -1);
         if (isGenerating) return this.set('depth', 0);
 
         const { chat } = context();

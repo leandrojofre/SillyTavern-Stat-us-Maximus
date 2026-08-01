@@ -224,6 +224,35 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
 }
 
 /**
+ * @param {boolean} [deleteOldBlock]
+ * @returns {Promise<JQuery<HTMLElement>>}
+ */
+async function createDetachedStatusBlock(deleteOldBlock = true) {
+    if (deleteOldBlock) $(`#${htmlSuffix}-popup-create-detached`).remove();
+
+    const $container = await HTML_TEMPLATES.get('popupStatusDetached', {clone: true});
+    const statuses = StatUsMaximus.getStatuses();
+    let avatar = generateUUID();
+    let isAvatarRepeated = statuses.some(status => status.avatar === avatar);
+
+    for (let i = 0; isAvatarRepeated && i < 50; i++) {
+        avatar = generateUUID();
+        isAvatarRepeated = statuses.some(status => status.avatar === avatar);
+    }
+
+    $container
+        .find(`.create-status`)
+        .data({
+            avatar,
+            is_user: false,
+            is_detached: true,
+            statusId: 'stat-us-maximus-popup-create-detached'
+        });
+
+    return $container;
+}
+
+/**
  * @param {string} avatar
  * @param {boolean?} [is_user]
  * @returns {Promise<JQuery<HTMLElement>>}
@@ -261,7 +290,7 @@ async function getStatusPopupBlock(avatar, is_user = false) {
             return $statusBlockEmpty;
         }
 
-        status = StatUsMaximus.addStatus(avatar, is_user);
+        status = StatUsMaximus.addStatus(avatar, {is_user});
 
         if (!status) return;
     };
@@ -386,8 +415,10 @@ async function openSingleStatusPopup(avatar, {is_user = false, onOpen = () => {}
 
 /**
  * @param {{avatar: string; is_user?: boolean}[]} members
+ * @param {Object} [options]
+ * @param {boolean} [options.detachedCreation]
  */
-async function openMultiStatusPopup(members = []) {
+async function openMultiStatusPopup(members = [], {detachedCreation = true} = {}) {
     if (!members?.length) return;
 
     const statusesWrapper = createElement('div', {
@@ -395,7 +426,6 @@ async function openMultiStatusPopup(members = []) {
     });
 
     const $statusesWrapper = $(statusesWrapper);
-    let noBlocksCreated = true;
 
     for (const {avatar, is_user} of members) {
         const $statusBlock = await getStatusPopupBlock(avatar, is_user);
@@ -403,10 +433,12 @@ async function openMultiStatusPopup(members = []) {
         if (!$statusBlock) continue;
 
         $statusesWrapper.append($statusBlock);
-        noBlocksCreated = false;
     }
 
-    if (noBlocksCreated) return;
+    if (detachedCreation) {
+        const $detachedCreationBlock = await createDetachedStatusBlock();
+        $statusesWrapper.append($detachedCreationBlock);
+    }
 
     await callGenericPopup($statusesWrapper, POPUP_TYPE.TEXT, "", {
         okButton: t`Close Status`,
@@ -459,12 +491,14 @@ async function onShortcutClick(e) {
         return await openSingleStatusPopup(user.avatar, {is_user: true});
     }
 
+    const members = StatUsMaximus.getStatuses();
+    const detachedStatuses = members
+        .filter(status => status.is_detached);
+
     if (type === 'characters') {
         const { chars } = getActiveParticipants([], getParticipantsOptions);
-        return await openMultiStatusPopup(chars);
+        return await openMultiStatusPopup([...chars, ...detachedStatuses]);
     }
-
-    const members = StatUsMaximus.getStatuses();
 
     if (type === 'all') {
         return await openMultiStatusPopup(members);
@@ -475,7 +509,7 @@ async function onShortcutClick(e) {
 
         if (!users.length) return;
 
-        return await openMultiStatusPopup(users);
+        return await openMultiStatusPopup(users, {detachedCreation: false});
     }
 }
 
@@ -502,6 +536,13 @@ function initPopupTriggers() {
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole[name="title"]`, eventMethods.onAltTitleInput);
     $(document).on('input', `.${htmlSuffix}-popup-row select[name="value_uid"]`, eventMethods.onEntryValueSwap);
     $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, eventMethods.onDeleteEntry);
+
+    $(document).on('click', `#${htmlSuffix}-popup-create-detached`, async function (e) {
+        const $oldBlock = $(`#${htmlSuffix}-popup-create-detached`);
+        const $newBlock = await createDetachedStatusBlock(false);
+        $oldBlock.before($newBlock);
+        $oldBlock.remove();
+    });
 
     // * Right Menu Button
 

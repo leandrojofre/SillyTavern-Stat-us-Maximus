@@ -34,6 +34,15 @@ const {
 // * MARK:Utility Methods
 
 /**
+ * Checks if a string is "true" value.
+ * @param {string} arg String to check
+ * @returns {boolean} True if the string is true, false otherwise.
+ */
+function isTrueBoolean(arg) {
+    return ['on', 'true', '1'].includes(arg?.trim()?.toLowerCase());
+}
+
+/**
  * Takes an object with a key and value and generates a comment
  * @param {StatusEntry} entry
  * @returns {string}
@@ -242,17 +251,18 @@ function isCharacterUser(character) {
  * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
- * @param {string} args.force - If multiple characters have the same name, it forces creation of data on ALL, despite if they were used or not in the chat
+ * @param {'true'|'false'} args.isdetached - Wether to search for personas or characters
+ * @param {'true'|'false'} args.force - If multiple characters have the same name, it forces creation of data on ALL, despite if they were used or not in the chat
  * @returns {Promise<'true'|'false'>} True if succeeds, False otherwise
  */
 async function commandCreateStatus(args) {
     try {
-        const {char = '', isuser = 'all', force = 'false'} = args;
-
-        const cleanForce = force === 'true';
+        const {char = '', isuser = 'all', isdetached = 'false', force = 'false'} = args;
 
         const entityFilters = ENUMS_STRINGS.entityFilters;
         const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
+        const cleanIsDetached = isTrueBoolean(isdetached);
+        const cleanForce = isTrueBoolean(force);
 
         if (!cleanForce && characterHasMetadata(char)) return 'true';
 
@@ -272,7 +282,10 @@ async function commandCreateStatus(args) {
                 }
 
                 ignoreAvatars.push(character.avatar);
-                const status = StatUsMaximus.addStatus(character.avatar, isCharacterUser(character));
+                const status = StatUsMaximus.addStatus(character.avatar, {
+                    is_user: isCharacterUser(character),
+                    is_detached: cleanIsDetached,
+                });
 
                 if (!status) break;
 
@@ -283,7 +296,10 @@ async function commandCreateStatus(args) {
 
             if (!character) throw new Error(`The character '${char}' could not be found`);
 
-            const status = StatUsMaximus.addStatus(character.avatar, isCharacterUser(character));
+            const status = StatUsMaximus.addStatus(character.avatar, {
+                is_user: isCharacterUser(character),
+                is_detached: cleanIsDetached,
+            });
 
             if (!status) return 'false';
         }

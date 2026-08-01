@@ -128,7 +128,7 @@ function getStatusFromInput(input) {
  * @param {JQuery} $container
  */
 async function appendEntryBlock(status, entryData, statusId, $container) {
-    const uid = status.addEntry(entryData);
+    const uid = status.addEntry(entryData || {});
     const entry = status.getEntry(uid);
     const $entryBlock = await createEntryBlock(entry, uid, status.avatar, statusId);
 
@@ -818,11 +818,11 @@ function onBulkToggleEntryDrawer(e) {
  */
 async function onCreateStatus(e) {
     const { avatar, data } = getStatusFromInput(e.currentTarget);
-    const { is_user, statusId } = data;
+    const { is_user, is_detached = false, statusId } = data;
 
     if (!avatar) return;
 
-    const status = StatUsMaximus.addStatus(avatar, is_user);
+    const status = StatUsMaximus.addStatus(avatar, {is_user, is_detached});
 
     if (!status) return;
 
@@ -831,8 +831,9 @@ async function onCreateStatus(e) {
 
     if (!$statusBlock) return;
 
-    $statusBlockEmpty.after($statusBlock);
-    $statusBlockEmpty.remove();
+    $statusBlockEmpty.before($statusBlock);
+
+    if (!status.is_detached) $statusBlockEmpty.remove();
 }
 
 /**
@@ -930,7 +931,8 @@ async function onDeleteStatus(e) {
 
         if (!accepted) return toastr.info(t`Status deletion cancelled`, extensionName);
 
-        const { is_user } = status;
+        const { is_user, is_detached } = status;
+        const isDetached = is_detached === true;
         const character = status.getCharacter();
         const thumbnail = status.getThumbnail();
 
@@ -958,7 +960,8 @@ async function onDeleteStatus(e) {
 
         if (!deleteSuccess) return;
 
-        $statusBlock.after($statusBlockEmpty);
+        if (!isDetached) $statusBlock.after($statusBlockEmpty);
+
         $statusBlock.remove();
     } catch (err) {
         StatUsMaximus.error(err);

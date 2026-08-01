@@ -545,14 +545,14 @@ function updateCaretDisplaySafe(input, span) {
 }
 
 /**
- * @param {string?} [extraSuffix]
+ * @param {string?} [overrideSuffix]
  * @returns {string} UUID
  */
-function generateUUID(extraSuffix) {
+function generateUUID(overrideSuffix) {
     const randUUID = self?.crypto?.randomUUID();
     const uuid = !randUUID ? new Date().valueOf().toString() : randUUID.replaceAll('-', '_');
 
-    return `${extraSuffix ?? metadataName}_${uuid}`;
+    return `${overrideSuffix ?? metadataName}_${uuid}`;
 }
 
 /**
@@ -665,13 +665,16 @@ async function renderCharStatus(status) {
 
     if (!character) return;
 
-    const lastMess = $(`#chat .mes[mesid="${status.last_mes_id}"][is_user="${status.is_user}"]`).last();
+    const $lastMess = status.is_detached ?
+        $(`#chat .last_mes`).last() :
+        $(`#chat .mes[mesid="${status.last_mes_id}"][is_user="${status.is_user}"]`).last();
 
-    if (!lastMess?.length) return;
+    if (!$lastMess?.length) return;
 
     const statusBlock = await HTML_TEMPLATES.get('chatStatus', {clone: true});
     const entryBlockTemplate = await HTML_TEMPLATES.get('chatStatusEntry', {clone: true});
     const statusBlockId = `${generateUUID()}_chat_stat_block`;
+    const lastMessIsUser = $lastMess.attr('is_user') === 'true';
 
     statusBlock
         .attr('char-target', status.avatar);
@@ -687,7 +690,7 @@ async function renderCharStatus(status) {
 
     statusBlock
         .find(`.inline-drawer`)
-        .toggleClass(`bg-${status.is_user ? 'user' : 'bot'}`, true);
+        .toggleClass(`bg-${(status.is_user || lastMessIsUser) ? 'user' : 'bot'}`, true);
 
     statusBlock
         .find('.inline-drawer-header')
@@ -796,7 +799,7 @@ async function renderCharStatus(status) {
             .append(entryBlock);
     }
 
-    lastMess
+    $lastMess
         .find('.mes_text')
         .before(statusBlock);
 
@@ -805,22 +808,17 @@ async function renderCharStatus(status) {
 
 async function renderStatuses() {
     const activeParticipants = getActiveParticipants([], {forceMutedIn: extensionSettings.showMutedMembersBlocks});
-
-    /** @type {(Character|UserCharacter)[]} */
     const characters = [];
+    const formattedChars = new Map();
 
     if (activeParticipants.user) characters.push(activeParticipants.user);
 
     characters.push(...activeParticipants.chars);
-
-    const formattedChars = characters.map(c => ({
-        avatar: c.avatar,
-        is_user: c['is_user'] ?? false
-    }));
+    characters.forEach(c => formattedChars.set(c.avatar, c['is_user']));
 
     const statuses = StatUsMaximus
         .getStatuses()
-        .filter(s => formattedChars.some(c => s.avatar === c.avatar && s.is_user === c.is_user));
+        .filter(s => s.is_detached || (formattedChars.has(s.avatar) && formattedChars.get(s.avatar) === s.is_user));
 
     $(`#chat .${htmlSuffix}-custom-css.${htmlSuffix}-chat-drawer`).remove();
 
@@ -838,7 +836,7 @@ const updateCaretDisplayDebounced = lodash.debounce(updateCaretDisplay, debounce
  * @type {GlobalInterface}
  */
 globalThis.StatUsMaximus = {
-    getStatuses: function() {
+    getStatuses() {
         let statuses = context().chatMetadata[metadataName];
 
         if (!statuses) statuses = [];
@@ -848,10 +846,10 @@ globalThis.StatUsMaximus = {
 
         context().chatMetadata[metadataName] = cleanStatuses;
 
-        return cleanStatuses.filter(stat => stat.getCharacter());
+        return cleanStatuses.filter(status => status.getCharacter());
     },
 
-    getStatus: function(avatar) {
+    getStatus(avatar) {
         let statuses = StatUsMaximus.getStatuses();
 
         if (!statuses) return false;
@@ -861,15 +859,15 @@ globalThis.StatUsMaximus = {
         return !status ? false : status;
     },
 
-    addStatus: function(avatar, is_user) {
+    addStatus(avatar, {is_user = false, is_detached = false}) {
         let statuses = StatUsMaximus.getStatuses();
 
         if (!statuses) return false;
 
-        let status = statuses.find(s => s.avatar === avatar);
+        let status = is_detached ? null : statuses.find(s => s.avatar === avatar);
 
         if (!status) {
-            status = new Status({avatar, is_user});
+            status = new Status({avatar, is_user, is_detached});
             statuses.push(status);
 
             context().chatMetadata[metadataName] = statuses;
@@ -879,7 +877,7 @@ globalThis.StatUsMaximus = {
         return status;
     },
 
-    delStatus: function(status) {
+    delStatus(status) {
         let statuses = StatUsMaximus.getStatuses();
 
         if (!statuses) return false;
@@ -902,7 +900,7 @@ globalThis.StatUsMaximus = {
 
         if (!status) return false;
 
-        let newStatus = getStatus(newAvatar) || addStatus(newAvatar, isUser);
+        let newStatus = getStatus(newAvatar) || addStatus(newAvatar, {is_user: isUser});
 
         if (!newStatus) return false;
 
@@ -920,6 +918,7 @@ globalThis.StatUsMaximus = {
         return newStatus.set('is_user', isUser);
     },
 
+    comment_avatar: 'img/quill.png',
     Status,
     StatusEntry,
     openPopupSingle: openSingleStatusPopup,
