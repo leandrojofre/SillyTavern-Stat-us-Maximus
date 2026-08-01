@@ -27,9 +27,6 @@ import {
     cloneStatusPopup,
 } from './popups.js';
 
-import { Status } from '../classes/Status.js';
-import { StatusEntry } from '../classes/StatusEntry.js';
-
 export {
     // Normal
     onToggleStatus,
@@ -43,7 +40,7 @@ export {
     onOpenSwitchValueList,
     onSelectSwitchValueList,
     onRefreshBlock,
-    onOpenPopupWithEntryOpen,
+    onOpenPopupOnEntry,
     onTogglePrivateEntry,
     onDocumentClick,
     // Popup
@@ -69,6 +66,7 @@ export {
  * @typedef {StatUsMaximus.EventData<T>} EventData
  */
 
+/** @typedef {StatUsMaximus.Status} Status */
 /** @typedef {StatUsMaximus.EntryData} EntryData */
 /** @typedef {StatUsMaximus.AltValueData} AltValueData */
 
@@ -106,6 +104,58 @@ const AllowedNumericInputs = Object.freeze({
 // * MARK:Methods
 
 /**
+ * @template T
+ * @param {JQuery<T>|HTMLElement} input
+ */
+function getStatusFromInput(input) {
+    const $input = $(input);
+    const { avatar } = $input.data();
+
+    return {
+        $input,
+        avatar,
+        status: StatUsMaximus.getStatus(avatar),
+        field: /** @type {keyof EntryData|keyof AltValueData} */($input.attr('name')),
+        value: /** @type {any} */($input.val()),
+        data: $input.data() ?? {},
+    };
+}
+
+/**
+ * @param {Status} status
+ * @param {EntryData} entryData
+ * @param {string} statusId
+ * @param {JQuery} $container
+ */
+async function appendEntryBlock(status, entryData, statusId, $container) {
+    const uid = status.addEntry(entryData);
+    const entry = status.getEntry(uid);
+    const $entryBlock = await createEntryBlock(entry, uid, status.avatar, statusId);
+
+    $container.append($entryBlock);
+}
+
+/**
+ * @param {JQuery} $input
+ * @param {number} value
+ * @returns {number}
+ */
+function normalizeRangeValue($input, value, direction = 0) {
+    const min = Number($input.attr('min'));
+    const max = Number($input.attr('max'));
+    const step = Number($input.attr('step'));
+
+    if (!Number.isFinite(step) || step <= 0) return value;
+
+    const steppedValue = value + (step * direction);
+    const flooredValue = Math.max(steppedValue, min);
+    const clampedValue = Math.min(flooredValue, max);
+    const stepAmount = Math.floor((clampedValue - min) / step);
+
+    return min + (stepAmount * step);
+}
+
+/**
  * @param {HTMLInputElement|HTMLTextAreaElement} inputTrigger
  */
 function updateEntryFromInput(inputTrigger) {
@@ -131,15 +181,14 @@ function updateEntryFromInput(inputTrigger) {
         entry[field]
     );
 
-    const operationUID = generateUUID(`${metadataName}_macro_parsing_done`);
-    const $inputs = $container.find('.input-value-source');
+    const operationUID = generateUUID(`::${metadataName}_macro_parsing_done`);
+    const $inputSources = $container.find('.input-value-source');
 
-    $inputs.each(function(i, input) {
+    $inputSources.each(function(i, input) {
         const $input = $(input);
+        const { type, original } = $input.data();
 
-        const { type, original: inputIndex } = $input.data();
-
-        if (!inputIndex) return;
+        if (!original) return;
 
         let newMacro = '';
 
@@ -153,7 +202,7 @@ function updateEntryFromInput(inputTrigger) {
                     .replaceAll(/\s+$/g, '$&{{noop}}');
             }
 
-            newMacro = `{{${type}${separator}${value}::${operationUID}}}`;
+            newMacro = `{{${type}${separator}${value}${operationUID}}}`;
         }
 
         if (type === InputTypes.BOOLEAN) {
@@ -163,7 +212,7 @@ function updateEntryFromInput(inputTrigger) {
 
             const { trueValue, falseValue } = $span.data();
 
-            newMacro = `{{${type}::${value}::${trueValue}::${falseValue}::${operationUID}}}`;
+            newMacro = `{{${type}::${value}::${trueValue}::${falseValue}${operationUID}}}`;
         }
 
         if (type === InputTypes.RANGE) {
@@ -172,59 +221,21 @@ function updateEntryFromInput(inputTrigger) {
             const max = $input.attr('max') ?? 100;
             const step = $input.attr('step') ?? 1;
 
-            newMacro = `{{${type}::${min}::${max}::${step}::${value}::${operationUID}}}`;
+            newMacro = `{{${type}::${min}::${max}::${step}::${value}${operationUID}}}`;
         }
 
-        fieldValue = fieldValue.replace(inputIndex, newMacro);
+        fieldValue = fieldValue.replace(original, newMacro);
+        $input.data('original', newMacro.replace(operationUID, ''));
     });
 
-    fieldValue = fieldValue.replaceAll(`::${operationUID}}}`, '}}');
+    fieldValue = fieldValue.replaceAll(operationUID, '');
     entry.set(field, fieldValue, value_uid);
-
-    $inputs.each(function(i, input) {
-        const $input = $(input);
-        const { type } = $input.data();
-
-        let finalMacro = '';
-
-        if (type === InputTypes.TEXT || type === InputTypes.NUMBER) {
-            let value = $input.val() ?? '';
-
-            if (type === InputTypes.TEXT) {
-                value = String(value)
-                    .replaceAll(/^\s+/g, '{{noop}}$&')
-                    .replaceAll(/\s+$/g, '$&{{noop}}');
-            }
-
-            finalMacro = `{{${type}::${value}}}`;
-        }
-
-        if (type === InputTypes.BOOLEAN) {
-            const value = $input.prop('checked') ?? true;
-            const inputId = $input.attr('id');
-            const $span = $(`.fake-input-span[data-input-id="${inputId}"]`);
-            const { trueValue, falseValue } = $span.data();
-
-            finalMacro = `{{${type}::${value}::${trueValue}::${falseValue}}}`;
-        }
-
-        if (type === InputTypes.RANGE) {
-            const value = $input.val() ?? 100;
-            const min = $input.attr('min') ?? 0;
-            const max = $input.attr('max') ?? 100;
-            const step = $input.attr('step') ?? 1;
-
-            finalMacro = `{{${type}::${min}::${max}::${step}::${value}}}`;
-        }
-
-        $input.data('original', finalMacro);
-    });
 }
 
 /**
  * @param {string} field
- * @param {string|number} value
- * @returns {string|number}
+ * @param {any} value
+ * @returns {any}
  */
 function cleanWonkyStatusValues(field, value) {
     const numValue = Number(value);
@@ -242,34 +253,30 @@ function cleanWonkyStatusValues(field, value) {
  * @param {EventData<HTMLDivElement>} e
  */
 function onToggleStatus(e) {
-    const $button = $(e.currentTarget);
-    const { avatar } = $button.data();
-
-    const status = StatUsMaximus.getStatus(avatar);
+    const { $input, status } = getStatusFromInput(e.currentTarget);
 
     if (!status) return;
 
     status.set('enabled', !status.enabled);
-    $button.toggleClass('toggleEnabled', status.enabled);
+    $input.toggleClass('toggleEnabled', status.enabled);
 }
 
 /**
  * @param {EventData<HTMLDivElement>} e
  */
 function onToggleEntry(e) {
-    const $entrySwitch = $(e.currentTarget);
-    const { uid, avatar, enabled } = $entrySwitch.data();
-    const nextState = !enabled;
-    const status = StatUsMaximus.getStatus(avatar);
+    const { $input, status, data } = getStatusFromInput(e.currentTarget);
+    const { uid, enabled } = data;
 
     if (!status) return;
 
+    const nextState = !enabled;
     const entry = status.getEntry(uid);
 
     if (!entry) return;
 
     entry.set('enabled', nextState);
-    $entrySwitch
+    $input
         .data({enabled: nextState})
         .toggleClass('fa-toggle-on', nextState)
         .toggleClass('fa-toggle-off', !nextState)
@@ -281,15 +288,11 @@ function onToggleEntry(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 function onCollapseStatus(e) {
-    const drawerHeader = $(e.currentTarget);
-    const { avatar } = drawerHeader.data();
-
-    /** @type {Status|false} */
-    const status = StatUsMaximus.getStatus(avatar);
+    const { $input, status } = getStatusFromInput(e.currentTarget);
 
     if (!status) return;
 
-    const doClose = drawerHeader
+    const doClose = $input
         .find('.inline-drawer-icon')
         .hasClass('up');
 
@@ -353,15 +356,8 @@ function onSelectChatInputFinish(e) {
         }
 
         if (type === AllowedNumericInputs.RANGE) {
-            const min = Number($input.attr('min'));
-            const max = Number($input.attr('max'));
-            const step = Number($input.attr('step'));
-            const normalizedFloor = Math.max(newValue, min);
-            const normalizedRoof = Math.min(normalizedFloor, max);
-            const normalizedValue = normalizedRoof - (normalizedRoof % step);
-
+            const normalizedValue = normalizeRangeValue($input, newValue);
             newValue = normalizedValue;
-
             window.requestAnimationFrame(() => {
                 $input.val(normalizedValue);
                 $(`input[data-input-id="${inputID}"].chat-input-editor`).val(normalizedValue);
@@ -439,18 +435,10 @@ function onClickInputArrow(e) {
     }
 
     if (type === AllowedNumericInputs.RANGE) {
-        const min = Number($input.attr('min'));
-        const max = Number($input.attr('max'));
-        const step = Number($input.attr('step'));
-
-        newValue = currentValue + (Number(step) * direction);
-
-        const normalizedFloor = Math.max(newValue, min);
-        const normalizedRoof = Math.min(normalizedFloor, max);;
-
-        newValue = normalizedRoof;
+        const normalizedValue = normalizeRangeValue($input, currentValue, direction);
+        newValue = normalizedValue;
         window.requestAnimationFrame(() => {
-            $(`input[data-input-id="${inputId}"].chat-input-editor`).val(normalizedRoof);
+            $(`input[data-input-id="${inputId}"].chat-input-editor`).val(normalizedValue);
         });
     }
 
@@ -481,9 +469,7 @@ function onCheckboxToggle(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 function onClickEditStatus(e) {
-    const $button = $(e.currentTarget);
-
-    const { avatar } = $button.data();
+    const { avatar } = getStatusFromInput(e.currentTarget);
 
     if (avatar) StatUsMaximus.openPopupSingle(avatar);
 }
@@ -505,16 +491,21 @@ async function onOpenSwitchValueList(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 async function onSelectSwitchValueList(e) {
-    const option = e.currentTarget;
-    const $option = $(option);
+    const { status, data } = getStatusFromInput(e.currentTarget);
 
-    const {altUid, uid, avatar, character, statusBlockId, listId} = $option.data();
+    const {
+        altUid,
+        uid,
+        character,
+        statusBlockId,
+        listId
+    } = data;
+
+    if (!statusBlockId) return;
 
     const $entryBlock = $(`#chat .${htmlSuffix}-entry-row[status-block-id="${statusBlockId}"][uid="${uid}"]`).first();
     const popperInstance = $entryBlock.find('.status-value-uid').first().data('switchValuePopper');
     const optionList = $(`#${listId}`)[0];
-
-    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status)
         return await hidePopper(popperInstance, optionList);
@@ -554,6 +545,8 @@ async function onSelectSwitchValueList(e) {
 function onHidePopperLists(e) {
     const $clickedElement = $(e.target);
 
+    if (!$clickedElement?.length) return;
+
     $('#chat .status-value-uid-options[data-show]').each(function(i, elem) {
         const invalidClickTarget =
             $clickedElement.attr('id') === elem.id ||
@@ -573,10 +566,7 @@ function onHidePopperLists(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 function onRefreshBlock(e) {
-    const $button = $(e.currentTarget);
-    const { avatar } = $button.data();
-
-    const status = StatUsMaximus.getStatus(avatar);
+    const { status } = getStatusFromInput(e.currentTarget);
 
     if (!status) return;
 
@@ -586,13 +576,11 @@ function onRefreshBlock(e) {
 /**
  * @param {EventData<HTMLDivElement>} e
  */
-async function onOpenPopupWithEntryOpen(e) {
+async function onOpenPopupOnEntry(e) {
     e.preventDefault();
 
-    const entrySwitch = $(e.currentTarget);
-    const { avatar, uid } = entrySwitch.data();
-
-    const status = StatUsMaximus.getStatus(avatar);
+    const { status, avatar, data } = getStatusFromInput(e.currentTarget);
+    const { uid } = data;
 
     if (!status) return;
 
@@ -611,19 +599,18 @@ async function onOpenPopupWithEntryOpen(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 function onTogglePrivateEntry(e) {
-    const $entrySwitch = $(e.currentTarget);
-    const { uid, avatar, enabled } = $entrySwitch.data();
-    const nextState = !enabled;
-    const status = StatUsMaximus.getStatus(avatar);
+    const { $input, status, data } = getStatusFromInput(e.currentTarget);
+    const { uid, enabled: isPrivate } = data;
 
     if (!status) return;
 
+    const nextState = !isPrivate;
     const entry = status.getEntry(uid);
 
     if (!entry) return;
 
     entry.set('private', nextState);
-    $entrySwitch
+    $input
         .data({enabled: nextState})
         .toggleClass('text-quote', nextState);
 }
@@ -641,34 +628,25 @@ function onDocumentClick(e) {
  * @param {EventData<HTMLInputElement|HTMLTextAreaElement>} e
  */
 function onPopupStatusInput(e) {
-    const $input = $(e.currentTarget);
-    const newValue = $input.val();
-    const field = $input.attr('name');
-    const { avatar } = $input.data();
-
-    /** @type {Status|false} */
-    const status = StatUsMaximus.getStatus(avatar);
+    const { status, field, value } = getStatusFromInput(e.currentTarget);
 
     if (!status) return;
 
-    status.set(field, cleanWonkyStatusValues(field, newValue));
+    status.set(field, cleanWonkyStatusValues(field, value));
 }
 
 /**
  * @param {EventData<HTMLInputElement|HTMLTextAreaElement>} e
  */
 function onPopupEntryInput(e) {
-    const $input = $(e.currentTarget);
-    const newValue = $input.val();
-    const field = /** @type {keyof EntryData|keyof AltValueData} */($input.attr('name'));
-    const { uid, avatar } = $input.data();
+    const { status, field, value, data } = getStatusFromInput(e.currentTarget);
+    const { uid } = data;
 
-    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 
     const entry = status.getEntry(uid);
-    const valueClean = field === 'value_uid' ? Number(newValue) : newValue;
+    const valueClean = field === 'value_uid' ? Number(value) : value;
 
     entry.set(field, valueClean, entry.value_uid);
 }
@@ -677,9 +655,8 @@ function onPopupEntryInput(e) {
  * @param {EventData<HTMLInputElement>} e
  */
 function onAltTitleInput(e) {
-    const $input = $(e.currentTarget);
-    const newValue = $input.val();
-    const { uid, statusId } = $input.data();
+    const { value, data } = getStatusFromInput(e.currentTarget);
+    const { uid, statusId } = data;
 
     const $statusBlock =  $(`#${statusId}`);
     const $valuesOption = $statusBlock
@@ -687,39 +664,30 @@ function onAltTitleInput(e) {
         .find('select[name="value_uid"]')
         .find(':selected');
 
-    $valuesOption.text(newValue || `UID: ${uid}`);
+    $valuesOption.text(value || `UID: ${uid}`);
 }
 
 /**
  * @param {EventData<HTMLDivElement>} e
  */
 async function onCreateEntry(e) {
-    const $button = $(e.currentTarget);
-    const { avatar, statusId } = $button.data();
-
-    /** @type {Status|false} */
-    const status = StatUsMaximus.getStatus(avatar);
+    const { status, data } = getStatusFromInput(e.currentTarget);
+    const { statusId } = data;
 
     if (!status) return;
 
-    const uid = status.addEntry();
-    const entry = status.entries[uid];
-    const $entryBlock = await createEntryBlock(entry, uid, avatar, statusId);
     const $statusBlock = $(`#${statusId}`);
     const $container = $statusBlock.find('.status-entries').first();
 
-    $container.append($entryBlock);
+    await appendEntryBlock(status, null, statusId, $container);
 }
 
 /**
  * @param {EventData<HTMLDivElement>} e
  */
 function onCreateEntryValue(e) {
-    const $button = $(e.currentTarget);
-    const { avatar, uid, statusId } = $button.data();
-
-    /** @type {Status|false} */
-    const status = StatUsMaximus.getStatus(avatar);
+    const { status, data } = getStatusFromInput(e.currentTarget);
+    const { uid, statusId } = data;
 
     if (!status) return;
 
@@ -751,19 +719,13 @@ function onCreateEntryValue(e) {
  * @param {EventData<HTMLSelectElement>} e
  */
 function onEntryValueSwap(e) {
-    const $select = $(e.currentTarget);
-    const selectedAltValue = String($select.val());
-    const { uid, avatar } = $select.data();
-
-    /** @type {Status|false} */
-    const status = StatUsMaximus.getStatus(avatar);
+    const { $input: $select, status, data, value: selectedUID } = getStatusFromInput(e.currentTarget);
+    const { uid } = data;
 
     if (!status) return;
 
-    /** @type {StatusEntry} */
-    const entry = status.entries[uid];
-    const altValue = entry.values[selectedAltValue];
-
+    const entry = status.getEntry(uid);
+    const altValue = entry.getValue(selectedUID);
     const $container = $select.closest('.inline-drawer-content');
 
     $container.find(':input[name="value"]').val(altValue.value);
@@ -774,11 +736,8 @@ function onEntryValueSwap(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 async function onDeleteEntryValue(e) {
-    const $button = $(e.currentTarget);
-    const { avatar, uid, statusId } = $button.data();
-
-    /** @type {Status|false} */
-    const status = StatUsMaximus.getStatus(avatar);
+    const { status, data } = getStatusFromInput(e.currentTarget);
+    const { uid, statusId } = data;
 
     if (!status) return;
 
@@ -794,13 +753,15 @@ async function onDeleteEntryValue(e) {
 
         const $statusBlock =  $(`#${statusId}`);
         const $entryBlock = $statusBlock.find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`);
-        const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
+        const $selectValue = $entryBlock.find('select[name="value_uid"]');
+        const newValueSelected = String(entry.get('value_uid'));
 
-        $valuesSelect
+        $selectValue
             .find(':selected')
             .remove();
-        $valuesSelect
-            .val(entry.value_uid)
+
+        $selectValue
+            .val(newValueSelected)
             .trigger('change');
 
         $entryBlock.find(':input[name="value"]').val(entry.get('value').toString());
@@ -814,11 +775,8 @@ async function onDeleteEntryValue(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 async function onDeleteEntry(e) {
-    const $button = $(e.currentTarget);
-    const { uid, avatar, statusId } = $button.data();
-
-    /** @type {Status|false} */
-    const status = StatUsMaximus.getStatus(avatar);
+    const { status, data } = getStatusFromInput(e.currentTarget);
+    const { uid, statusId } = data;
 
     if (!status) return;
 
@@ -827,7 +785,7 @@ async function onDeleteEntry(e) {
 
         if (!accepted) return toastr.info(t`Entry deletion cancelled`, extensionName);
 
-        delete status.entries[uid];
+        status.delEntry(uid);
 
         const $statusBlock = $(`#${statusId}`);
         const $container = $statusBlock.find(`.${htmlSuffix}-popup-row[entry-uid="${uid}"]`).first();
@@ -842,8 +800,8 @@ async function onDeleteEntry(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 function onBulkToggleEntryDrawer(e) {
-    const $button = $(e.currentTarget);
-    const { statusId } = $button.data();
+    const { $input: $button, data } = getStatusFromInput(e.currentTarget);
+    const { statusId } = data;
     const $statusBlock = $(`#${statusId}`);
     const $entryContainers = $statusBlock.find(`.${htmlSuffix}-popup-row`);
 
@@ -859,8 +817,8 @@ function onBulkToggleEntryDrawer(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 async function onCreateStatus(e) {
-    const $button = $(e.currentTarget);
-    const { avatar, is_user, statusId } = $button.data();
+    const { avatar, data } = getStatusFromInput(e.currentTarget);
+    const { is_user, statusId } = data;
 
     if (!avatar) return;
 
@@ -881,10 +839,8 @@ async function onCreateStatus(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 async function onCopyEntry(e) {
-    const $button = $(e.currentTarget);
-    const { avatar, uid } = $button.data();
-
-    const status = StatUsMaximus.getStatus(avatar);
+    const { status, data } = getStatusFromInput(e.currentTarget);
+    const { uid } = data;
 
     if (!status) return;
 
@@ -901,16 +857,14 @@ async function onCreateEntryFromClipboard(e) {
     if (!navigator.clipboard)
         return toastr.warning(t`Clipboard API not available in this context.`);
 
-    const $button = $(e.currentTarget);
-    const { avatar, statusId } = $button.data();
-    const $statusBlock = $(`#${statusId}`);
-    const $entriesContainer = $statusBlock.find('.status-entries');
-
-    const status = StatUsMaximus.getStatus(avatar);
+    const { status, data } = getStatusFromInput(e.currentTarget);
+    const { statusId } = data;
 
     if (!status) return;
 
     let newEntry;
+    const $statusBlock = $(`#${statusId}`);
+    const $entriesContainer = $statusBlock.find('.status-entries');
 
     try {
         newEntry = await navigator.clipboard.readText();
@@ -920,21 +874,16 @@ async function onCreateEntryFromClipboard(e) {
         return toastr.warning(t`Failed to read clipboard text. Make sure you granted permissions to the page and the text is a JSON object.`, extensionName);
     }
 
-    const uid = status.addEntry(newEntry);
-    const entry = status.getEntry(uid);
-    const $entryBlock = await createEntryBlock(entry, uid, avatar, statusId);
-    $entriesContainer.append($entryBlock);
+    await appendEntryBlock(status, newEntry, statusId, $entriesContainer);
 }
 
 /**
  * @param {EventData<HTMLDivElement>} e
  */
 async function onTransferStatus(e) {
-    const $button = $(e.currentTarget);
-    const { avatar, statusId } = $button.data();
+    const { status, data } = getStatusFromInput(e.currentTarget);
+    const { statusId } = data;
     const $statusBlock = $(`#${statusId}`);
-
-    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 
@@ -971,9 +920,8 @@ async function onTransferStatus(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 async function onDeleteStatus(e) {
-    const $button = $(e.currentTarget);
-    const { avatar, statusId } = $button.data();
-    const status = StatUsMaximus.getStatus(avatar);
+    const { status, avatar, data } = getStatusFromInput(e.currentTarget);
+    const { statusId } = data;
 
     if (!status) return;
 
@@ -1021,14 +969,12 @@ async function onDeleteStatus(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 function onMacroShortcut(e) {
-    const $button = $(e.currentTarget);
+    const { $input: $button, status, data } = getStatusFromInput(e.currentTarget);
+    const { uid, statusId } = data;
     const macro = $button.attr('macro');
-    const { uid, avatar, statusId } = $button.data();
 
     if (!extensionSettings.altMacroTemplateBehavior)
         return copyText(macro);
-
-    const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 

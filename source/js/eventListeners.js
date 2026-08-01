@@ -221,7 +221,7 @@ function registerEvents() {
     });
 
     $chat.on('click', `.${htmlSuffix}-entry-row .kill-switch`, eventMethods.onToggleEntry);
-    $chat.on('contextmenu', `.${htmlSuffix}-entry-row .kill-switch`, eventMethods.onOpenPopupWithEntryOpen);
+    $chat.on('contextmenu', `.${htmlSuffix}-entry-row .kill-switch`, eventMethods.onOpenPopupOnEntry);
     $chat.on('click', `.${htmlSuffix}-entry-row .private-lamp`, eventMethods.onTogglePrivateEntry);
     $chat.on('input', `.${htmlSuffix}-entry-row .chat-input-editor[type="range"]`, eventMethods.onRangeSliderMoved);
     $chat.on('click', `.${htmlSuffix}-entry-row .status-value-uid`, eventMethods.onOpenSwitchValueList);

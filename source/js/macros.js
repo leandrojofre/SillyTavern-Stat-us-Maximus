@@ -192,7 +192,7 @@ const CUSTOM_MACROS = {
                 handler: function({args: [text], rawOriginal}) {
                     if (!text) text = DefMacroValue.STRING;
 
-                    const hasNestedMacro = text.match(detectNestedMacro)?.length > 0;
+                    const hasNestedMacro = text?.match(detectNestedMacro)?.length > 0;
 
                     if (hasNestedMacro) {
                         toastr.error(`${t`You can't nest input macros - macro:`} {{text}}`, extensionName);
@@ -230,7 +230,7 @@ const CUSTOM_MACROS = {
             },
             'number': {
                 handler: function({args: [number], rawOriginal, resolve}) {
-                    const hasNestedMacro = number.match(detectNestedMacro)?.length > 0;
+                    const hasNestedMacro = number?.match(detectNestedMacro)?.length > 0;
 
                     if (hasNestedMacro) {
                         toastr.error(`${t`You can't nest input macros - macro:`} {{number}}`, extensionName);
