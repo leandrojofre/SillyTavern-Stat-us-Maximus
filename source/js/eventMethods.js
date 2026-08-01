@@ -817,8 +817,21 @@ function onBulkToggleEntryDrawer(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 async function onCreateStatus(e) {
-    const { avatar, data } = getStatusFromInput(e.currentTarget);
-    const { is_user, is_detached = false, statusId } = data;
+    const { data } = getStatusFromInput(e.currentTarget);
+    let { avatar, is_user, is_detached = false, statusId } = data;
+
+    if (!avatar && is_detached) {
+        const statuses = StatUsMaximus.getStatuses();
+        let newAvatar = generateUUID();
+        let isAvatarRepeated = statuses.some(status => status.avatar === newAvatar);
+
+        for (let i = 0; isAvatarRepeated && i < 50; i++) {
+            newAvatar = generateUUID();
+            isAvatarRepeated = statuses.some(status => status.avatar === newAvatar);
+        }
+
+        avatar = newAvatar;
+    }
 
     if (!avatar) return;
 

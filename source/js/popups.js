@@ -231,19 +231,10 @@ async function createDetachedStatusBlock(deleteOldBlock = true) {
     if (deleteOldBlock) $(`#${htmlSuffix}-popup-create-detached`).remove();
 
     const $container = await HTML_TEMPLATES.get('popupStatusDetached', {clone: true});
-    const statuses = StatUsMaximus.getStatuses();
-    let avatar = generateUUID();
-    let isAvatarRepeated = statuses.some(status => status.avatar === avatar);
-
-    for (let i = 0; isAvatarRepeated && i < 50; i++) {
-        avatar = generateUUID();
-        isAvatarRepeated = statuses.some(status => status.avatar === avatar);
-    }
 
     $container
         .find(`.create-status`)
         .data({
-            avatar,
             is_user: false,
             is_detached: true,
             statusId: 'stat-us-maximus-popup-create-detached'
@@ -536,13 +527,6 @@ function initPopupTriggers() {
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole[name="title"]`, eventMethods.onAltTitleInput);
     $(document).on('input', `.${htmlSuffix}-popup-row select[name="value_uid"]`, eventMethods.onEntryValueSwap);
     $(document).on('click', `.${htmlSuffix}-popup-row .delete-row`, eventMethods.onDeleteEntry);
-
-    $(document).on('click', `#${htmlSuffix}-popup-create-detached`, async function (e) {
-        const $oldBlock = $(`#${htmlSuffix}-popup-create-detached`);
-        const $newBlock = await createDetachedStatusBlock(false);
-        $oldBlock.before($newBlock);
-        $oldBlock.remove();
-    });
 
     // * Right Menu Button
 

@@ -8,7 +8,8 @@ import {
     unEscapeNewlines,
     saveMetadataSafe,
     extensionSettings,
-    parseValue
+    parseValue,
+    getParticipant,
 } from '../../index.js';
 
 import { StatusEntry, entryTemplate } from './StatusEntry.js';
@@ -107,6 +108,7 @@ class Status {
         }
 
         if (!this.name) this.name = this.getCharacter()?.name || '';
+        if (this.is_detached) this.is_user = false;
     }
 
     /**
@@ -211,8 +213,7 @@ class Status {
         };
 
         const { avatar, is_user } = this;
-        const { characters } = context();
-        const entity = is_user ? getUser(avatar) : characters.find(c => c.avatar === avatar);
+        const entity = getParticipant(avatar, {is_user});
         const name = this.name || entity.name;
 
         return {...entity, name};

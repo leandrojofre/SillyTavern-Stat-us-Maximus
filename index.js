@@ -545,14 +545,14 @@ function updateCaretDisplaySafe(input, span) {
 }
 
 /**
- * @param {string?} [overrideSuffix]
+ * @param {string?} [overridePrefix]
  * @returns {string} UUID
  */
-function generateUUID(overrideSuffix) {
+function generateUUID(overridePrefix) {
     const randUUID = self?.crypto?.randomUUID();
     const uuid = !randUUID ? new Date().valueOf().toString() : randUUID.replaceAll('-', '_');
 
-    return `${overrideSuffix ?? metadataName}_${uuid}`;
+    return `${overridePrefix ?? metadataName}_${uuid}`;
 }
 
 /**
