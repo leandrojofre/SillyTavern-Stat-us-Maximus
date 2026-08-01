@@ -16,7 +16,7 @@ import {
     getCharFromMessage,
 } from '../../index.js';
 
-import * as eventMethods from '../js/eventMethods.js';
+import * as eventMethods from './eventMethods.js';
 
 /** @typedef {StatUsMaximus.UserCharacter} UserCharacter */
 
@@ -220,11 +220,11 @@ function registerEvents() {
         e.stopPropagation();
     });
 
-    $chat.on('click', `.${htmlSuffix}-entry .kill-switch`, eventMethods.onToggleEntry);
-    $chat.on('contextmenu', `.${htmlSuffix}-entry .kill-switch`, eventMethods.onOpenPopupWithEntryOpen);
-    $chat.on('click', `.${htmlSuffix}-entry .private-lamp`, eventMethods.onTogglePrivateEntry);
-    $chat.on('input', `.${htmlSuffix}-entry .chat-input-editor[type="range"]`, eventMethods.onRangeSliderMoved);
-    $chat.on('click', `.${htmlSuffix}-entry .status-value-uid`, eventMethods.onOpenSwitchValueList);
+    $chat.on('click', `.${htmlSuffix}-entry-row .kill-switch`, eventMethods.onToggleEntry);
+    $chat.on('contextmenu', `.${htmlSuffix}-entry-row .kill-switch`, eventMethods.onOpenPopupWithEntryOpen);
+    $chat.on('click', `.${htmlSuffix}-entry-row .private-lamp`, eventMethods.onTogglePrivateEntry);
+    $chat.on('input', `.${htmlSuffix}-entry-row .chat-input-editor[type="range"]`, eventMethods.onRangeSliderMoved);
+    $chat.on('click', `.${htmlSuffix}-entry-row .status-value-uid`, eventMethods.onOpenSwitchValueList);
 
     $chat.on('click', `.${htmlSuffix}-chat-drawer .status-value-uid-options .list-group-item`, eventMethods.onSelectSwitchValueList);
     $chat.on('click', `.${htmlSuffix}-chat-drawer .inline-drawer-header`, eventMethods.onCollapseStatus);
@@ -234,7 +234,7 @@ function registerEvents() {
 
     $chat.on('click', `.${htmlSuffix}-toolbar .kill-switch`, eventMethods.onToggleStatus);
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-pen`, eventMethods.onClickEditStatus);
-    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-arrows-rotate`, eventMethods.onRefreshBlockClick);
+    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-arrows-rotate`, eventMethods.onRefreshBlock);
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-floppy-disk`, () => saveMetadataSafe);
 
     $(document).on('click', eventMethods.onDocumentClick);

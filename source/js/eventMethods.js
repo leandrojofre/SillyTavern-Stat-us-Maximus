@@ -1,23 +1,37 @@
 import {
+    // ST imports
+    copyText,
+    t,
     // Normal imports
     showPopper,
     hidePopper,
     generateUUID,
     lodash,
-    htmlSuffix,
     metadataName,
     extensionSettings,
     unEscapeAll,
+    extensionName,
     // HTML Related
+    HTML_TEMPLATES,
+    htmlSuffix,
     updateCaretDisplaySafe,
     getSelectedTextInElem,
+    exportObjectToClipboard,
     renderCaret,
 } from '../../index.js';
+
+import {
+    createEntryBlock,
+    popupConfirmAction,
+    getStatusPopupBlock,
+    cloneStatusPopup,
+} from './popups.js';
 
 import { Status } from '../classes/Status.js';
 import { StatusEntry } from '../classes/StatusEntry.js';
 
 export {
+    // Normal
     onToggleStatus,
     onToggleEntry,
     onCollapseStatus,
@@ -28,16 +42,35 @@ export {
     onClickEditStatus,
     onOpenSwitchValueList,
     onSelectSwitchValueList,
-    onRefreshBlockClick,
+    onRefreshBlock,
     onOpenPopupWithEntryOpen,
     onTogglePrivateEntry,
     onDocumentClick,
+    // Popup
+    onPopupStatusInput,
+    onPopupEntryInput,
+    onAltTitleInput,
+    onCreateEntry,
+    onCreateEntryValue,
+    onEntryValueSwap,
+    onDeleteEntryValue,
+    onDeleteEntry,
+    onBulkToggleEntryDrawer,
+    onCreateStatus,
+    onCopyEntry,
+    onCreateEntryFromClipboard,
+    onTransferStatus,
+    onDeleteStatus,
+    onMacroShortcut,
 };
 
 /**
  * @template T
  * @typedef {StatUsMaximus.EventData<T>} EventData
  */
+
+/** @typedef {StatUsMaximus.EntryData} EntryData */
+/** @typedef {StatUsMaximus.AltValueData} AltValueData */
 
 // * MARK:Variables
 
@@ -189,6 +222,23 @@ function updateEntryFromInput(inputTrigger) {
 }
 
 /**
+ * @param {string} field
+ * @param {string|number} value
+ * @returns {string|number}
+ */
+function cleanWonkyStatusValues(field, value) {
+    const numValue = Number(value);
+    const isEmpty = (value ?? '') === '';
+
+    if (field === 'force_depth' && isEmpty) return -1;
+    if (field === 'force_depth') return numValue;
+
+    return value;
+}
+
+// * MARK:In Chat
+
+/**
  * @param {EventData<HTMLDivElement>} e
  */
 function onToggleStatus(e) {
@@ -207,26 +257,23 @@ function onToggleStatus(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 function onToggleEntry(e) {
-    const entrySwitch = $(e.currentTarget);
-    const { avatar, enabled, uid } = entrySwitch.data();
+    const $entrySwitch = $(e.currentTarget);
+    const { uid, avatar, enabled } = $entrySwitch.data();
     const nextState = !enabled;
-
-    /** @type {Status|false} */
     const status = StatUsMaximus.getStatus(avatar);
 
     if (!status) return;
 
-    /** @type {StatusEntry} */
-    const entry = status.entries[uid];
+    const entry = status.getEntry(uid);
 
     if (!entry) return;
 
     entry.set('enabled', nextState);
-    entrySwitch
+    $entrySwitch
         .data({enabled: nextState})
         .toggleClass('fa-toggle-on', nextState)
         .toggleClass('fa-toggle-off', !nextState)
-        .closest(`.${htmlSuffix}-entry`)
+        .closest(`.${htmlSuffix}-entry-row`)
         .toggleClass('disabled', !nextState);
 }
 
@@ -525,7 +572,7 @@ function onHidePopperLists(e) {
 /**
  * @param {EventData<HTMLDivElement>} e
  */
-function onRefreshBlockClick(e) {
+function onRefreshBlock(e) {
     const $button = $(e.currentTarget);
     const { avatar } = $button.data();
 
@@ -586,4 +633,415 @@ function onTogglePrivateEntry(e) {
  */
 function onDocumentClick(e) {
     onHidePopperLists(e);
+}
+
+// * MARK:Popup
+
+/**
+ * @param {EventData<HTMLInputElement|HTMLTextAreaElement>} e
+ */
+function onPopupStatusInput(e) {
+    const $input = $(e.currentTarget);
+    const newValue = $input.val();
+    const field = $input.attr('name');
+    const { avatar } = $input.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    status.set(field, cleanWonkyStatusValues(field, newValue));
+}
+
+/**
+ * @param {EventData<HTMLInputElement|HTMLTextAreaElement>} e
+ */
+function onPopupEntryInput(e) {
+    const $input = $(e.currentTarget);
+    const newValue = $input.val();
+    const field = /** @type {keyof EntryData|keyof AltValueData} */($input.attr('name'));
+    const { uid, avatar } = $input.data();
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const entry = status.getEntry(uid);
+    const valueClean = field === 'value_uid' ? Number(newValue) : newValue;
+
+    entry.set(field, valueClean, entry.value_uid);
+}
+
+/**
+ * @param {EventData<HTMLInputElement>} e
+ */
+function onAltTitleInput(e) {
+    const $input = $(e.currentTarget);
+    const newValue = $input.val();
+    const { uid, statusId } = $input.data();
+
+    const $statusBlock =  $(`#${statusId}`);
+    const $valuesOption = $statusBlock
+        .find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`)
+        .find('select[name="value_uid"]')
+        .find(':selected');
+
+    $valuesOption.text(newValue || `UID: ${uid}`);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onCreateEntry(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, statusId } = $button.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const uid = status.addEntry();
+    const entry = status.entries[uid];
+    const $entryBlock = await createEntryBlock(entry, uid, avatar, statusId);
+    const $statusBlock = $(`#${statusId}`);
+    const $container = $statusBlock.find('.status-entries').first();
+
+    $container.append($entryBlock);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onCreateEntryValue(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, uid, statusId } = $button.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const valueUID = status
+        .getEntry(uid)
+        .addValue('', '');
+
+    if (typeof valueUID !== 'number' || valueUID < 0) return;
+
+    status
+        .getEntry(uid)
+        .swapValue(valueUID);
+
+    const $statusBlock =  $(`#${statusId}`);
+    const $entryBlock = $statusBlock.find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`);
+    const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
+
+    $('<option>', { text: `UID: ${valueUID}`, value: valueUID }).appendTo($valuesSelect);
+
+    $valuesSelect
+        .val(valueUID)
+        .trigger('change');
+
+    $entryBlock.find(':input[name="value"]').val('');
+    $entryBlock.find(':input[name="title"]').val('');
+}
+
+/**
+ * @param {EventData<HTMLSelectElement>} e
+ */
+function onEntryValueSwap(e) {
+    const $select = $(e.currentTarget);
+    const selectedAltValue = String($select.val());
+    const { uid, avatar } = $select.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    /** @type {StatusEntry} */
+    const entry = status.entries[uid];
+    const altValue = entry.values[selectedAltValue];
+
+    const $container = $select.closest('.inline-drawer-content');
+
+    $container.find(':input[name="value"]').val(altValue.value);
+    $container.find(':input[name="title"]').val(altValue.title);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onDeleteEntryValue(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, uid, statusId } = $button.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    try {
+        const accepted = await popupConfirmAction('delete this entry value');
+
+        if (!accepted) return toastr.info(t`Entry value deletion cancelled`, extensionName);
+
+        const entry = status.getEntry(uid);
+        const deletionSuccess = entry.delValue();
+
+        if (!deletionSuccess) return;
+
+        const $statusBlock =  $(`#${statusId}`);
+        const $entryBlock = $statusBlock.find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`);
+        const $valuesSelect = $entryBlock.find('select[name="value_uid"]');
+
+        $valuesSelect
+            .find(':selected')
+            .remove();
+        $valuesSelect
+            .val(entry.value_uid)
+            .trigger('change');
+
+        $entryBlock.find(':input[name="value"]').val(entry.get('value').toString());
+        $entryBlock.find(':input[name="title"]').val(entry.get('title').toString());
+    } catch (err) {
+        StatUsMaximus.error(err);
+    }
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onDeleteEntry(e) {
+    const $button = $(e.currentTarget);
+    const { uid, avatar, statusId } = $button.data();
+
+    /** @type {Status|false} */
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    try {
+        const accepted = await popupConfirmAction('delete this entry');
+
+        if (!accepted) return toastr.info(t`Entry deletion cancelled`, extensionName);
+
+        delete status.entries[uid];
+
+        const $statusBlock = $(`#${statusId}`);
+        const $container = $statusBlock.find(`.${htmlSuffix}-popup-row[entry-uid="${uid}"]`).first();
+
+        $container.remove();
+    } catch (err) {
+        StatUsMaximus.error(err);
+    }
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onBulkToggleEntryDrawer(e) {
+    const $button = $(e.currentTarget);
+    const { statusId } = $button.data();
+    const $statusBlock = $(`#${statusId}`);
+    const $entryContainers = $statusBlock.find(`.${htmlSuffix}-popup-row`);
+
+    $entryContainers.each(function(i, row) {
+        const $rowToggle = $(row).find('.inline-drawer-toggle');
+        const direction = $button.hasClass('fa-compress') ? '.up' : '.down';
+
+        if ($rowToggle.is(direction)) $rowToggle.trigger('click');
+    });
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onCreateStatus(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, is_user, statusId } = $button.data();
+
+    if (!avatar) return;
+
+    const status = StatUsMaximus.addStatus(avatar, is_user);
+
+    if (!status) return;
+
+    const $statusBlockEmpty = $(`#${statusId}`);
+    const $statusBlock = await getStatusPopupBlock(avatar, is_user);
+
+    if (!$statusBlock) return;
+
+    $statusBlockEmpty.after($statusBlock);
+    $statusBlockEmpty.remove();
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onCopyEntry(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, uid } = $button.data();
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const entry = status.getEntry(uid);
+
+    await exportObjectToClipboard(entry);
+    toastr.info(t`Entry copied into the clipboard`, extensionName)
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onCreateEntryFromClipboard(e) {
+    if (!navigator.clipboard)
+        return toastr.warning(t`Clipboard API not available in this context.`);
+
+    const $button = $(e.currentTarget);
+    const { avatar, statusId } = $button.data();
+    const $statusBlock = $(`#${statusId}`);
+    const $entriesContainer = $statusBlock.find('.status-entries');
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    let newEntry;
+
+    try {
+        newEntry = await navigator.clipboard.readText();
+        newEntry = JSON.parse(newEntry);
+    } catch (error) {
+        StatUsMaximus.error('Error reading clipboard:', error);
+        return toastr.warning(t`Failed to read clipboard text. Make sure you granted permissions to the page and the text is a JSON object.`, extensionName);
+    }
+
+    const uid = status.addEntry(newEntry);
+    const entry = status.getEntry(uid);
+    const $entryBlock = await createEntryBlock(entry, uid, avatar, statusId);
+    $entriesContainer.append($entryBlock);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onTransferStatus(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, statusId } = $button.data();
+    const $statusBlock = $(`#${statusId}`);
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const {
+        status: newStatus,
+        keepOriginal,
+        onlyEntries
+    } = await cloneStatusPopup(status.getCharacter());
+
+    if (!newStatus) return;
+
+    const $newStatusBlock = await getStatusPopupBlock(newStatus.avatar, newStatus.is_user);
+
+    if (!$newStatusBlock) return;
+
+    const $creationBlock = $(`.stat-us-maximus-popup-empty[avatar="${newStatus.avatar}"]`);
+
+    if ($creationBlock.length > 0) {
+        $creationBlock.before($newStatusBlock);
+        $creationBlock.remove();
+    } else {
+        $statusBlock.after($newStatusBlock);
+    }
+
+    if (!keepOriginal) {
+        if (onlyEntries) $statusBlock
+            .find('.stat-us-maximus-popup-row')
+            .remove();
+        else $statusBlock.remove();
+    }
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+async function onDeleteStatus(e) {
+    const $button = $(e.currentTarget);
+    const { avatar, statusId } = $button.data();
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    try {
+        const accepted = await popupConfirmAction('delete Status data for this character');
+
+        if (!accepted) return toastr.info(t`Status deletion cancelled`, extensionName);
+
+        const { is_user } = status;
+        const character = status.getCharacter();
+        const thumbnail = status.getThumbnail();
+
+        const $statusBlock = $(`#${statusId}`);
+        const $statusBlockEmpty = await HTML_TEMPLATES.get('popupStatusEmpty', {clone: true});
+        const newStatusId = `${generateUUID()}_stat_block`;
+
+        $statusBlockEmpty
+            .attr('id', newStatusId);
+
+        $statusBlockEmpty
+            .find(`.${htmlSuffix}-name`)
+            .text(character.name);
+
+        $statusBlockEmpty
+            .find(`.${htmlSuffix}-avatar`)
+            .attr('src', thumbnail)
+            .attr('title', avatar);
+
+        $statusBlockEmpty
+            .find(`.create-status`)
+            .data({avatar, is_user, statusId: newStatusId});
+
+        const deleteSuccess = StatUsMaximus.delStatus(status);
+
+        if (!deleteSuccess) return;
+
+        $statusBlock.after($statusBlockEmpty);
+        $statusBlock.remove();
+    } catch (err) {
+        StatUsMaximus.error(err);
+    }
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onMacroShortcut(e) {
+    const $button = $(e.currentTarget);
+    const macro = $button.attr('macro');
+    const { uid, avatar, statusId } = $button.data();
+
+    if (!extensionSettings.altMacroTemplateBehavior)
+        return copyText(macro);
+
+    const status = StatUsMaximus.getStatus(avatar);
+
+    if (!status) return;
+
+    const $statusBlock = $(`#${statusId}`);
+    const $input = $statusBlock
+        .find(`.stat-us-maximus-popup-row[entry-uid="${uid}"]`)
+        .find(':input[name="value"]');
+
+    const newValue = $input.val() + macro;
+
+    $input.val(newValue);
+
+    status
+        .getEntry(Number(uid))
+        .setValue('value', newValue);
 }
