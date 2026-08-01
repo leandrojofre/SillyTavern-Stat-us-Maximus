@@ -155,7 +155,7 @@ function onGenerationAfterCommands(...args) {
         const uuid = `${metadataName}_${id}`;
         const prompt = unEscapeAll(
             status.prefix + entries.join(status.separator) + status.suffix,
-            {character: char.name, ...replaceMacrosOptions}
+            {character: status.name || char.name, ...replaceMacrosOptions}
         );
 
         if (!prompt) continue;

@@ -518,7 +518,7 @@ async function onSelectSwitchValueList(e) {
     entry.set('value_uid', altUid);
 
     const macroParser = extensionSettings.editNumbersFromChat ? 'getInputs' : 'getValues';
-    const replaceMacrosOptions = {newlines: true, macros: true, macroParser, character};
+    const replaceMacrosOptions = {newlines: true, macros: true, macroParser, character: status.name || character};
     const entryValue = entry.getValue(altUid);
     const valueClean = unEscapeAll(entryValue.value, replaceMacrosOptions);
 

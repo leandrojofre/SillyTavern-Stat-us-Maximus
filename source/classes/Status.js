@@ -105,6 +105,8 @@ class Status {
         for (const [uid, entry] of Object.entries(this.entries ?? {})) {
             this.entries[uid] = new StatusEntry(entry);
         }
+
+        if (!this.name) this.name = this.getCharacter()?.name || '';
     }
 
     /**
@@ -210,10 +212,10 @@ class Status {
 
         const { avatar, is_user } = this;
         const { characters } = context();
+        const entity = is_user ? getUser(avatar) : characters.find(c => c.avatar === avatar);
+        const name = this.name || entity.name;
 
-        return is_user ?
-            getUser(avatar) :
-            characters.find(c => c.avatar === avatar);
+        return {...entity, name};
     }
 
     /**
