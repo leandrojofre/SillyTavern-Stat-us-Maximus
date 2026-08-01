@@ -701,7 +701,6 @@ async function renderCharStatus(status) {
         .find(`.${htmlSuffix}-toolbar .menu_button`)
         .data({avatar: status.avatar});
 
-    /** @type {[string, StatusEntry][]} */
     const entries = Object
         .entries(status.entries)
         .sort(([uidA, entryA], [uidB, entryB]) => entryA.display_position - entryB.display_position);
