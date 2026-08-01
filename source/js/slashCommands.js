@@ -113,8 +113,13 @@ function getParticipant(charName, isUser, ignoreAvatars = []) {
 function getStatusFromName(charName, isUser) {
     const statuses = StatUsMaximus.getStatuses();
 
+    if (isUser === 'detached')
+        return statuses
+            .filter(status => status.is_detached)
+            .find(status => status.name === charName);
+
     if (isUser === 'all')
-        return statuses.find(stat => stat.getCharacter().name === charName);
+        return statuses.find(status => status.getCharacter().name === charName);
 
     const isUserFilter = isUser === 'true';
 
@@ -142,20 +147,21 @@ const ENUMS_PROVIDER = {
         new SlashCommandEnumValue('false')
     ],
 
-    entityFilters: () => [
-        new SlashCommandEnumValue('all'),
-        new SlashCommandEnumValue('true'),
-        new SlashCommandEnumValue('false')
+    entityFilters: [
+        new SlashCommandEnumValue('all', 'Search char through user, character and detached Status data (default)'),
+        new SlashCommandEnumValue('true', 'Search char only for user data'),
+        new SlashCommandEnumValue('false', 'Search char only for character data'),
+        new SlashCommandEnumValue('detached', 'Search char only for detached data'),
     ],
 
-    acceptedStatusFields: () => [
+    acceptedStatusFields: [
         new SlashCommandEnumValue('separator'),
         new SlashCommandEnumValue('def_entry_separator'),
         new SlashCommandEnumValue('prefix'),
         new SlashCommandEnumValue('suffix')
     ],
 
-    acceptedEntryFields: () => [
+    acceptedEntryFields: [
         new SlashCommandEnumValue('enabled'),
         new SlashCommandEnumValue('key'),
         new SlashCommandEnumValue('separator'),
@@ -164,7 +170,7 @@ const ENUMS_PROVIDER = {
         new SlashCommandEnumValue('private', 'If true, it makes the entry only visible for the owner')
     ],
 
-    acceptedAltEntryFields: () => [
+    acceptedAltEntryFields: [
         new SlashCommandEnumValue('value'),
         new SlashCommandEnumValue('title')
     ],
@@ -224,15 +230,15 @@ const ENUMS_STRINGS = {
     ],
 
     acceptedStatusFields: ENUMS_PROVIDER
-        .acceptedStatusFields()
+        .acceptedStatusFields
         .map(key => key.toString()),
 
     acceptedEntryFields: ENUMS_PROVIDER
-        .acceptedEntryFields()
+        .acceptedEntryFields
         .map(key => key.toString()),
 
     acceptedAltEntryFields: ENUMS_PROVIDER
-        .acceptedAltEntryFields()
+        .acceptedAltEntryFields
         .map(key => key.toString())
 }
 
@@ -908,7 +914,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'force',
@@ -957,14 +963,14 @@ function registerSlashCommands() {
                     description: 'Field to update - defaults to separator',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedStatusFields
+                    enumList: ENUMS_PROVIDER.acceptedStatusFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -1010,7 +1016,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -1046,7 +1052,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -1082,14 +1088,14 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
                     description: 'Field to match - defaults to key',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedEntryFields
+                    enumList: ENUMS_PROVIDER.acceptedEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'fuzzy',
@@ -1149,14 +1155,14 @@ function registerSlashCommands() {
                     description: 'Field to update - defaults to value',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedEntryFields
+                    enumList: ENUMS_PROVIDER.acceptedEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -1206,14 +1212,14 @@ function registerSlashCommands() {
                     description: 'Field to match - defaults to value',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedEntryFields
+                    enumList: ENUMS_PROVIDER.acceptedEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -1256,7 +1262,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -1306,7 +1312,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -1361,7 +1367,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -1414,7 +1420,7 @@ function registerSlashCommands() {
                     description: 'Field to match - defaults to title',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedAltEntryFields
+                    enumList: ENUMS_PROVIDER.acceptedAltEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'fuzzy',
@@ -1428,7 +1434,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -1488,14 +1494,14 @@ function registerSlashCommands() {
                     description: 'Field to match - defaults to title',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedAltEntryFields
+                    enumList: ENUMS_PROVIDER.acceptedAltEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -1552,14 +1558,14 @@ function registerSlashCommands() {
                     description: 'Field to match - defaults to title',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedAltEntryFields
+                    enumList: ENUMS_PROVIDER.acceptedAltEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -1609,7 +1615,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `

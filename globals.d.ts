@@ -97,5 +97,5 @@ declare namespace StatUsMaximus {
 
     type EventData<T> = JQuery.TypeEventHandler & { data: Record<string, any>; currentTarget: T; };
 
-    type EntityFilter = 'true' | 'false' | 'all';
+    type EntityFilter = 'true' | 'false' | 'all' | 'detached';
 };
