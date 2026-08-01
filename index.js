@@ -279,25 +279,42 @@ function getUser(value = user_avatar, {searchKey = 'avatar', ignoreAvatars = []}
  * @param {string[]?} [discard]
  * @param {Object} [options]
  * @param {boolean} [options.forceMutedIn]
- * @returns {{chars: Character[]; user: UserCharacter;}}
+ * @param {boolean} [options.onlyAvatars]
+ * @returns {{chars: (Character|UserCharacter)[]; user: UserCharacter;}}
  */
-function getActiveParticipants(discard = [], {forceMutedIn = false} = {}) {
+function getActiveParticipants(discard = [], {forceMutedIn = false, onlyAvatars = false} = {}) {
     const { groupId: group_id, groups, characterId: chid } = context();
 
-    /** @type {Character[]} */
+    /** @type {(Character|UserCharacter)[]} */
     const chars = [];
     const user = getUser();
 
+    /**
+     * @param {string} avatar
+     * @returns {UserCharacter}
+     */
+    const defCharFields = (avatar) => ({
+        avatar,
+        is_user: false,
+        description: '',
+        name: '',
+    });
+
     if (group_id) {
-        const members = getGroupMembers();
         const group = groups.find(g => g.id == group_id);
         const muted_members = group.disabled_members ?? [];
+        const members = onlyAvatars ? group.members : getGroupMembers();
 
         if (!forceMutedIn)
             discard.push(...muted_members);
 
-        for (const member of members)
-            if (member) chars.push(member);
+        for (const member of members) {
+            if (!member) continue;
+
+            chars.push(typeof member === 'string' ?
+                defCharFields(member) : member
+            );
+        }
     }
 
     if (chid) {
@@ -320,7 +337,9 @@ function getActiveParticipants(discard = [], {forceMutedIn = false} = {}) {
         discardUnique: structuredClone(discardUnique),
     });
 
-    members.chars = members.chars.filter(c => !discardUnique.includes(c.avatar));
+    members.chars = members.chars
+        .filter(c => !discardUnique.includes(c.avatar))
+        .map(c => ({is_user: false, ...c}));
 
     StatUsMaximus.log({members});
 

@@ -216,7 +216,7 @@ class Status {
         const entity = getParticipant(avatar, {is_user});
         const name = this.name || entity.name;
 
-        return {...entity, name};
+        return {...entity, is_user, name};
     }
 
     /**

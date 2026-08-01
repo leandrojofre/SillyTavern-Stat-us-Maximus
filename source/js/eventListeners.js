@@ -96,8 +96,16 @@ function onGenerationAfterCommands(...args) {
 
     const [ genType ] = args;
     const { extensionPrompts: extension_prompts, characterId: chid, characters: allCharacters } = context();
-    const { chars, user } = getActiveParticipants([], {forceMutedIn: extensionSettings.forceMutedMembersInclusion});
+    const { chars, user } = getActiveParticipants([], {forceMutedIn: extensionSettings.forceMutedMembersInclusion, onlyAvatars: true});
     const genHasOffset = genTypesWithOffset.includes(genType);
+    const statusesAll = StatUsMaximus.getStatuses();
+
+    /**
+     * @param {Object} c Character data
+     * @param {Object} s Status data
+     * @returns {boolean}
+     */
+    const checkCharacter = (c, s) => c.avatar === s.avatar && c.is_user === s.is_user;
 
     for (const key of Object.keys(extension_prompts)) {
         if (key.includes(metadataName)) delete extension_prompts[key];
@@ -111,10 +119,11 @@ function onGenerationAfterCommands(...args) {
     characters.push(...chars);
 
     const replaceMacrosOptions = {newlines: true, macros: true, comments: true, macroParser: 'getValues'};
+    const statuses = statusesAll.filter(status =>
+        status.is_detached || characters.some(c => checkCharacter(c, status))
+    );
 
-    for (const [id, char] of characters.entries()) {
-        const status = StatUsMaximus.getStatus(char.avatar);
-
+    for (const [id, status] of statuses.entries()) {
         if (!status) continue;
         if (!status.enabled) continue;
 
@@ -155,7 +164,7 @@ function onGenerationAfterCommands(...args) {
         const uuid = `${metadataName}_${id}`;
         const prompt = unEscapeAll(
             status.prefix + entries.join(status.separator) + status.suffix,
-            {character: status.name || char.name, ...replaceMacrosOptions}
+            {character: status.getCharacter().name, ...replaceMacrosOptions}
         );
 
         if (!prompt) continue;
