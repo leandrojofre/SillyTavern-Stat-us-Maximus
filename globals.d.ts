@@ -93,6 +93,7 @@ declare namespace StatUsMaximus {
         hideInputLabels: boolean;
         rangeInputWidth: string;
         showWhiteSpaces: boolean;
+        defaultPromptRole: number;
         minPromptDepth: number;
         alwaysIncludeUnmutedMembers: boolean;
         forceMutedMembersInclusion: boolean;

@@ -118,6 +118,7 @@ const defaultSettings = {
     hideInputLabels: true,
     rangeInputWidth: 'auto',
     showWhiteSpaces: false,
+    defaultPromptRole: extension_prompt_roles.SYSTEM,
     minPromptDepth: 0,
     alwaysIncludeUnmutedMembers: false,
     forceMutedMembersInclusion: false,
@@ -1005,12 +1006,23 @@ const settingsCallbacks = {
     }
 }
 
+/**
+ * @param {JQuery|HTMLElement} element
+ * @returns {{callback: Function; setting: string;}}
+ */
+function getSettingInputCallback(element) {
+    const $target = $(element);
+    const setting = $target.attr(`${htmlSuffix}-setting`);
+    const callback = settingsCallbacks[setting];
+
+    return {callback, setting};
+}
+
 /** Changes a setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsBooleanButton(event) {
-    const target = event.target;
-    const value = Boolean($(target).prop('checked'));
-    const setting = target.getAttribute(`${htmlSuffix}-setting`);
-    const callback = settingsCallbacks[setting];
+    const $target = $(event.target);
+    const {callback, setting} = getSettingInputCallback($target);
+    const value = Boolean($target.prop('checked'));
 
     extensionSettings[setting] = value;
 
@@ -1022,11 +1034,10 @@ function settingsBooleanButton(event) {
 
 /** Changes a string setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsTextButton(event) {
-    const target = event.target;
-    const value = String($(target).val());
-    const setting = target.getAttribute(`${htmlSuffix}-setting`);
-    const callback = settingsCallbacks[setting];
-    const pattern = String(target.getAttribute('pattern') || '');
+    const $target = $(event.target);
+    const {callback, setting} = getSettingInputCallback($target);
+    const value = String($target.val());
+    const pattern = String($target.attr('pattern') || '');
 
     if (pattern) {
         const regex = new RegExp(pattern);
@@ -1045,18 +1056,16 @@ function settingsTextButton(event) {
 
 /** Changes a number setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsNumberButton(event) {
-    const target = /** @type {HTMLInputElement} */ (event.target);
+    const target = event.target;
+    const {callback, setting} = getSettingInputCallback(target);
+
     const raw_value = isNaN(target.valueAsNumber) ? 0 : target.valueAsNumber;
     const insideMinBoundary = (target.min !== '') ? (Number(target.min) <= raw_value) : true;
     const insideMaxBoundary = (target.max !== '') ? (Number(target.max) >= raw_value) : true;
-
     let value = raw_value;
 
     if (!insideMinBoundary) value = Number(target.min);
     if (!insideMaxBoundary) value = Number(target.max);
-
-    const setting = target.getAttribute(`${htmlSuffix}-setting`);
-    const callback = settingsCallbacks[setting];
 
     extensionSettings[setting] = value;
 
@@ -1086,9 +1095,18 @@ function displaySettings() {
 
 /** Append settings menu on ST and set listeners. */
 async function loadSettingsMenu() {
-    const settingsHtml = await HTML_TEMPLATES.get('settings');
+    const $settingsHtml = await HTML_TEMPLATES.get('settings');
+    const $selectDefRole = $settingsHtml.find(`#${htmlSuffix}-default-prompt-role`);
 
-    $('#extensions_settings2').append(settingsHtml);
+    for (const [text, value] of Object.entries(extension_prompt_roles)) {
+        $('<option>', { text, value }).appendTo($selectDefRole);
+    }
+
+    $selectDefRole
+        .val(extensionSettings.defaultPromptRole)
+        .trigger('change');
+
+    $('#extensions_settings2').append($settingsHtml);
 
     $(`#${htmlSuffix}-auto-detect-participants`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-always-include-unmuted-members`).on('input', settingsBooleanButton);
@@ -1102,6 +1120,7 @@ async function loadSettingsMenu() {
     $(`#${htmlSuffix}-range-input-width`).on('input', settingsTextButton);
     $(`#${htmlSuffix}-min-prompt-depth`).on('input', settingsNumberButton);
     $(`#${htmlSuffix}-show-private-lamp`).on('input', settingsBooleanButton);
+    $selectDefRole.on('input', settingsTextButton);
 
     $(`#${htmlSuffix}-debug`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-check-configuration`).on('click', displaySettings);

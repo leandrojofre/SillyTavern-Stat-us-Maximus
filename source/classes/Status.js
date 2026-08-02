@@ -113,7 +113,10 @@ class Status {
         status = migrateV0Data(status);
 
         /** @type {StatusData} */
-        const statusClean = {avatar: ''};
+        const statusClean = {
+            avatar: '',
+            role: extensionSettings.defaultPromptRole
+        };
 
         for (const key in Status.template) {
             const hasProperty = key in status;
