@@ -846,16 +846,7 @@ async function onCreateStatus(e) {
     let { avatar, is_user, is_detached = false, statusId } = data;
 
     if (!avatar && is_detached) {
-        const statuses = StatUsMaximus.getStatuses();
-        let newAvatar = generateUUID();
-        let isAvatarRepeated = statuses.some(status => status.avatar === newAvatar);
-
-        for (let i = 0; isAvatarRepeated && i < 50; i++) {
-            newAvatar = generateUUID();
-            isAvatarRepeated = statuses.some(status => status.avatar === newAvatar);
-        }
-
-        avatar = newAvatar;
+        avatar = StatUsMaximus.Status.createAvatarUID();
     }
 
     if (!avatar) return;

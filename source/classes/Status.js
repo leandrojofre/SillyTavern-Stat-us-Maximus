@@ -2,7 +2,8 @@ import {
     extension_prompt_roles,
     getFreeDataUid,
     messageBelongsToChar,
-    getUser,
+    generateUUID,
+    metadataName,
     getThumbnailUrl,
     context,
     unEscapeNewlines,
@@ -42,6 +43,25 @@ const statusTemplate = Object.freeze({
 });
 
 /**
+ * @param {string} [starterAvatar]
+ * @returns {string}
+ */
+function createAvatarUIDForDetached(starterAvatar = '') {
+    starterAvatar = String(starterAvatar || '');
+
+    const statuses = context().chatMetadata[metadataName];
+    let newAvatar = starterAvatar || generateUUID();
+    let isAvatarRepeated = statuses.some(status => status.avatar === newAvatar);
+
+    for (let i = 0; isAvatarRepeated && i < 50; i++) {
+        newAvatar = generateUUID();
+        isAvatarRepeated = statuses.some(status => status.avatar === newAvatar);
+    }
+
+    return newAvatar;
+}
+
+/**
  * @param {StatusData} statusData
  * @returns {StatusData}
  */
@@ -67,23 +87,24 @@ function migrateV0Data(statusData) {
 }
 
 class Status {
-    static template = statusTemplate;
+    /** @type {StatusData} */ static template;
+    /** @type {() => string} */ static createAvatarUID;
 
-    /** @property @type {string} */ avatar;
-    /** @property @type {string} */ name;
-    /** @property @type {number} */ role;
-    /** @property @type {string} */ separator;
-    /** @property @type {string} */ def_entry_separator;
-    /** @property @type {string} */ prefix;
-    /** @property @type {string} */ suffix;
-    /** @property @type {number} */ depth;
-    /** @property @type {number} */ force_depth;
-    /** @property @type {number} */ last_mes_id;
-    /** @property @type {boolean} */ enabled;
-    /** @property @type {boolean} */ is_user;
-    /** @property @type {boolean} */ is_detached;
-    /** @property @type {boolean} */ is_collapsed;
-    /** @property @type {Record<string, StatusEntry>} */ entries;
+    /** @type {string} */ avatar;
+    /** @type {string} */ name;
+    /** @type {number} */ role;
+    /** @type {string} */ separator;
+    /** @type {string} */ def_entry_separator;
+    /** @type {string} */ prefix;
+    /** @type {string} */ suffix;
+    /** @type {number} */ depth;
+    /** @type {number} */ force_depth;
+    /** @type {number} */ last_mes_id;
+    /** @type {boolean} */ enabled;
+    /** @type {boolean} */ is_user;
+    /** @type {boolean} */ is_detached;
+    /** @type {boolean} */ is_collapsed;
+    /** @type {Record<string, StatusEntry>} */ entries;
 
     /**
      * @param {StatusData?} [status={}] - The status data to initialize the Status object with. If not provided, default values will be used.
@@ -108,7 +129,11 @@ class Status {
         }
 
         if (!this.name) this.name = this.getCharacter()?.name || '';
-        if (this.is_detached) this.is_user = false;
+
+        if (this.is_detached) {
+            this.avatar = createAvatarUIDForDetached(this.avatar);
+            this.is_user = false;
+        }
     }
 
     /**
@@ -273,3 +298,6 @@ class Status {
         return this.set('depth', chatEmpty ? 0 : (chatLength - lastID));
     }
 }
+
+Status.template = statusTemplate;
+Status.createAvatarUID = createAvatarUIDForDetached;

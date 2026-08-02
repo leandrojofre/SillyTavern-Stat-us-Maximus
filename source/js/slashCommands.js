@@ -76,12 +76,17 @@ function buildAltUIDsComment(alt) {
 
 /**
  * @param {string} charName
+ * @param {Object} [options]
+ * @param {boolean} [options.is_user]
+ * @param {boolean} [options.is_detached]
  * @returns {boolean}
  */
-function characterHasMetadata(charName) {
-    return StatUsMaximus.getStatuses().some(stat => {
-        return stat.getCharacter().name === charName;
-    });
+function characterHasMetadata(charName, {is_user = false, is_detached = false} = {}) {
+    return StatUsMaximus.getStatuses().some(stat =>
+        stat.getCharacter().name === charName &&
+        stat.is_user === is_user &&
+        stat.is_detached === is_detached
+    );
 }
 
 /**
@@ -227,7 +232,8 @@ const ENUMS_STRINGS = {
     entityFilters: [
         'all',
         'true',
-        'false'
+        'false',
+        'detached',
     ],
 
     acceptedStatusFields: ENUMS_PROVIDER
@@ -264,24 +270,30 @@ function isCharacterUser(character) {
  */
 async function commandCreateStatus(args) {
     try {
-        const {char = '', isuser = 'all', isdetached = 'false', force = 'false'} = args;
+        const {char = '', isuser = 'all', force = 'false'} = args;
 
         const entityFilters = ENUMS_STRINGS.entityFilters;
         const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
-        const cleanIsDetached = isTrueBoolean(isdetached);
+        const isDetached = cleanIsUser === 'detached';
+        const isUser = cleanIsUser === 'true';
         const cleanForce = isTrueBoolean(force);
+        let status;
 
-        if (!cleanForce && characterHasMetadata(char)) return 'true';
+        if (!cleanForce && characterHasMetadata(char, {is_user: isUser, is_detached: isDetached})) return 'true';
 
-        if (cleanForce) {
+        if (isDetached) {
+            status = StatUsMaximus.addStatus('', {
+                is_detached: true,
+                name: char || '',
+            });
+        } else if (cleanForce) {
             const ignoreAvatars = [];
             const safeStop = 100;
             let continueWhile = true;
-            let loop = 0
+            let loop = 0;
 
             while (continueWhile && loop < safeStop) {
                 const character = getParticipant(char, cleanIsUser, ignoreAvatars);
-                StatUsMaximus.log(character);
 
                 if (!character) {
                     continueWhile = false;
@@ -289,9 +301,9 @@ async function commandCreateStatus(args) {
                 }
 
                 ignoreAvatars.push(character.avatar);
-                const status = StatUsMaximus.addStatus(character.avatar, {
+
+                status = StatUsMaximus.addStatus(character.avatar, {
                     is_user: isCharacterUser(character),
-                    is_detached: cleanIsDetached,
                 });
 
                 if (!status) break;
@@ -303,13 +315,12 @@ async function commandCreateStatus(args) {
 
             if (!character) throw new Error(`The character '${char}' could not be found`);
 
-            const status = StatUsMaximus.addStatus(character.avatar, {
+            status = StatUsMaximus.addStatus(character.avatar, {
                 is_user: isCharacterUser(character),
-                is_detached: cleanIsDetached,
             });
-
-            if (!status) return 'false';
         }
+
+        if (!status) return 'false';
 
         return 'true';
     } catch (error) {

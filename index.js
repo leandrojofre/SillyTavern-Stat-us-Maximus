@@ -893,7 +893,7 @@ globalThis.StatUsMaximus = {
         return !status ? false : status;
     },
 
-    addStatus(avatar, {is_user = false, is_detached = false}) {
+    addStatus(avatar, {is_user = false, is_detached = false, name = ''}) {
         let statuses = StatUsMaximus.getStatuses();
 
         if (!statuses) return false;
@@ -901,7 +901,7 @@ globalThis.StatUsMaximus = {
         let status = is_detached ? null : statuses.find(s => s.avatar === avatar);
 
         if (!status) {
-            status = new Status({avatar, is_user, is_detached});
+            status = new Status({avatar, is_user, is_detached, name});
             statuses.push(status);
 
             context().chatMetadata[metadataName] = statuses;

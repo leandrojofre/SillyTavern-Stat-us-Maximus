@@ -1,7 +1,11 @@
 declare namespace StatUsMaximus {
     type Instance = import('@popperjs/core/index.js').Instance;
+
     type Status = import('./source/classes/Status.js').Status;
+    type StatusClass = typeof import('./source/classes/Status.js').Status;
+
     type StatusEntry = import('./source/classes/StatusEntry.js').StatusEntry;
+    type StatusEntryClass = typeof import('./source/classes/StatusEntry.js').StatusEntry;
 
     type StatusData = {
         avatar: string;
@@ -58,12 +62,18 @@ declare namespace StatUsMaximus {
         allowDetached?: boolean;
     }
 
+    type AddStatusOptions = {
+        is_user?: boolean;
+        is_detached?: boolean;
+        name?: string;
+    }
+
     type GlobalInterface = {
-        Status: typeof Status;
-        StatusEntry: typeof StatusEntry;
+        Status: StatusClass;
+        StatusEntry: StatusEntryClass;
         getStatuses: () => Status[];
         getStatus: (avatar: string) => false | Status;
-        addStatus: (avatar: string, options: {is_user?: boolean; is_detached?: boolean;}) => false | Status;
+        addStatus: (avatar: string, options: AddStatusOptions) => false | Status;
         delStatus: (status: Status) => boolean | Status;
         transferStatus: (avatar: string, newAvatar: string, options?: TransferStatusOptions) => false | Status;
         openPopupSingle: (avatar: string, options?: { is_user?: boolean; onOpen?: () => void }) => Promise<void>;
