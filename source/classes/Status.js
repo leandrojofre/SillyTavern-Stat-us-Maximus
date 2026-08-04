@@ -49,9 +49,12 @@ const statusTemplate = Object.freeze({
 function createAvatarUIDForDetached(starterAvatar = '') {
     starterAvatar = String(starterAvatar || '');
 
+    /** @type {any[]} */
     const statuses = context().chatMetadata[metadataName];
     let newAvatar = starterAvatar || generateUUID();
     let isAvatarRepeated = statuses.some(status => status.avatar === newAvatar);
+
+    if (!isAvatarRepeated) return newAvatar;
 
     for (let i = 0; isAvatarRepeated && i < 50; i++) {
         newAvatar = generateUUID();
@@ -115,7 +118,7 @@ class Status {
         /** @type {StatusData} */
         const statusClean = {
             avatar: '',
-            role: extensionSettings.defaultPromptRole
+            role: Number(extensionSettings.defaultPromptRole)
         };
 
         for (const key in Status.template) {
@@ -134,7 +137,7 @@ class Status {
         if (!this.name) this.name = this.getCharacter()?.name || '';
 
         if (this.is_detached) {
-            this.avatar = createAvatarUIDForDetached(this.avatar);
+            this.avatar = this.avatar || createAvatarUIDForDetached();
             this.is_user = false;
         }
     }
@@ -242,7 +245,7 @@ class Status {
 
         const { avatar, is_user } = this;
         const entity = getParticipant(avatar, {is_user});
-        const name = this.name || entity.name;
+        const name = this.name || entity?.name;
 
         return {...entity, is_user, name};
     }
@@ -252,7 +255,7 @@ class Status {
      */
     getThumbnail() {
         if (this.is_detached) return StatUsMaximus.comment_avatar;
-        return getThumbnailUrl(this.is_user ? "persona" : "avatar", this.avatar);
+        return getThumbnailUrl(this.is_user ? 'persona' : 'avatar', this.avatar);
     }
 
     /**

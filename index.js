@@ -1056,16 +1056,20 @@ function settingsTextButton(event) {
 
 /** Changes a number setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsNumberButton(event) {
-    const target = event.target;
+    const target = /** @type {HTMLSelectElement} */(event.target);
     const {callback, setting} = getSettingInputCallback(target);
 
-    const raw_value = isNaN(target.valueAsNumber) ? 0 : target.valueAsNumber;
-    const insideMinBoundary = (target.min !== '') ? (Number(target.min) <= raw_value) : true;
-    const insideMaxBoundary = (target.max !== '') ? (Number(target.max) >= raw_value) : true;
+    const defValue = defaultSettings[setting];
+    const raw_value = isNaN(Number(target.value)) ? defValue : Number(target.value);
+    const min = Number(target.getAttribute('min') || raw_value);
+    const max = Number(target.getAttribute('max') || raw_value);
+
+    const insideMinBoundary = min !== raw_value ? (min <= raw_value) : true;
+    const insideMaxBoundary = max !== raw_value ? (max >= raw_value) : true;
     let value = raw_value;
 
-    if (!insideMinBoundary) value = Number(target.min);
-    if (!insideMaxBoundary) value = Number(target.max);
+    if (!insideMinBoundary) value = min;
+    if (!insideMaxBoundary) value = max;
 
     extensionSettings[setting] = value;
 
@@ -1120,7 +1124,7 @@ async function loadSettingsMenu() {
     $(`#${htmlSuffix}-range-input-width`).on('input', settingsTextButton);
     $(`#${htmlSuffix}-min-prompt-depth`).on('input', settingsNumberButton);
     $(`#${htmlSuffix}-show-private-lamp`).on('input', settingsBooleanButton);
-    $selectDefRole.on('input', settingsTextButton);
+    $selectDefRole.on('input', settingsNumberButton);
 
     $(`#${htmlSuffix}-debug`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-check-configuration`).on('click', displaySettings);
