@@ -344,6 +344,10 @@ async function getStatusPopupBlock(avatar, is_user = false) {
         .find(`.${htmlSuffix}-avatar-upload`)
         .data({avatar, statusId});
 
+    $statusBlock
+        .find('.status-collapse-entries')
+        .attr('collapsed', String(status.is_collapsed));
+
     for (const [text, value] of Object.entries(extension_prompt_roles)) {
         $('<option>', { text, value }).appendTo($selectRoles);
     }
@@ -545,6 +549,7 @@ function initPopupTriggers() {
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.status-bulk-toggle`, eventMethods.onBulkToggleEntryDrawer);
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-truck-arrow-right`, eventMethods.onTransferStatus);
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.fa-trash-can`, eventMethods.onDeleteStatus);
+    $(document).on('click', `.${htmlSuffix}-popup .status-collapse-entries`, eventMethods.onCollapsePopupBlock);
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-plus`, eventMethods.onCreateEntryValue);
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-trash-can`, eventMethods.onDeleteEntryValue);
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-copy`, eventMethods.onCopyEntry);

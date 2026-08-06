@@ -48,6 +48,7 @@ export {
     onRenameStatus,
     onAvatarFileUpload,
     // Popup
+    onCollapsePopupBlock,
     onPopupStatusInput,
     onPopupEntryInput,
     onAltTitleInput,
@@ -368,6 +369,16 @@ function onCollapseStatus(e) {
         .hasClass('up');
 
     status.set('is_collapsed', doClose);
+}
+
+/**
+ * @param {EventData<HTMLDivElement>} e
+ */
+function onCollapsePopupBlock(e) {
+    const $input = $(e.currentTarget);
+    const oppositeState = $input.attr('collapsed') === 'true' ? 'false' : 'true';
+
+    $input.attr('collapsed', oppositeState);
 }
 
 /**

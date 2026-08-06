@@ -49,7 +49,7 @@
 }
 
 .stat-us-maximus-popup.bordered-box {
-    padding: 5px 10px;
+    padding: 10px;
     border: solid 1px var(--SmartThemeBorderColor);
 }
 
@@ -321,10 +321,6 @@
         background-color: color-mix(in srgb, var(--SmartThemeBotMesBlurTintColor), var(--black30a));
     }
 
-    .stat-us-maximus-popup-row:last-child {
-        margin-bottom: 5px;
-    }
-
     .bg-bot {
         background-color: var(--SmartThemeBotMesBlurTintColor);
     }
@@ -465,6 +461,20 @@
     .menu_button {
         --stum_menu_button_filter: unset;
         filter: var(--stum_menu_button_filter) !important;
+    }
+
+    .status-entries:has(~ .status-collapse-entries[collapsed="true"]) {
+        display: none;
+    }
+
+    .status-collapse-entries[collapsed="true"] {
+        .fa-chevron-down { display: block; }
+        .fa-chevron-up { display: none; }
+    }
+
+    .status-collapse-entries[collapsed="false"] {
+        .fa-chevron-down { display: none; }
+        .fa-chevron-up { display: block; }
     }
 }
 
