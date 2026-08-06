@@ -329,6 +329,10 @@
         background-color: var(--SmartThemeUserMesBlurTintColor);
     }
 
+    .bg-black-30 {
+        background-color: var(--black30a);
+    }
+
     .border {
         border: solid;
         border-width: 1px;
