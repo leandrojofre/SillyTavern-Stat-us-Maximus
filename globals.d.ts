@@ -7,8 +7,27 @@ declare namespace StatUsMaximus {
     type StatusEntry = import('./source/classes/StatusEntry.js').StatusEntry;
     type StatusEntryClass = typeof import('./source/classes/StatusEntry.js').StatusEntry;
 
+    type FileManager = import('./source/classes/FileManager.js').FileManager;
+    type FileManagerClass = typeof import('./source/classes/FileManager.js').FileManager;
+
+    type FileAttachment = import('../../../chats.js').FileAttachment & {
+        type: 'avatar' | 'file';
+        extension: string;
+    };
+
+    type ExtensionEvents = {
+        THUMBNAIL_UPDATE: 'stat_us_maximus_thumbnail_update';
+    };
+
+    type FileManagerData = {
+        files?: FileAttachment[];
+        images?: FileAttachment[];
+    };
+
     type StatusData = {
+        dataVersion?: number;
         avatar: string;
+        thumbnail?: string;
         name?: string;
         role?: number;
         separator?: string;
@@ -25,7 +44,7 @@ declare namespace StatUsMaximus {
         is_detached?: boolean;
         is_collapsed?: boolean;
         entries?: Record<string, StatusEntry>;
-    }
+    };
 
     type EntryData = {
         enabled?: boolean;
@@ -37,36 +56,36 @@ declare namespace StatUsMaximus {
         values?: Record<string, AltValueData>;
         /** @deprecated Must be transformed into a valid 'values' instance */
         alt_values?: ({uid: number; key: string; value: string;})[];
-    }
+    };
 
     type AltValueData = {
         title?: string;
         value?: string;
-    }
+    };
 
     type UserCharacter = {
         name: string;
         description: string;
         avatar: string;
         is_user: boolean;
-    }
+    };
 
     type TransferStatusOptions = {
         onlyEntries?: boolean;
         isUser?: boolean;
-    }
+    };
 
     type RenderStatusesSafeOptions = {
         filter?: string;
         filter_is_user?: boolean;
         allowDetached?: boolean;
-    }
+    };
 
     type AddStatusOptions = {
         is_user?: boolean;
         is_detached?: boolean;
         name?: string;
-    }
+    };
 
     type GlobalInterface = {
         Status: StatusClass;
@@ -83,8 +102,10 @@ declare namespace StatUsMaximus {
         log: (...mess: any[]) => void;
         debug: (...mess: any[]) => void;
         error: (...mess: any[]) => void;
+        EVENTS: ExtensionEvents;
+        FileManager: FileManager;
         comment_avatar: 'img/quill.png';
-    }
+    };
 
     type ExtensionSettings = {
         enabled: boolean;
@@ -102,17 +123,19 @@ declare namespace StatUsMaximus {
         showMutedMembersBlocks: boolean;
         showPrivateLampOnChat: boolean;
         debug: boolean;
-    }
+    };
 
     type RefreshDepthOptions = {
         isGenerating?: boolean;
-    }
+    };
 
     type HTMLTemplateGetOptions = {
         clone?: boolean;
     };
 
-    type EventData<T> = JQuery.TypeEventHandler & { data: Record<string, any>; currentTarget: T; };
+    type EventData<T> =
+        JQuery.TriggeredEvent<any, Record<any, any>, T, any> |
+        JQuery.EventBase<any, Record<any, any>, T, any>;
 
     type EntityFilter = 'true' | 'false' | 'all' | 'detached';
 };

@@ -185,6 +185,7 @@ async function cloneStatusPopup(char) {
 }
 
 /**
+ * MARK:createEntryBlock
  * @param {StatusEntry} entry
  * @param {string|number} uid
  * @param {string} avatar
@@ -265,6 +266,7 @@ async function createDetachedStatusBlock(deleteOldBlock = true) {
 }
 
 /**
+ * MARK:getStatusPopupBlock
  * @param {string} avatar
  * @param {boolean?} [is_user]
  * @returns {Promise<JQuery<HTMLElement>>}
@@ -312,7 +314,6 @@ async function getStatusPopupBlock(avatar, is_user = false) {
     const $entriesContainer = $statusBlock.find('.status-entries');
     const statusId = `${generateUUID()}_stat_block`;
 
-    /** @type {[string, StatusEntry][]} */
     const entries = Object
         .entries(status.entries)
         .sort(([uidA, entryA], [uidB, entryB]) => entryA.display_position - entryB.display_position);
@@ -328,7 +329,7 @@ async function getStatusPopupBlock(avatar, is_user = false) {
 
     $statusBlock
         .find(`.${htmlSuffix}-avatar`)
-        .attr('src', status.getThumbnail())
+        .attr('src', `${status.getThumbnail()}?v=${Date.now()}`)
         .attr('title', status.avatar);
 
     $statusBlock
@@ -337,6 +338,10 @@ async function getStatusPopupBlock(avatar, is_user = false) {
 
     $statusBlock
         .find('.status-toolbar .menu_button')
+        .data({avatar, statusId});
+
+    $statusBlock
+        .find(`.${htmlSuffix}-avatar-upload`)
         .data({avatar, statusId});
 
     for (const [text, value] of Object.entries(extension_prompt_roles)) {
@@ -531,6 +536,7 @@ function initPopupTriggers() {
     $('#rm_group_members').on('click', '.avatar img', onGroupMemberListClick);
 
     $(document).on('click', `.${htmlSuffix}-popup .menu_button.create-status`, eventMethods.onCreateStatus);
+    $(document).on('input', `.${htmlSuffix}-popup .${htmlSuffix}-avatar-upload`, eventMethods.onAvatarFileUpload);
     $(document).on('input', `.${htmlSuffix}-popup .status-fields .text_pole`, eventMethods.onPopupStatusInput);
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.kill-switch`, eventMethods.onToggleStatus);
     $(document).on('click', `.${htmlSuffix}-popup .status-toolbar .menu_button.status-rename`, eventMethods.onRenameStatus);
@@ -593,6 +599,7 @@ function initPopupTriggers() {
         append: [ wandMenuShortcut ]
     });
 
-    $('#extensionsMenu').append(wandMenuShortcutContainer);
-    $(`#${htmlSuffix}-wand-menu-shortcut`).on('click', onShortcutClick);
+    $('#extensionsMenu')
+        .append(wandMenuShortcutContainer)
+        .on('click', `#${htmlSuffix}-wand-menu-shortcut`, onShortcutClick);
 }

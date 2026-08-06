@@ -73,16 +73,16 @@ function migrateV0Data(entryData) {
 }
 
 class StatusEntry {
-    static template = entryTemplate;
-    static valueTemplate = altEntryTemplate;
+    /** @type {EntryData} */ static template;
+    /** @type {AltValueData} */ static valueTemplate;
 
-    /** @property @type {boolean} */ enabled
-    /** @property @type {string} */ key
-    /** @property @type {string} */ separator
-    /** @property @type {number} */ display_position
-    /** @property @type {boolean} */ private
-    /** @property @type {number} */ value_uid
-    /** @property @type {Record<string, AltValueData>} */ values
+    /** @type {boolean} */ enabled
+    /** @type {string} */ key
+    /** @type {string} */ separator
+    /** @type {number} */ display_position
+    /** @type {boolean} */ private
+    /** @type {number} */ value_uid
+    /** @type {Record<string, AltValueData>} */ values
 
     /**
      * @param {EntryData?} [entry={}] - The status data to initialize the Status object with. If not provided, default values will be used.
@@ -252,3 +252,6 @@ class StatusEntry {
         return this;
     }
 }
+
+StatusEntry.template = entryTemplate;
+StatusEntry.valueTemplate = altEntryTemplate;

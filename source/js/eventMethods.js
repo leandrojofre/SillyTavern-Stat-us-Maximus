@@ -1,6 +1,7 @@
 import {
     // ST imports
     copyText,
+    eventSource,
     t,
     // Normal imports
     showPopper,
@@ -45,6 +46,7 @@ export {
     onTogglePrivateEntry,
     onDocumentClick,
     onRenameStatus,
+    onAvatarFileUpload,
     // Popup
     onPopupStatusInput,
     onPopupEntryInput,
@@ -106,8 +108,7 @@ const AllowedNumericInputs = Object.freeze({
 // * MARK:Methods
 
 /**
- * @template T
- * @param {JQuery<T>|HTMLElement} input
+ * @param {HTMLElement} input
  */
 function getStatusFromInput(input) {
     const $input = $(input);
@@ -249,6 +250,51 @@ function cleanWonkyStatusValues(field, value) {
     return value;
 }
 
+// * MARK:General
+
+/**
+ * @param {EventData<HTMLInputElement>} e
+ */
+async function onAvatarFileUpload(e) {
+    const { $input, status, data } = getStatusFromInput(e.currentTarget);
+    const { statusId } = data;
+    const form = $input.closest('form').get().at(0);
+
+    if (!status || !form) return;
+
+    const formData = new FormData(form);
+    const file = formData.get('file');
+    const fileInstance = file instanceof File;
+
+    if (!fileInstance) return;
+
+    const fileExtension = file.type.split('/').at(-1);
+
+    if (!fileExtension) return;
+
+    const oldThumbnail = status.getThumbnail();
+    const attachment = await StatUsMaximus.FileManager.imageUpload({
+        path: status?.thumbnail,
+        name: generateUUID(metadataName + '_avatar_file'),
+        format: fileExtension,
+        image: file
+    });
+
+    const newThumbnail = status
+        .set('thumbnail', attachment?.url || '')
+        .getThumbnail();
+
+    eventSource.emit(StatUsMaximus.EVENTS.THUMBNAIL_UPDATE, {
+        oldThumbnail,
+        newThumbnail,
+        avatar: status.avatar
+    });
+
+    $(`#${statusId}`)
+        .find(`.${htmlSuffix}-avatar`)
+        .attr('src', `${newThumbnail}?v=${Date.now()}`);
+}
+
 // * MARK:In Chat
 
 /**
@@ -325,7 +371,7 @@ function onCollapseStatus(e) {
 }
 
 /**
- * @param {EventData<HTMLSpanElement>} e
+ * @param {JQuery.EventBase} e
  */
 function onSelectChatInputFinish(e) {
     const spanInput = e.data.spanInput;

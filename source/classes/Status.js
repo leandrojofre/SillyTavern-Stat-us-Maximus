@@ -25,7 +25,9 @@ export {
 
 /** @type {StatusData} */
 const statusTemplate = Object.freeze({
+    dataVersion: 0,
     avatar: '',
+    thumbnail: '',
     name: '',
     role: extension_prompt_roles.SYSTEM,
     separator: '\n',
@@ -69,6 +71,10 @@ function createAvatarUIDForDetached(starterAvatar = '') {
  * @returns {StatusData}
  */
 function migrateV0Data(statusData) {
+    const dataVersion = statusData?.dataVersion ?? 0;
+
+    if (dataVersion > 0) return statusData;
+
     statusData = structuredClone(statusData);
 
     // If it has entries as array, turn into object - Compatibility with older data versions - Remove in months
@@ -86,6 +92,8 @@ function migrateV0Data(statusData) {
     if ('forceDepth' in statusData)
         statusData.force_depth = statusData.forceDepth === '' ? -1 : Number(statusData.forceDepth ?? -1);
 
+    statusData.dataVersion = 1;
+
     return statusData;
 }
 
@@ -93,7 +101,9 @@ class Status {
     /** @type {StatusData} */ static template;
     /** @type {() => string} */ static createAvatarUID;
 
+    /** @type {number} */ dataVersion;
     /** @type {string} */ avatar;
+    /** @type {string} */ thumbnail;
     /** @type {string} */ name;
     /** @type {number} */ role;
     /** @type {string} */ separator;
@@ -118,7 +128,7 @@ class Status {
         /** @type {StatusData} */
         const statusClean = {
             avatar: '',
-            role: Number(extensionSettings.defaultPromptRole)
+            role: Number(extensionSettings.defaultPromptRole),
         };
 
         for (const key in Status.template) {
@@ -134,7 +144,13 @@ class Status {
             this.entries[uid] = new StatusEntry(entry);
         }
 
-        if (!this.name) this.name = this.getCharacter()?.name || '';
+        if (!this.thumbnail) {
+            this.thumbnail = this.getThumbnail();
+        }
+
+        if (!this.name) {
+            this.name = this.getCharacter()?.name || '';
+        }
 
         if (this.is_detached) {
             this.avatar = this.avatar || createAvatarUIDForDetached();
@@ -254,8 +270,14 @@ class Status {
      * @returns {string}
      */
     getThumbnail() {
-        if (this.is_detached) return StatUsMaximus.comment_avatar;
-        return getThumbnailUrl(this.is_user ? 'persona' : 'avatar', this.avatar);
+        if (this.thumbnail) return this.thumbnail;
+
+        this.set('thumbnail', this.is_detached ?
+            StatUsMaximus.comment_avatar :
+            getThumbnailUrl(this.is_user ? 'persona' : 'avatar', this.avatar)
+        );
+
+        return this.thumbnail;
     }
 
     /**

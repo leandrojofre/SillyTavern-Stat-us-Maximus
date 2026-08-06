@@ -4,6 +4,7 @@ import { getGroupMembers } from '../../../group-chats.js';
 
 import { Status } from './source/classes/Status.js';
 import { StatusEntry } from './source/classes/StatusEntry.js';
+import { FileManager } from './source/classes/FileManager.js';
 import { registerEvents } from './source/js/eventListeners.js';
 import { initPopupTriggers, openSingleStatusPopup } from './source/js/popups.js';
 import { CUSTOM_MACROS } from './source/js/macros.js';
@@ -103,7 +104,7 @@ const debounceTimeout = Object.freeze({
 
 const extensionFullName = 'SillyTavern-Stat-us-Maximus';
 const extensionName = 'Stat-us-Maximus';
-const metadataName = extensionName.toLowerCase().replaceAll('-', '_');
+const metadataName = 'stat_us_maximus';
 const htmlSuffix = extensionName.toLowerCase();
 const extensionFolderPath = `scripts/extensions/third-party/${extensionFullName}`;
 
@@ -954,6 +955,10 @@ globalThis.StatUsMaximus = {
     },
 
     comment_avatar: 'img/quill.png',
+    FileManager: new FileManager(),
+    EVENTS: {
+        THUMBNAIL_UPDATE: `${metadataName}_thumbnail_update`,
+    },
     Status,
     StatusEntry,
     openPopupSingle: openSingleStatusPopup,

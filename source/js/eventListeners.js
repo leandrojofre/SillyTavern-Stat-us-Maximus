@@ -16,9 +16,11 @@ import {
     getCharFromMessage,
 } from '../../index.js';
 
+import { FileManager } from '../classes/FileManager.js';
 import * as eventMethods from './eventMethods.js';
 
 /** @typedef {StatUsMaximus.UserCharacter} UserCharacter */
+/** @typedef {StatUsMaximus.Status} Status */
 
 export {
     registerEvents
@@ -86,6 +88,9 @@ async function onChatChanged(...args) {
 
     if (!chat_id) return;
 
+    const fileManagerData = context().chatMetadata[`${metadataName}_files`] || {};
+
+    StatUsMaximus.FileManager = new FileManager(fileManagerData);
     StatUsMaximus.getStatuses();
     await StatUsMaximus.renderStatuses();
 
@@ -205,14 +210,18 @@ function onGenerationAfterCommands(...args) {
 async function onCharacterRenamed(currentChat, oldAvatar, newAvatar) {
     StatUsMaximus.log(eventTypes.CHARACTER_RENAMED_IN_PAST_CHAT, currentChat, oldAvatar, newAvatar);
 
-    const metadata = currentChat[0][metadataName] ?? false;
+    const metadata = currentChat[0] ?? null;
 
     if (!metadata) return;
     if (!metadata[metadataName]) return;
 
-    metadata[metadataName] = metadata[metadataName].map(stat => {
-        if (String(stat.avatar) === String(oldAvatar))
+    metadata[metadataName] = metadata[metadataName].map((/** @type {Status} */stat) => {
+        if (String(stat.avatar) === String(oldAvatar)) {
+            StatUsMaximus.FileManager.imageDelete(stat.thumbnail);
+
             stat.avatar = String(newAvatar);
+            stat.thumbnail = '';
+        }
 
         return stat;
     });
@@ -250,7 +259,7 @@ function registerEvents() {
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-arrows-rotate`, eventMethods.onRefreshBlock);
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-floppy-disk`, () => saveMetadataSafe);
 
-    $(document).on('click', eventMethods.onDocumentClick);
+    $(document).on('click', 'body', eventMethods.onDocumentClick);
 
     eventSource.makeLast(eventTypes.CHAT_CHANGED, onChatChanged);
     eventSource.makeLast(eventTypes.CHAT_CREATED, onChatChanged);
