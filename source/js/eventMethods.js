@@ -920,7 +920,7 @@ async function onCreateStatus(e) {
 
     if (!$statusBlock) return;
 
-    $statusBlockEmpty.before($statusBlock);
+    $statusBlockEmpty.after($statusBlock);
 
     if (!status.is_detached) $statusBlockEmpty.remove();
 }

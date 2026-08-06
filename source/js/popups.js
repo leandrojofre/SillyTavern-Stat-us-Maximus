@@ -259,7 +259,7 @@ async function createDetachedStatusBlock(deleteOldBlock = true) {
         .data({
             is_user: false,
             is_detached: true,
-            statusId: 'stat-us-maximus-popup-create-detached'
+            statusId: `${htmlSuffix}-popup-create-detached`
         });
 
     return $container;
@@ -451,17 +451,16 @@ async function openMultiStatusPopup(members = [], {detachedCreation = true} = {}
 
     const $statusesWrapper = $(statusesWrapper);
 
+    if (detachedCreation) {
+        $statusesWrapper.append(await createDetachedStatusBlock());
+    }
+
     for (const {avatar, is_user} of members) {
         const $statusBlock = await getStatusPopupBlock(avatar, is_user);
 
         if (!$statusBlock) continue;
 
         $statusesWrapper.append($statusBlock);
-    }
-
-    if (detachedCreation) {
-        const $detachedCreationBlock = await createDetachedStatusBlock();
-        $statusesWrapper.append($detachedCreationBlock);
     }
 
     await callGenericPopup($statusesWrapper, POPUP_TYPE.TEXT, "", {
@@ -521,7 +520,11 @@ async function onShortcutClick(e) {
 
     if (type === 'characters') {
         const { chars } = getActiveParticipants([], getParticipantsOptions);
-        return await openMultiStatusPopup([...chars, ...detachedStatuses.filter(s => s.enabled)]);
+
+        return await openMultiStatusPopup([
+            ...detachedStatuses.filter(s => s.enabled),
+            ...chars
+        ]);
     }
 
     if (type === 'all') {
