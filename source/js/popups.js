@@ -313,6 +313,8 @@ async function getStatusPopupBlock(avatar, is_user = false) {
     const $selectRoles = $statusBlock.find('select[name="role"]');
     const $entriesContainer = $statusBlock.find('.status-entries');
     const statusId = `${generateUUID()}_stat_block`;
+    const thumbnail = status.getThumbnail();
+    const thumbnailSuffix = thumbnail.includes('/thumbnail?') ? '' : `?v=${Date.now()}`;
 
     const entries = Object
         .entries(status.entries)
@@ -329,7 +331,7 @@ async function getStatusPopupBlock(avatar, is_user = false) {
 
     $statusBlock
         .find(`.${htmlSuffix}-avatar`)
-        .attr('src', `${status.getThumbnail()}?v=${Date.now()}`)
+        .attr('src', thumbnail + thumbnailSuffix)
         .attr('title', status.avatar);
 
     $statusBlock
