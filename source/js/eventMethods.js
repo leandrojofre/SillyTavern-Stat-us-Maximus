@@ -375,10 +375,13 @@ function onCollapseStatus(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 function onCollapsePopupBlock(e) {
-    const $input = $(e.currentTarget);
+    const { $input, status } = getStatusFromInput(e.currentTarget);
     const oppositeState = $input.attr('collapsed') === 'true' ? 'false' : 'true';
 
+    if (!status) return;
+
     $input.attr('collapsed', oppositeState);
+    status.set('is_collapsed', oppositeState === 'true');
 }
 
 /**

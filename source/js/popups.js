@@ -346,7 +346,8 @@ async function getStatusPopupBlock(avatar, is_user = false) {
 
     $statusBlock
         .find('.status-collapse-entries')
-        .attr('collapsed', String(status.is_collapsed));
+        .attr('collapsed', String(status.is_collapsed))
+        .data({avatar});
 
     for (const [text, value] of Object.entries(extension_prompt_roles)) {
         $('<option>', { text, value }).appendTo($selectRoles);
@@ -518,7 +519,7 @@ async function onShortcutClick(e) {
 
     if (type === 'characters') {
         const { chars } = getActiveParticipants([], getParticipantsOptions);
-        return await openMultiStatusPopup([...chars, ...detachedStatuses]);
+        return await openMultiStatusPopup([...chars, ...detachedStatuses.filter(s => s.enabled)]);
     }
 
     if (type === 'all') {
