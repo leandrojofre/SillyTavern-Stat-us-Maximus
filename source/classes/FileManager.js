@@ -99,6 +99,30 @@ export class FileManager {
     }
 
     /**
+     * @param {string} base64String
+     * @param {string} filename
+     * @param {FilePropertyBag} [options]
+     * @returns {File}
+     */
+    base64ToFile(base64String, filename, options) {
+        if (base64String.includes(';base64,'))
+            base64String = base64String.split(',').at(1);
+
+        const binaryString = atob(base64String);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const blob = new Blob([bytes], { type: 'application/octet-stream' });
+        const file = new File([blob], filename, options);
+
+        return file;
+    }
+
+    /**
      * @param {Object} file
      * @param {File} file.image
      * @param {string} file.name

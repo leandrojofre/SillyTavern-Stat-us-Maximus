@@ -1,7 +1,10 @@
 import {
     // ST imports
     copyText,
+    callGenericPopup,
+    POPUP_TYPE,
     eventSource,
+    powerUserSettings,
     t,
     // Normal imports
     showPopper,
@@ -266,10 +269,25 @@ async function onAvatarFileUpload(e) {
     const formData = new FormData(form);
     const file = formData.get('file');
     const fileInstance = file instanceof File;
+    let image;
 
     if (!fileInstance) return;
 
-    const fileExtension = file.type.split('/').at(-1);
+    if (powerUserSettings.never_resize_avatars) {
+        image = file;
+    } else {
+        const croppedImageBase64 = await callGenericPopup('Crop the avatar', POPUP_TYPE.CROP, null, {
+            cropImage: URL.createObjectURL(file),
+        });
+
+        const successfulCrop = typeof croppedImageBase64 === 'string' && croppedImageBase64.length > 0;
+
+        if (!successfulCrop) return toastr.info(t`Image upload cancelled.`, extensionName);
+
+        image = StatUsMaximus.FileManager.base64ToFile(croppedImageBase64, file.name, {type: file.type});
+    }
+
+    const fileExtension = image.type.split('/').at(-1);
 
     if (!fileExtension) return;
 
@@ -278,7 +296,7 @@ async function onAvatarFileUpload(e) {
         path: status?.thumbnail,
         name: generateUUID(metadataName + '_avatar_file'),
         format: fileExtension,
-        image: file
+        image: image
     });
 
     const newThumbnail = status
