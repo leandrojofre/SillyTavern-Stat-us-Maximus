@@ -686,15 +686,13 @@ async function renderCharStatus(status) {
 
     if (!character) return;
 
-    const $lastMess = status.is_detached ?
-        $(`#chat .last_mes`).last() :
-        $(`#chat .mes[mesid="${status.last_mes_id}"][is_user="${status.is_user}"]`).last();
+    const $lastMess = $(`#chat .mes[mesid="${status.last_mes_id}"]`).last();
 
     if (!$lastMess?.length) return;
 
     const statusBlock = await HTML_TEMPLATES.get('chatStatus', {clone: true});
     const entryBlockTemplate = await HTML_TEMPLATES.get('chatStatusEntry', {clone: true});
-    const statusBlockId = `${generateUUID()}_chat_stat_block`;
+    const statusBlockId = generateUUID(`${metadataName}_chat_stat_block`);
     const lastMessIsUser = $lastMess.attr('is_user') === 'true';
 
     statusBlock
@@ -832,7 +830,7 @@ async function renderCharStatus(status) {
  */
 async function renderStatuses({filter = '', filter_is_user = false, allowDetached = true} = {}) {
     const statusesAll = StatUsMaximus.getStatuses();
-    const statusesDetached = statusesAll.filter(s => allowDetached && s.is_detached);
+    const statusesDetached = allowDetached ? statusesAll.filter(s => s.is_detached) : [];
     const statuses = [];
 
     if (filter) {

@@ -284,18 +284,19 @@ class Status {
      * @returns {Status}
      */
     refreshPosition() {
-        if (this.is_detached) return this.set('last_mes_id', this.enabled ? 0 : -1);
-
         const { chat } = context();
-        const { is_user } = this;
+        const chatLength = chat.length - 1;
+        const chatEmpty = chatLength < 0;
+        const lastChatID = Math.max(0, chatLength);
 
+        if (this.is_detached) return this.set('last_mes_id', this.enabled ? lastChatID : -1);
+
+        const { is_user } = this;
         const character = this.getCharacter();
         const lastID = chat.findLastIndex(m => messageBelongsToChar(m, character, is_user));
 
-        if (lastID < 0) return this.set('last_mes_id', -1);
-
-        const chatLength = chat.length - 1;
-        const chatEmpty = chatLength < 0;
+        if (lastID < 0)
+            return this.set('last_mes_id', extensionSettings.alwaysIncludeUnmutedMembers ? lastChatID : -1);
 
         return this.set('last_mes_id', chatEmpty ? 0 : lastID);
     }
