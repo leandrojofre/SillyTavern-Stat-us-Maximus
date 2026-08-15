@@ -1166,7 +1166,8 @@ eventSource.once(eventTypes.APP_INITIALIZED, async function() {
     }
 
     await loadSettingsMenu();
+    await initPopupTriggers();
     registerEvents();
-    initPopupTriggers();
     registerSlashCommands();
+    registerMacros();
 });

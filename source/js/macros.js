@@ -4,14 +4,25 @@ import {
     extensionSettings,
     createElement,
     generateUUID,
+    context,
     t
 } from "../../index.js";
 
 export {
-    CUSTOM_MACROS
+    CUSTOM_MACROS,
+    init,
 };
 
 const detectNestedMacro = /\{\{(text|number|boolean|range)(::[\s\S]*)?\}\}/g;
+
+/**
+ * Checks if a string is "true" value.
+ * @param {string} arg String to check
+ * @returns {boolean} True if the string is true, false otherwise.
+ */
+export function isTrueBoolean(arg) {
+    return ['on', 'true', '1'].includes(arg?.trim()?.toLowerCase());
+}
 
 /**
  * @readonly
@@ -186,7 +197,7 @@ const CUSTOM_MACROS = {
             'name': {
                 handler: function() {
                     return charName;
-                }
+                },
             },
             'text': {
                 handler: function({args: [text], rawOriginal}) {
@@ -224,9 +235,9 @@ const CUSTOM_MACROS = {
                 unnamedArgs: [{
                     name: 'value',
                     defaultValue: DefMacroValue.STRING,
-                    optional: true
+                    optional: true,
                 }],
-                delayArgResolution: true
+                delayArgResolution: true,
             },
             'number': {
                 handler: function({args: [number], rawOriginal, resolve}) {
@@ -275,9 +286,9 @@ const CUSTOM_MACROS = {
                 unnamedArgs: [{
                     name: 'value',
                     defaultValue: DefMacroValue.NUMBER,
-                    optional: true
+                    optional: true,
                 }],
-                delayArgResolution: true
+                delayArgResolution: true,
             },
             'boolean': {
                 handler: function({args: [value, trueText, falseText], rawOriginal, resolve}) {
@@ -322,17 +333,17 @@ const CUSTOM_MACROS = {
                 unnamedArgs: [{
                     name: 'value',
                     defaultValue: DefMacroValue.TRUE,
-                    optional: true
+                    optional: true,
                 }, {
                     name: 'truetext',
                     defaultValue: DefMacroValue.TRUE,
-                    optional: true
+                    optional: true,
                 }, {
                     name: 'falsetext',
                     defaultValue: DefMacroValue.FALSE,
-                    optional: true
+                    optional: true,
                 }],
-                delayArgResolution: true
+                delayArgResolution: true,
             },
             'range': {
                 handler: function({args: [min, max, step, value], rawOriginal, resolve}) {
@@ -405,22 +416,56 @@ const CUSTOM_MACROS = {
                 unnamedArgs: [{
                     name: 'min',
                     defaultValue: DefMacroValue.RANGE_MIN,
-                    optional: true
+                    optional: true,
                 }, {
                     name: 'max',
                     defaultValue: DefMacroValue.RANGE_MAX,
-                    optional: true
+                    optional: true,
                 }, {
                     name: 'step',
                     defaultValue: DefMacroValue.RANGE_STEP,
-                    optional: true
+                    optional: true,
                 }, {
                     name: 'value',
                     defaultValue: DefMacroValue.RANGE_MAX,
-                    optional: true
+                    optional: true,
                 }],
-                delayArgResolution: true
-            }
+                delayArgResolution: true,
+            },
         }
     })
+}
+
+// * MARK:Init
+
+function init() {
+    const macros = context().macros;
+
+    macros.register('detachedStatusNames', {
+        category: macros.category.NAMES,
+        description: 'Returns the names for the detached Statuses in the chat.',
+        returns: 'Status name list',
+        returnType: macros.valueType.STRING,
+        unnamedArgs: [{
+            name: 'onlyEnabled',
+            description: 'If true, it will only return the names for enabled Status blocks.',
+            defaultValue: 'true',
+            optional: true,
+            type: macros.valueType.BOOLEAN,
+        }],
+        handler({args: [only_enabled = 'true']}) {
+            const onlyEnabled = isTrueBoolean(only_enabled);
+            const statuses = StatUsMaximus.getStatuses();
+            const IDs = [];
+
+            for (const status of statuses) {
+                if (!status.is_detached) continue;
+                if (onlyEnabled && !status.enabled) continue;
+
+                IDs.push(status.name);
+            }
+
+            return IDs.join(', ');
+        },
+    });
 }
