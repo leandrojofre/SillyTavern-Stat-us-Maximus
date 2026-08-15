@@ -8,6 +8,7 @@ import {
     t,
     // Normal imports
     extensionName,
+    settingsCallbacks,
     escapeNewlines,
     generateUUID,
     saveMetadataSafe,
@@ -21,7 +22,7 @@ import {
     // HTML related
     HTML_TEMPLATES,
     htmlSuffix,
-    createElement
+    createElement,
 } from '../../index.js';
 
 import {Status} from '../classes/Status.js';
@@ -156,8 +157,6 @@ async function cloneStatusPopup(char) {
     const onlyEntries = $checkboxOnlyEntries.prop('checked');
     const keepOriginalData = $keepOriginalData.prop('checked');
 
-    StatUsMaximus.log(target, users, isUser)
-
     if (!oldStatus) {
         toastr.info(t`An error occurred - The original Status could not be found`, extensionName);
         // @ts-ignore
@@ -218,7 +217,7 @@ async function createEntryBlock(entry, uid, avatar, statusId) {
         .toggleClass('fa-toggle-off', !entry.enabled);
 
     $entryBlock
-        .find('.menu_button.make-private')
+        .find('.menu_button.private-lamp')
         .data({uid, avatar, statusId, enabled: entry.private})
         .toggleClass('text-quote', entry.private);
 
@@ -540,9 +539,27 @@ async function onShortcutClick(e) {
     }
 }
 
+/**
+ * @param {EventData<HTMLInputElement>} e
+ */
+function onToolbarSettingChange(e) {
+    const $input = $(e.currentTarget);
+    const name = $input.attr('name');
+    const type = $input.attr('type');
+    const value = type === 'checkbox' ? $input.prop('checked') : $input.val();
+
+    const { ChatSettings } = StatUsMaximus;
+
+    switch (name) {
+        case 'allow_private': ChatSettings.set(name, value);
+            settingsCallbacks.showPrivateLampOnChat();
+            break;
+    }
+}
+
 // * MARK:Init Triggers
 
-function initPopupTriggers() {
+async function initPopupTriggers() {
     $('#rm_group_members').on('click', '.avatar img', onGroupMemberListClick);
 
     $(document).on('click', `.${htmlSuffix}-popup .menu_button.create-status`, eventMethods.onCreateStatus);
@@ -559,7 +576,7 @@ function initPopupTriggers() {
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-plus`, eventMethods.onCreateEntryValue);
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-trash-can`, eventMethods.onDeleteEntryValue);
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.fa-copy`, eventMethods.onCopyEntry);
-    $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.make-private`, eventMethods.onTogglePrivateEntry);
+    $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button.private-lamp`, eventMethods.onTogglePrivateEntry);
     $(document).on('click', `.${htmlSuffix}-popup-row .status-entry-toolbar .menu_button[macro]`, eventMethods.onMacroShortcut);
     $(document).on('input', `.${htmlSuffix}-popup-row .text_pole`, eventMethods.onPopupEntryInput);
     $(document).on('click', `.${htmlSuffix}-popup-row .fa-solid.kill-switch`, eventMethods.onToggleEntry);
@@ -569,29 +586,16 @@ function initPopupTriggers() {
 
     // * Right Menu Button
 
-    const saveMetadataButton = createElement('div', { attr: { role: 'button', type: 'save' }, class: 'menu_button flex1 fa-solid fa-floppy-disk bg-bot' });
-    const charactersButton = createElement('div', { attr: { role: 'button', type: 'characters' }, class: 'menu_button flex1 fa-solid fa-table bg-bot' });
-    const userButton = createElement('div', { attr: { role: 'button', type: 'user' }, class: 'menu_button flex1 fa-solid fa-user-cog bg-bot' });
-    const usersButton = createElement('div', { attr: { role: 'button', type: 'users' }, class: 'menu_button flex1 fa-solid fa-users-cog bg-bot' });
-    const buttonWrapper = createElement('div', {
-        class: 'flex-container flexnowrap gap5px padding0',
-        append: [ saveMetadataButton, charactersButton, userButton, usersButton ]
-    });
-
-    const title = createElement('small', { innerText: extensionName, class: 'paddingTop5' });
-    const toolbar = createElement('div', {
-        attr: { style: 'justify-content: space-between' },
-        class: `${htmlSuffix}-right-menu-toolbar ${htmlSuffix}-custom-css flex-container flexFlowColumn flexnowrap gap0 padding0 paddingLeftRight5 standoutHeader`,
-        append: [ title, buttonWrapper ]
-    });
+    const $toolbar = await HTML_TEMPLATES.get('sidebarMenu', {clone: true});
 
     $('#rm_group_chats_block .inline-drawer:has(> #groupCurrentMemberListToggle)')
-        .prepend($(toolbar).clone());
+        .prepend($toolbar.clone());
 
     $('#avatar-and-name-block')
-        .after($(toolbar).clone());
+        .after($toolbar.clone());
 
     $(`.${htmlSuffix}-right-menu-toolbar`).on('click', '.menu_button', onShortcutClick);
+    $(`.${htmlSuffix}-right-menu-settings`).on('input', ':input', onToolbarSettingChange);
 
     // * Wand Menu Button
 

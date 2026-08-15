@@ -10,6 +10,9 @@ declare namespace StatUsMaximus {
     type FileManager = import('./source/classes/FileManager.js').FileManager;
     type FileManagerClass = typeof import('./source/classes/FileManager.js').FileManager;
 
+    type ChatSettings = import('./source/classes/ChatSettings.js').ChatSettings;
+    type ChatSettingsClass = typeof import('./source/classes/ChatSettings.js').ChatSettings;
+
     type FileAttachment = import('../../../chats.js').FileAttachment & {
         type: 'avatar' | 'file';
         extension: string;
@@ -104,6 +107,7 @@ declare namespace StatUsMaximus {
         error: (...mess: any[]) => void;
         EVENTS: ExtensionEvents;
         FileManager: FileManager;
+        ChatSettings: ChatSettings;
         comment_avatar: 'img/quill.png';
     };
 

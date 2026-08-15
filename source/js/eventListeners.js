@@ -14,6 +14,7 @@ import {
     htmlSuffix,
     unEscapeAll,
     getCharFromMessage,
+    settingsCallbacks,
 } from '../../index.js';
 
 import { FileManager } from '../classes/FileManager.js';
@@ -88,11 +89,17 @@ async function onChatChanged(...args) {
 
     if (!chat_id) return;
 
+    const { ChatSettings } = StatUsMaximus;
     const fileManagerData = context().chatMetadata[`${metadataName}_files`] || {};
+    const rightMenuSelector = `.${htmlSuffix}-right-menu-settings`;
 
     StatUsMaximus.FileManager = new FileManager(fileManagerData);
     StatUsMaximus.getStatuses();
+    settingsCallbacks.showPrivateLampOnChat();
+
     await StatUsMaximus.renderStatuses();
+
+    $(`${rightMenuSelector} :input[name="allow_private"]`).prop('checked', ChatSettings.get('allow_private'));
 
     scrollChatToBottom();
 }
@@ -108,6 +115,7 @@ function onGenerationAfterCommands(...args) {
     const { chars, user } = getActiveParticipants([], {forceMutedIn: extensionSettings.forceMutedMembersInclusion, onlyAvatars: true});
     const genHasOffset = genTypesWithOffset.includes(genType);
     const statusesAll = StatUsMaximus.getStatuses();
+    const allowPrivate = StatUsMaximus.ChatSettings.get('allow_private');
 
     /**
      * @param {Object} c Character data
@@ -147,24 +155,21 @@ function onGenerationAfterCommands(...args) {
         const entries = Object.keys(status.entries)
         .map(uid => status.getEntry(uid))
         .filter(entry => entry !== undefined)
-        .filter(entry => status.is_detached || !entry.private || charIsGenerating)
+        .filter(entry => {
+            if (status.is_detached) return true;
+            if (allowPrivate && !charIsGenerating && entry.private) return false;
+
+            return entry.enabled;
+        })
         .sort((a, b) => a.display_position - b.display_position)
         .map(function(entry) {
-            const { enabled, value_uid } = entry;
+            const { value_uid } = entry;
 
-            const key = entry.get('key');
-            const separator = entry.get('separator');
-            const value = entry.getValue(value_uid)?.value;
+            const key = entry.get('key') || '';
+            const separator = entry.get('separator') || '';
+            const value = entry.getValue(value_uid)?.value || '';
 
-            let text = '';
-
-            if (!enabled) return text;
-
-            if (key) text += key;
-            if (separator) text += separator;
-            if (value) text += value;
-
-            return text;
+            return `${key}${separator}${value}`;
         })
         .filter(entry => entry?.length);
 

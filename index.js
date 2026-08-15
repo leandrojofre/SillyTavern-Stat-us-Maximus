@@ -5,9 +5,10 @@ import { getGroupMembers } from '../../../group-chats.js';
 import { Status } from './source/classes/Status.js';
 import { StatusEntry } from './source/classes/StatusEntry.js';
 import { FileManager } from './source/classes/FileManager.js';
+import { ChatSettings } from './source/classes/ChatSettings.js';
 import { registerEvents } from './source/js/eventListeners.js';
 import { initPopupTriggers, openSingleStatusPopup } from './source/js/popups.js';
-import { CUSTOM_MACROS } from './source/js/macros.js';
+import { CUSTOM_MACROS, init as registerMacros } from './source/js/macros.js';
 import { registerSlashCommands } from './source/js/slashCommands.js';
 
 export {
@@ -46,6 +47,7 @@ export {
     isChatOpen,
     parseValue,
     getCharFromMessage,
+    settingsCallbacks,
     extensionSettings,
     metadataName,
     extensionName,
@@ -334,17 +336,9 @@ function getActiveParticipants(discard = [], {forceMutedIn = false, onlyAvatars 
         .toArray()
         .filter(avatar => avatar !== charGenerating);
 
-    StatUsMaximus.log({
-        members: structuredClone(members),
-        discard: structuredClone(discard),
-        discardUnique: structuredClone(discardUnique),
-    });
-
     members.chars = members.chars
         .filter(c => !discardUnique.includes(c.avatar))
         .map(c => ({is_user: false, ...c}));
-
-    StatUsMaximus.log({members});
 
     return members;
 }
@@ -934,13 +928,14 @@ globalThis.StatUsMaximus = {
 
         if (!status) return false;
 
+        const bannedProperties = ['avatar', 'entries', 'is_detached'];
         let newStatus = getStatus(newAvatar) || addStatus(newAvatar, {is_user: isUser});
 
         if (!newStatus) return false;
 
         if (!onlyEntries) {
             for (const key in status) {
-                if (!['avatar', 'entries'].includes(key)) newStatus.set(key, status[key]);
+                if (!bannedProperties.includes(key)) newStatus.set(key, status[key]);
             }
         }
 
@@ -954,6 +949,7 @@ globalThis.StatUsMaximus = {
 
     comment_avatar: 'img/quill.png',
     FileManager: new FileManager(),
+    ChatSettings: new ChatSettings(),
     EVENTS: {
         THUMBNAIL_UPDATE: `${metadataName}_thumbnail_update`,
     },
@@ -1003,7 +999,9 @@ const settingsCallbacks = {
     },
 
     showPrivateLampOnChat: function() {
-        const newDisplay = extensionSettings.showPrivateLampOnChat ? 'block' : 'none';
+        const show = extensionSettings.showPrivateLampOnChat;
+        const allow = StatUsMaximus.ChatSettings.get('allow_private');
+        const newDisplay = allow && show ? 'block' : 'none';
 
         document.documentElement.style.setProperty('--stat-us-private-lamp-display', newDisplay);
     }
@@ -1136,7 +1134,7 @@ async function loadSettingsMenu() {
 
     $(`#${htmlSuffix}-auto-detect-participants`).prop('checked', extensionSettings.autoDetectParticipants);
     $(`#${htmlSuffix}-always-include-unmuted-members`).prop('checked', extensionSettings.alwaysIncludeUnmutedMembers);
-    $(`#${htmlSuffix}-always-force-muted-members-inclusion`).prop('checked', extensionSettings.alwaysIncludeUnmutedMembers);
+    $(`#${htmlSuffix}-force-muted-members-inclusion`).prop('checked', extensionSettings.forceMutedMembersInclusion);
     $(`#${htmlSuffix}-auto-save-metadata`).prop('checked', extensionSettings.autoSaveMetadata);
     $(`#${htmlSuffix}-alt-macro-template-behavior`).prop('checked', extensionSettings.altMacroTemplateBehavior);
     $(`#${htmlSuffix}-show-input-macros`).prop('checked', extensionSettings.editNumbersFromChat);
