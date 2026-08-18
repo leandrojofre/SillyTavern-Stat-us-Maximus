@@ -4,9 +4,11 @@ import { getGroupMembers } from '../../../group-chats.js';
 
 import { Status } from './source/classes/Status.js';
 import { StatusEntry } from './source/classes/StatusEntry.js';
+import { FileManager } from './source/classes/FileManager.js';
+import { ChatSettings } from './source/classes/ChatSettings.js';
 import { registerEvents } from './source/js/eventListeners.js';
 import { initPopupTriggers, openSingleStatusPopup } from './source/js/popups.js';
-import { CUSTOM_MACROS } from './source/js/macros.js';
+import { CUSTOM_MACROS, init as registerMacros } from './source/js/macros.js';
 import { registerSlashCommands } from './source/js/slashCommands.js';
 
 export {
@@ -44,6 +46,8 @@ export {
     getParticipant,
     isChatOpen,
     parseValue,
+    getCharFromMessage,
+    settingsCallbacks,
     extensionSettings,
     metadataName,
     extensionName,
@@ -60,6 +64,7 @@ export {
 /** @typedef {StatUsMaximus.Instance} Instance */
 /** @typedef {StatUsMaximus.ExtensionSettings} ExtensionSettings */
 /** @typedef {StatUsMaximus.HTMLTemplateGetOptions} HTMLTemplateGetOptions */
+/** @typedef {StatUsMaximus.RenderStatusesSafeOptions} RenderStatusesSafeOptions */
 
 // * MARK:Extension variables
 
@@ -101,7 +106,7 @@ const debounceTimeout = Object.freeze({
 
 const extensionFullName = 'SillyTavern-Stat-us-Maximus';
 const extensionName = 'Stat-us-Maximus';
-const metadataName = extensionName.toLowerCase().replaceAll('-', '_');
+const metadataName = 'stat_us_maximus';
 const htmlSuffix = extensionName.toLowerCase();
 const extensionFolderPath = `scripts/extensions/third-party/${extensionFullName}`;
 
@@ -116,6 +121,7 @@ const defaultSettings = {
     hideInputLabels: true,
     rangeInputWidth: 'auto',
     showWhiteSpaces: false,
+    defaultPromptRole: extension_prompt_roles.SYSTEM,
     minPromptDepth: 0,
     alwaysIncludeUnmutedMembers: false,
     forceMutedMembersInclusion: false,
@@ -278,25 +284,42 @@ function getUser(value = user_avatar, {searchKey = 'avatar', ignoreAvatars = []}
  * @param {string[]?} [discard]
  * @param {Object} [options]
  * @param {boolean} [options.forceMutedIn]
- * @returns {{chars: Character[]; user: UserCharacter;}}
+ * @param {boolean} [options.onlyAvatars]
+ * @returns {{chars: (Character|UserCharacter)[]; user: UserCharacter;}}
  */
-function getActiveParticipants(discard = [], {forceMutedIn = false} = {}) {
+function getActiveParticipants(discard = [], {forceMutedIn = false, onlyAvatars = false} = {}) {
     const { groupId: group_id, groups, characterId: chid } = context();
 
-    /** @type {Character[]} */
+    /** @type {(Character|UserCharacter)[]} */
     const chars = [];
     const user = getUser();
 
+    /**
+     * @param {string} avatar
+     * @returns {UserCharacter}
+     */
+    const defCharFields = (avatar) => ({
+        avatar,
+        is_user: false,
+        description: '',
+        name: '',
+    });
+
     if (group_id) {
-        const members = getGroupMembers();
         const group = groups.find(g => g.id == group_id);
         const muted_members = group.disabled_members ?? [];
+        const members = onlyAvatars ? group.members : getGroupMembers();
 
         if (!forceMutedIn)
             discard.push(...muted_members);
 
-        for (const member of members)
-            if (member) chars.push(member);
+        for (const member of members) {
+            if (!member) continue;
+
+            chars.push(typeof member === 'string' ?
+                defCharFields(member) : member
+            );
+        }
     }
 
     if (chid) {
@@ -313,15 +336,9 @@ function getActiveParticipants(discard = [], {forceMutedIn = false} = {}) {
         .toArray()
         .filter(avatar => avatar !== charGenerating);
 
-    StatUsMaximus.log({
-        members: structuredClone(members),
-        discard: structuredClone(discard),
-        discardUnique: structuredClone(discardUnique),
-    });
-
-    members.chars = members.chars.filter(c => !discardUnique.includes(c.avatar));
-
-    StatUsMaximus.log({members});
+    members.chars = members.chars
+        .filter(c => !discardUnique.includes(c.avatar))
+        .map(c => ({is_user: false, ...c}));
 
     return members;
 }
@@ -346,7 +363,7 @@ function getParticipant(value, {search_key = 'avatar', is_user = false} = {}) {
     if (!char)
         char = characters.find(c => c[search_key] === value);
 
-    return char;
+    return char || null;
 }
 
 /**
@@ -413,8 +430,36 @@ async function hidePopper(popperInstance, tooltip) {
 }
 
 /**
+ * @param {string|number} mess_id
+ * @returns {Character|UserCharacter}
+ */
+function getCharFromMessage(mess_id) {
+    const { chat } = context();
+    const mes = chat[mess_id] ?? null;
+
+    if (!mes) return null;
+
+    const { force_avatar, original_avatar, is_user } = mes;
+
+    try {
+        const url = new URL(force_avatar, window.location.origin);
+        const fileName = url?.searchParams.get('file') ?? '';
+        let entity;
+
+        if (fileName) entity = getParticipant(fileName, {is_user});
+        if (!entity) entity = getParticipant(original_avatar, {is_user});
+
+        return entity ?? null;
+    } catch (err) {
+        StatUsMaximus.error(err);
+
+        return null;
+    }
+}
+
+/**
  * @param {ChatMessage} mes
- * @param {Character|Object?} [char]
+ * @param {Character|UserCharacter|Object} [char]
  * @param {boolean?} [is_user]
  * @returns {boolean}
  */
@@ -425,9 +470,9 @@ function messageBelongsToChar(mes, char = {}, is_user = false) {
     if (is_user !== mess_is_user) return false;
 
     const url = new URL(force_avatar, window.location.origin);
-    const urlFile = url?.searchParams.get('file') ?? '';
+    const fileName = url?.searchParams.get('file') ?? '';
 
-    if (avatar === urlFile) return true;
+    if (avatar === fileName) return true;
     if (avatar === original_avatar) return true;
 
     if (!char) return false;
@@ -512,14 +557,14 @@ function updateCaretDisplaySafe(input, span) {
 }
 
 /**
- * @param {string?} [extraSuffix]
+ * @param {string?} [overridePrefix]
  * @returns {string} UUID
  */
-function generateUUID(extraSuffix) {
+function generateUUID(overridePrefix) {
     const randUUID = self?.crypto?.randomUUID();
     const uuid = !randUUID ? new Date().valueOf().toString() : randUUID.replaceAll('-', '_');
 
-    return `${extraSuffix ?? metadataName}_${uuid}`;
+    return `${overridePrefix ?? metadataName}_${uuid}`;
 }
 
 /**
@@ -579,9 +624,12 @@ async function renderStatusSafe(status) {
     await renderStatusDebounced(status);
 }
 
-function renderStatusesSafe() {
+/**
+ * @param {RenderStatusesSafeOptions} [options]
+ */
+async function renderStatusesSafe(options) {
     renderStatusesDebounced.cancel();
-    renderStatusesDebounced();
+    await renderStatusesDebounced(options);
 }
 
 /**
@@ -616,6 +664,9 @@ function unEscapeAll(text, { newlines = false, macros = false, comments = false,
  * @param {Status} status
  */
 async function renderCharStatus(status) {
+    if (!status) return;
+
+    $(`#chat .${htmlSuffix}-custom-css[char-target="${status.avatar}"] .input-value-source`).trigger('blur');
     $(`#chat .${htmlSuffix}-custom-css[char-target="${status.avatar}"]`).remove();
 
     if (!Object.keys(status.entries).length) return;
@@ -629,13 +680,14 @@ async function renderCharStatus(status) {
 
     if (!character) return;
 
-    const lastMess = $(`#chat .mes[mesid="${status.last_mes_id}"][is_user="${status.is_user}"]`).last();
+    const $lastMess = $(`#chat .mes[mesid="${status.last_mes_id}"]`).last();
 
-    if (!lastMess?.length) return;
+    if (!$lastMess?.length) return;
 
     const statusBlock = await HTML_TEMPLATES.get('chatStatus', {clone: true});
     const entryBlockTemplate = await HTML_TEMPLATES.get('chatStatusEntry', {clone: true});
-    const statusBlockId = `${generateUUID()}_chat_stat_block`;
+    const statusBlockId = generateUUID(`${metadataName}_chat_stat_block`);
+    const lastMessIsUser = $lastMess.attr('is_user') === 'true';
 
     statusBlock
         .attr('char-target', status.avatar);
@@ -651,7 +703,7 @@ async function renderCharStatus(status) {
 
     statusBlock
         .find(`.inline-drawer`)
-        .toggleClass(`bg-${status.is_user ? 'user' : 'bot'}`, true);
+        .toggleClass(`bg-${(status.is_user || lastMessIsUser) ? 'user' : 'bot'}`, true);
 
     statusBlock
         .find('.inline-drawer-header')
@@ -665,7 +717,6 @@ async function renderCharStatus(status) {
         .find(`.${htmlSuffix}-toolbar .menu_button`)
         .data({avatar: status.avatar});
 
-    /** @type {[string, StatusEntry][]} */
     const entries = Object
         .entries(status.entries)
         .sort(([uidA, entryA], [uidB, entryB]) => entryA.display_position - entryB.display_position);
@@ -761,33 +812,43 @@ async function renderCharStatus(status) {
             .append(entryBlock);
     }
 
-    lastMess
+    $lastMess
         .find('.mes_text')
         .before(statusBlock);
 
     if (!status.is_collapsed) statusBlock.find('.inline-drawer-content').show();
 }
 
-async function renderStatuses() {
-    const activeParticipants = getActiveParticipants([], {forceMutedIn: extensionSettings.showMutedMembersBlocks});
+/**
+ * @param {RenderStatusesSafeOptions} [options]
+ */
+async function renderStatuses({filter = '', filter_is_user = false, allowDetached = true} = {}) {
+    const statusesAll = StatUsMaximus.getStatuses();
+    const statusesDetached = allowDetached ? statusesAll.filter(s => s.is_detached) : [];
+    const statuses = [];
 
-    /** @type {(Character|UserCharacter)[]} */
-    const characters = [];
+    if (filter) {
+        statuses.push(...statusesAll.filter(s =>
+            filter === s.avatar && filter_is_user === s.is_user
+        ));
+    } else {
+        const activeParticipants = getActiveParticipants([], {forceMutedIn: extensionSettings.showMutedMembersBlocks});
+        const characters = [];
+        const formattedChars = new Map();
 
-    if (activeParticipants.user) characters.push(activeParticipants.user);
+        if (activeParticipants.user) characters.push(activeParticipants.user);
 
-    characters.push(...activeParticipants.chars);
+        characters.push(...activeParticipants.chars);
+        characters.forEach(c => formattedChars.set(c.avatar, c['is_user']));
 
-    const formattedChars = characters.map(c => ({
-        avatar: c.avatar,
-        is_user: c['is_user'] ?? false
-    }));
+        statuses.push(...statusesAll.filter(s =>
+            formattedChars.has(s.avatar) && formattedChars.get(s.avatar) === s.is_user
+        ));
 
-    const statuses = StatUsMaximus
-        .getStatuses()
-        .filter(s => formattedChars.some(c => s.avatar === c.avatar && s.is_user === c.is_user));
+        $(`#chat .${htmlSuffix}-custom-css.${htmlSuffix}-chat-drawer`).remove();
+    }
 
-    $(`#chat .${htmlSuffix}-custom-css.${htmlSuffix}-chat-drawer`).remove();
+    statuses.push(...statusesDetached);
 
     for (const status of statuses)
         await renderCharStatus(status);
@@ -803,7 +864,7 @@ const updateCaretDisplayDebounced = lodash.debounce(updateCaretDisplay, debounce
  * @type {GlobalInterface}
  */
 globalThis.StatUsMaximus = {
-    getStatuses: function() {
+    getStatuses() {
         let statuses = context().chatMetadata[metadataName];
 
         if (!statuses) statuses = [];
@@ -813,10 +874,10 @@ globalThis.StatUsMaximus = {
 
         context().chatMetadata[metadataName] = cleanStatuses;
 
-        return cleanStatuses.filter(stat => stat.getCharacter());
+        return cleanStatuses.filter(status => status.getCharacter());
     },
 
-    getStatus: function(avatar) {
+    getStatus(avatar) {
         let statuses = StatUsMaximus.getStatuses();
 
         if (!statuses) return false;
@@ -826,15 +887,15 @@ globalThis.StatUsMaximus = {
         return !status ? false : status;
     },
 
-    addStatus: function(avatar, is_user) {
+    addStatus(avatar, {is_user = false, is_detached = false, name = ''}) {
         let statuses = StatUsMaximus.getStatuses();
 
         if (!statuses) return false;
 
-        let status = statuses.find(s => s.avatar === avatar);
+        let status = is_detached ? null : statuses.find(s => s.avatar === avatar);
 
         if (!status) {
-            status = new Status({avatar, is_user});
+            status = new Status({avatar, is_user, is_detached, name});
             statuses.push(status);
 
             context().chatMetadata[metadataName] = statuses;
@@ -844,7 +905,7 @@ globalThis.StatUsMaximus = {
         return status;
     },
 
-    delStatus: function(status) {
+    delStatus(status) {
         let statuses = StatUsMaximus.getStatuses();
 
         if (!statuses) return false;
@@ -867,13 +928,14 @@ globalThis.StatUsMaximus = {
 
         if (!status) return false;
 
-        let newStatus = getStatus(newAvatar) || addStatus(newAvatar, isUser);
+        const bannedProperties = ['avatar', 'entries', 'is_detached'];
+        let newStatus = getStatus(newAvatar) || addStatus(newAvatar, {is_user: isUser});
 
         if (!newStatus) return false;
 
         if (!onlyEntries) {
             for (const key in status) {
-                if (!['avatar', 'entries'].includes(key)) newStatus.set(key, status[key]);
+                if (!bannedProperties.includes(key)) newStatus.set(key, status[key]);
             }
         }
 
@@ -885,6 +947,12 @@ globalThis.StatUsMaximus = {
         return newStatus.set('is_user', isUser);
     },
 
+    comment_avatar: 'img/quill.png',
+    FileManager: new FileManager(),
+    ChatSettings: new ChatSettings(),
+    EVENTS: {
+        THUMBNAIL_UPDATE: `${metadataName}_thumbnail_update`,
+    },
     Status,
     StatusEntry,
     openPopupSingle: openSingleStatusPopup,
@@ -931,18 +999,31 @@ const settingsCallbacks = {
     },
 
     showPrivateLampOnChat: function() {
-        const newDisplay = extensionSettings.showPrivateLampOnChat ? 'block' : 'none';
+        const show = extensionSettings.showPrivateLampOnChat;
+        const allow = StatUsMaximus.ChatSettings.get('allow_private');
+        const newDisplay = allow && show ? 'block' : 'none';
 
         document.documentElement.style.setProperty('--stat-us-private-lamp-display', newDisplay);
     }
 }
 
+/**
+ * @param {JQuery|HTMLElement} element
+ * @returns {{callback: Function; setting: string;}}
+ */
+function getSettingInputCallback(element) {
+    const $target = $(element);
+    const setting = $target.attr(`${htmlSuffix}-setting`);
+    const callback = settingsCallbacks[setting];
+
+    return {callback, setting};
+}
+
 /** Changes a setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsBooleanButton(event) {
-    const target = event.target;
-    const value = Boolean($(target).prop('checked'));
-    const setting = target.getAttribute(`${htmlSuffix}-setting`);
-    const callback = settingsCallbacks[setting];
+    const $target = $(event.target);
+    const {callback, setting} = getSettingInputCallback($target);
+    const value = Boolean($target.prop('checked'));
 
     extensionSettings[setting] = value;
 
@@ -954,11 +1035,10 @@ function settingsBooleanButton(event) {
 
 /** Changes a string setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsTextButton(event) {
-    const target = event.target;
-    const value = String($(target).val());
-    const setting = target.getAttribute(`${htmlSuffix}-setting`);
-    const callback = settingsCallbacks[setting];
-    const pattern = String(target.getAttribute('pattern') || '');
+    const $target = $(event.target);
+    const {callback, setting} = getSettingInputCallback($target);
+    const value = String($target.val());
+    const pattern = String($target.attr('pattern') || '');
 
     if (pattern) {
         const regex = new RegExp(pattern);
@@ -977,18 +1057,20 @@ function settingsTextButton(event) {
 
 /** Changes a number setting value and triggers a callback if there's any on settingsCallbacks. */
 function settingsNumberButton(event) {
-    const target = /** @type {HTMLInputElement} */ (event.target);
-    const raw_value = isNaN(target.valueAsNumber) ? 0 : target.valueAsNumber;
-    const insideMinBoundary = (target.min !== '') ? (Number(target.min) <= raw_value) : true;
-    const insideMaxBoundary = (target.max !== '') ? (Number(target.max) >= raw_value) : true;
+    const target = /** @type {HTMLSelectElement} */(event.target);
+    const {callback, setting} = getSettingInputCallback(target);
 
+    const defValue = defaultSettings[setting];
+    const raw_value = isNaN(Number(target.value)) ? defValue : Number(target.value);
+    const min = Number(target.getAttribute('min') || raw_value);
+    const max = Number(target.getAttribute('max') || raw_value);
+
+    const insideMinBoundary = min !== raw_value ? (min <= raw_value) : true;
+    const insideMaxBoundary = max !== raw_value ? (max >= raw_value) : true;
     let value = raw_value;
 
-    if (!insideMinBoundary) value = Number(target.min);
-    if (!insideMaxBoundary) value = Number(target.max);
-
-    const setting = target.getAttribute(`${htmlSuffix}-setting`);
-    const callback = settingsCallbacks[setting];
+    if (!insideMinBoundary) value = min;
+    if (!insideMaxBoundary) value = max;
 
     extensionSettings[setting] = value;
 
@@ -1018,9 +1100,18 @@ function displaySettings() {
 
 /** Append settings menu on ST and set listeners. */
 async function loadSettingsMenu() {
-    const settingsHtml = await HTML_TEMPLATES.get('settings');
+    const $settingsHtml = await HTML_TEMPLATES.get('settings');
+    const $selectDefRole = $settingsHtml.find(`#${htmlSuffix}-default-prompt-role`);
 
-    $('#extensions_settings2').append(settingsHtml);
+    for (const [text, value] of Object.entries(extension_prompt_roles)) {
+        $('<option>', { text, value }).appendTo($selectDefRole);
+    }
+
+    $selectDefRole
+        .val(extensionSettings.defaultPromptRole)
+        .trigger('change');
+
+    $('#extensions_settings2').append($settingsHtml);
 
     $(`#${htmlSuffix}-auto-detect-participants`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-always-include-unmuted-members`).on('input', settingsBooleanButton);
@@ -1034,6 +1125,7 @@ async function loadSettingsMenu() {
     $(`#${htmlSuffix}-range-input-width`).on('input', settingsTextButton);
     $(`#${htmlSuffix}-min-prompt-depth`).on('input', settingsNumberButton);
     $(`#${htmlSuffix}-show-private-lamp`).on('input', settingsBooleanButton);
+    $selectDefRole.on('input', settingsNumberButton);
 
     $(`#${htmlSuffix}-debug`).on('input', settingsBooleanButton);
     $(`#${htmlSuffix}-check-configuration`).on('click', displaySettings);
@@ -1042,7 +1134,7 @@ async function loadSettingsMenu() {
 
     $(`#${htmlSuffix}-auto-detect-participants`).prop('checked', extensionSettings.autoDetectParticipants);
     $(`#${htmlSuffix}-always-include-unmuted-members`).prop('checked', extensionSettings.alwaysIncludeUnmutedMembers);
-    $(`#${htmlSuffix}-always-force-muted-members-inclusion`).prop('checked', extensionSettings.alwaysIncludeUnmutedMembers);
+    $(`#${htmlSuffix}-force-muted-members-inclusion`).prop('checked', extensionSettings.forceMutedMembersInclusion);
     $(`#${htmlSuffix}-auto-save-metadata`).prop('checked', extensionSettings.autoSaveMetadata);
     $(`#${htmlSuffix}-alt-macro-template-behavior`).prop('checked', extensionSettings.altMacroTemplateBehavior);
     $(`#${htmlSuffix}-show-input-macros`).prop('checked', extensionSettings.editNumbersFromChat);
@@ -1072,7 +1164,8 @@ eventSource.once(eventTypes.APP_INITIALIZED, async function() {
     }
 
     await loadSettingsMenu();
+    await initPopupTriggers();
     registerEvents();
-    initPopupTriggers();
     registerSlashCommands();
+    registerMacros();
 });

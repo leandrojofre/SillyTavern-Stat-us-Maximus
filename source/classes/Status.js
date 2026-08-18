@@ -2,13 +2,15 @@ import {
     extension_prompt_roles,
     getFreeDataUid,
     messageBelongsToChar,
-    getUser,
+    generateUUID,
+    metadataName,
     getThumbnailUrl,
     context,
     unEscapeNewlines,
     saveMetadataSafe,
     extensionSettings,
-    parseValue
+    parseValue,
+    getParticipant,
 } from '../../index.js';
 
 import { StatusEntry, entryTemplate } from './StatusEntry.js';
@@ -23,7 +25,10 @@ export {
 
 /** @type {StatusData} */
 const statusTemplate = Object.freeze({
+    dataVersion: 0,
     avatar: '',
+    thumbnail: '',
+    name: '',
     role: extension_prompt_roles.SYSTEM,
     separator: '\n',
     def_entry_separator: '',
@@ -34,15 +39,42 @@ const statusTemplate = Object.freeze({
     last_mes_id: -1,
     enabled: true,
     is_user: false,
+    is_detached: false,
     is_collapsed: false,
     entries: {}
 });
+
+/**
+ * @param {string} [starterAvatar]
+ * @returns {string}
+ */
+function createAvatarUIDForDetached(starterAvatar = '') {
+    starterAvatar = String(starterAvatar || '');
+
+    /** @type {any[]} */
+    const statuses = context().chatMetadata[metadataName];
+    let newAvatar = starterAvatar || generateUUID();
+    let isAvatarRepeated = statuses.some(status => status.avatar === newAvatar);
+
+    if (!isAvatarRepeated) return newAvatar;
+
+    for (let i = 0; isAvatarRepeated && i < 50; i++) {
+        newAvatar = generateUUID();
+        isAvatarRepeated = statuses.some(status => status.avatar === newAvatar);
+    }
+
+    return newAvatar;
+}
 
 /**
  * @param {StatusData} statusData
  * @returns {StatusData}
  */
 function migrateV0Data(statusData) {
+    const dataVersion = statusData?.dataVersion ?? 0;
+
+    if (dataVersion > 0) return statusData;
+
     statusData = structuredClone(statusData);
 
     // If it has entries as array, turn into object - Compatibility with older data versions - Remove in months
@@ -60,25 +92,32 @@ function migrateV0Data(statusData) {
     if ('forceDepth' in statusData)
         statusData.force_depth = statusData.forceDepth === '' ? -1 : Number(statusData.forceDepth ?? -1);
 
+    statusData.dataVersion = 1;
+
     return statusData;
 }
 
 class Status {
-    static template = statusTemplate;
+    /** @type {StatusData} */ static template;
+    /** @type {() => string} */ static createAvatarUID;
 
-    /** @property @type {string} */ avatar;
-    /** @property @type {number} */ role;
-    /** @property @type {string} */ separator;
-    /** @property @type {string} */ def_entry_separator;
-    /** @property @type {string} */ prefix;
-    /** @property @type {string} */ suffix;
-    /** @property @type {number} */ depth;
-    /** @property @type {number} */ force_depth;
-    /** @property @type {number} */ last_mes_id;
-    /** @property @type {boolean} */ enabled;
-    /** @property @type {boolean} */ is_user;
-    /** @property @type {boolean} */ is_collapsed;
-    /** @property @type {Record<string, StatusEntry>} */ entries;
+    /** @type {number} */ dataVersion;
+    /** @type {string} */ avatar;
+    /** @type {string} */ thumbnail;
+    /** @type {string} */ name;
+    /** @type {number} */ role;
+    /** @type {string} */ separator;
+    /** @type {string} */ def_entry_separator;
+    /** @type {string} */ prefix;
+    /** @type {string} */ suffix;
+    /** @type {number} */ depth;
+    /** @type {number} */ force_depth;
+    /** @type {number} */ last_mes_id;
+    /** @type {boolean} */ enabled;
+    /** @type {boolean} */ is_user;
+    /** @type {boolean} */ is_detached;
+    /** @type {boolean} */ is_collapsed;
+    /** @type {Record<string, StatusEntry>} */ entries;
 
     /**
      * @param {StatusData?} [status={}] - The status data to initialize the Status object with. If not provided, default values will be used.
@@ -87,7 +126,10 @@ class Status {
         status = migrateV0Data(status);
 
         /** @type {StatusData} */
-        const statusClean = {avatar: ''};
+        const statusClean = {
+            avatar: '',
+            role: Number(extensionSettings.defaultPromptRole),
+        };
 
         for (const key in Status.template) {
             const hasProperty = key in status;
@@ -100,6 +142,19 @@ class Status {
 
         for (const [uid, entry] of Object.entries(this.entries ?? {})) {
             this.entries[uid] = new StatusEntry(entry);
+        }
+
+        if (!this.thumbnail) {
+            this.thumbnail = this.getThumbnail();
+        }
+
+        if (!this.name) {
+            this.name = this.getCharacter()?.name || '';
+        }
+
+        if (this.is_detached) {
+            this.avatar = this.avatar || createAvatarUIDForDetached();
+            this.is_user = false;
         }
     }
 
@@ -197,19 +252,32 @@ class Status {
      * @returns {Character|UserCharacter}
      */
     getCharacter() {
-        const { avatar, is_user } = this;
-        const { characters } = context();
+        if (this.is_detached) return {
+            avatar: this.avatar || StatUsMaximus.comment_avatar,
+            name: this.name || 'Detached',
+            description: '',
+            is_user: false,
+        };
 
-        return is_user ?
-            getUser(avatar) :
-            characters.find(c => c.avatar === avatar);
+        const { avatar, is_user } = this;
+        const entity = getParticipant(avatar, {is_user});
+        const name = this.name || entity?.name;
+
+        return {...entity, is_user, name};
     }
 
     /**
      * @returns {string}
      */
     getThumbnail() {
-        return getThumbnailUrl(this.is_user ? "persona" : "avatar", this.avatar);
+        if (this.thumbnail) return this.thumbnail;
+
+        this.set('thumbnail', this.is_detached ?
+            StatUsMaximus.comment_avatar :
+            getThumbnailUrl(this.is_user ? 'persona' : 'avatar', this.avatar)
+        );
+
+        return this.thumbnail;
     }
 
     /**
@@ -217,15 +285,18 @@ class Status {
      */
     refreshPosition() {
         const { chat } = context();
-        const { is_user } = this;
+        const chatLength = chat.length - 1;
+        const chatEmpty = chatLength < 0;
+        const lastChatID = Math.max(0, chatLength);
 
+        if (this.is_detached) return this.set('last_mes_id', this.enabled ? lastChatID : -1);
+
+        const { is_user } = this;
         const character = this.getCharacter();
         const lastID = chat.findLastIndex(m => messageBelongsToChar(m, character, is_user));
 
-        if (lastID < 0) return this.set('last_mes_id', -1);
-
-        const chatLength = chat.length - 1;
-        const chatEmpty = chatLength < 0;
+        if (lastID < 0)
+            return this.set('last_mes_id', extensionSettings.alwaysIncludeUnmutedMembers ? lastChatID : -1);
 
         return this.set('last_mes_id', chatEmpty ? 0 : lastID);
     }
@@ -238,6 +309,7 @@ class Status {
      * @returns {Status}
      */
     refreshDepth({ isGenerating = false } = {}) {
+        if (this.is_detached) return this.set('depth', this.enabled ? 0 : -1);
         if (isGenerating) return this.set('depth', 0);
 
         const { chat } = context();
@@ -255,3 +327,6 @@ class Status {
         return this.set('depth', chatEmpty ? 0 : (chatLength - lastID));
     }
 }
+
+Status.template = statusTemplate;
+Status.createAvatarUID = createAvatarUIDForDetached;

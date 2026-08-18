@@ -3,7 +3,12 @@
         <span class="stat-us-maximus-name text-quote"></span>
 
         <div class="flex-container flex-center-row w-100">
-            <img class="stat-us-maximus-avatar me-5px" src="" alt="Avatar" title="Avatar">
+            <form enctype="multipart/form-data">
+                <label class="cursor-pointer">
+                    <img class="stat-us-maximus-avatar me-5px" src="" alt="Avatar" title="Avatar">
+                    <input type="file" class="stat-us-maximus-avatar-upload d-none" accept="image/png, image/jpeg, image/jpg" name="file">
+                </label>
+            </form>
 
             <div class="flex-container flex-column flex-lg-row flex-grow-1 status-fields">
                 <div class="flex-container flex-center-row flex-grow-1">
@@ -55,10 +60,11 @@
                         <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-power-off togglable kill-switch" title="Toggle the active state of the whole status block." data-i18n="[title]Toggle the active state of the whole status block."></div>
                         <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-file-clipboard" title="Create an entry from clipboard." data-i18n="[title]Create an entry from clipboard."></div>
                         <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-plus" title="Create a blank entry." data-i18n="[title]Create a blank entry."></div>
-                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-compress status-bulk-toggle" title="Collapse all entry drawers." data-i18n="[title]Collapse all entry drawers."></div>
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-pen status-rename" title="Rename the status." data-i18n="[title]Rename the status."></div>
                     </div>
 
                     <div class="flex-container flex-center-row">
+                        <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-compress status-bulk-toggle" title="Collapse all entry drawers." data-i18n="[title]Collapse all entry drawers."></div>
                         <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-expand status-bulk-toggle" title="Expand all entry drawers." data-i18n="[title]Expand all entry drawers."></div>
                         <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-truck-arrow-right" title="Transfer (or clone) this status to another character." data-i18n="[title]Transfer (or clone) this status to another character."></div>
                         <div class="menu_button menu_button_icon fa-fw interactable m-0 fa-solid fa-trash-can redWarningBG" title="Delete this status. WARNING: It cannot be undone." data-i18n="[title]Delete this status. WARNING: It cannot be undone."></div>
@@ -69,4 +75,8 @@
     </div>
 
     <div class="flex-container flex-column flex-center-col gap-5px status-entries"></div>
+    <div class="menu_button bg-black-30 interactable m-0 w-100 status-collapse-entries" collapsed="true">
+        <span class="fa-solid fa-chevron-down status-collapse-entries-icon"></span>
+        <span class="fa-solid fa-chevron-up status-collapse-entries-icon"></span>
+    </div>
 </div>

@@ -34,6 +34,15 @@ const {
 // * MARK:Utility Methods
 
 /**
+ * Checks if a string is "true" value.
+ * @param {string} arg String to check
+ * @returns {boolean} True if the string is true, false otherwise.
+ */
+function isTrueBoolean(arg) {
+    return ['on', 'true', '1'].includes(arg?.trim()?.toLowerCase());
+}
+
+/**
  * Takes an object with a key and value and generates a comment
  * @param {StatusEntry} entry
  * @returns {string}
@@ -67,12 +76,17 @@ function buildAltUIDsComment(alt) {
 
 /**
  * @param {string} charName
+ * @param {Object} [options]
+ * @param {boolean} [options.is_user]
+ * @param {boolean} [options.is_detached]
  * @returns {boolean}
  */
-function characterHasMetadata(charName) {
-    return StatUsMaximus.getStatuses().some(stat => {
-        return stat.getCharacter().name === charName;
-    });
+function characterHasMetadata(charName, {is_user = false, is_detached = false} = {}) {
+    return StatUsMaximus.getStatuses().some(stat =>
+        stat.getCharacter().name === charName &&
+        stat.is_user === is_user &&
+        stat.is_detached === is_detached
+    );
 }
 
 /**
@@ -104,8 +118,13 @@ function getParticipant(charName, isUser, ignoreAvatars = []) {
 function getStatusFromName(charName, isUser) {
     const statuses = StatUsMaximus.getStatuses();
 
+    if (isUser === 'detached')
+        return statuses
+            .filter(status => status.is_detached)
+            .find(status => status.name === charName);
+
     if (isUser === 'all')
-        return statuses.find(stat => stat.getCharacter().name === charName);
+        return statuses.find(status => status.getCharacter().name === charName);
 
     const isUserFilter = isUser === 'true';
 
@@ -128,36 +147,38 @@ const ENUMS_PROVIDER = {
         ...ENUMS_PROVIDER.characters()
     ],
 
-    boolean: () => [
+    boolean: [
         new SlashCommandEnumValue('true'),
         new SlashCommandEnumValue('false')
     ],
 
-    entityFilters: () => [
-        new SlashCommandEnumValue('all'),
-        new SlashCommandEnumValue('true'),
-        new SlashCommandEnumValue('false')
+    entityFilters: [
+        new SlashCommandEnumValue('all', 'Search char through user, character and detached Status data (default)'),
+        new SlashCommandEnumValue('true', 'Search char only for user data'),
+        new SlashCommandEnumValue('false', 'Search char only for character data'),
+        new SlashCommandEnumValue('detached', 'Search char only for detached data'),
     ],
 
-    acceptedStatusFields: () => [
-        new SlashCommandEnumValue('separator'),
-        new SlashCommandEnumValue('def_entry_separator'),
-        new SlashCommandEnumValue('prefix'),
-        new SlashCommandEnumValue('suffix')
+    acceptedStatusFields: [
+        new SlashCommandEnumValue('name', 'Name used for UI display and {{name}} macro'),
+        new SlashCommandEnumValue('separator', 'Separator for the Status entries'),
+        new SlashCommandEnumValue('def_entry_separator', 'Default separator set for entry title/value on creation'),
+        new SlashCommandEnumValue('prefix', 'Prefix for the Status block'),
+        new SlashCommandEnumValue('suffix', 'Suffix for the Status block')
     ],
 
-    acceptedEntryFields: () => [
-        new SlashCommandEnumValue('enabled'),
-        new SlashCommandEnumValue('key'),
-        new SlashCommandEnumValue('separator'),
+    acceptedEntryFields: [
+        new SlashCommandEnumValue('enabled', 'Whether the entry is sent with the Status block'),
+        new SlashCommandEnumValue('key', 'Main title of the entry'),
+        new SlashCommandEnumValue('separator', 'Separator between entry value and main title'),
         new SlashCommandEnumValue('value', 'Value of the currently selected entry swipe'),
         new SlashCommandEnumValue('title', 'Title of the currently selected entry swipe on the selector'),
         new SlashCommandEnumValue('private', 'If true, it makes the entry only visible for the owner')
     ],
 
-    acceptedAltEntryFields: () => [
-        new SlashCommandEnumValue('value'),
-        new SlashCommandEnumValue('title')
+    acceptedAltEntryFields: [
+        new SlashCommandEnumValue('value', 'Value of the Status entry swipe'),
+        new SlashCommandEnumValue('title', 'Title of the Status entry swipe on the selector')
     ],
 
     entryUIDs: (executor, scope) => {
@@ -211,19 +232,20 @@ const ENUMS_STRINGS = {
     entityFilters: [
         'all',
         'true',
-        'false'
+        'false',
+        'detached',
     ],
 
     acceptedStatusFields: ENUMS_PROVIDER
-        .acceptedStatusFields()
+        .acceptedStatusFields
         .map(key => key.toString()),
 
     acceptedEntryFields: ENUMS_PROVIDER
-        .acceptedEntryFields()
+        .acceptedEntryFields
         .map(key => key.toString()),
 
     acceptedAltEntryFields: ENUMS_PROVIDER
-        .acceptedAltEntryFields()
+        .acceptedAltEntryFields
         .map(key => key.toString())
 }
 
@@ -242,29 +264,36 @@ function isCharacterUser(character) {
  * @param {Object} args
  * @param {string} args.char - Character name
  * @param {EntityFilter} args.isuser - Wether to search for personas or characters
- * @param {string} args.force - If multiple characters have the same name, it forces creation of data on ALL, despite if they were used or not in the chat
+ * @param {'true'|'false'} args.isdetached - Wether to search for personas or characters
+ * @param {'true'|'false'} args.force - If multiple characters have the same name, it forces creation of data on ALL, despite if they were used or not in the chat
  * @returns {Promise<'true'|'false'>} True if succeeds, False otherwise
  */
 async function commandCreateStatus(args) {
     try {
         const {char = '', isuser = 'all', force = 'false'} = args;
 
-        const cleanForce = force === 'true';
-
         const entityFilters = ENUMS_STRINGS.entityFilters;
         const cleanIsUser = entityFilters.includes(isuser) ? isuser : 'all';
+        const isDetached = cleanIsUser === 'detached';
+        const isUser = cleanIsUser === 'true';
+        const cleanForce = isTrueBoolean(force);
+        let status;
 
-        if (!cleanForce && characterHasMetadata(char)) return 'true';
+        if (!cleanForce && characterHasMetadata(char, {is_user: isUser, is_detached: isDetached})) return 'true';
 
-        if (cleanForce) {
+        if (isDetached) {
+            status = StatUsMaximus.addStatus('', {
+                is_detached: true,
+                name: char || '',
+            });
+        } else if (cleanForce) {
             const ignoreAvatars = [];
             const safeStop = 100;
             let continueWhile = true;
-            let loop = 0
+            let loop = 0;
 
             while (continueWhile && loop < safeStop) {
                 const character = getParticipant(char, cleanIsUser, ignoreAvatars);
-                StatUsMaximus.log(character);
 
                 if (!character) {
                     continueWhile = false;
@@ -272,7 +301,10 @@ async function commandCreateStatus(args) {
                 }
 
                 ignoreAvatars.push(character.avatar);
-                const status = StatUsMaximus.addStatus(character.avatar, isCharacterUser(character));
+
+                status = StatUsMaximus.addStatus(character.avatar, {
+                    is_user: isCharacterUser(character),
+                });
 
                 if (!status) break;
 
@@ -283,10 +315,12 @@ async function commandCreateStatus(args) {
 
             if (!character) throw new Error(`The character '${char}' could not be found`);
 
-            const status = StatUsMaximus.addStatus(character.avatar, isCharacterUser(character));
-
-            if (!status) return 'false';
+            status = StatUsMaximus.addStatus(character.avatar, {
+                is_user: isCharacterUser(character),
+            });
         }
+
+        if (!status) return 'false';
 
         return 'true';
     } catch (error) {
@@ -892,14 +926,14 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'force',
                     description: 'If multiple characters or personas have the same name, it will create metadata for all - false by default',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.boolean
+                    enumList: ENUMS_PROVIDER.boolean
                 })
             ],
             helpString: `
@@ -941,14 +975,14 @@ function registerSlashCommands() {
                     description: 'Field to update - defaults to separator',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedStatusFields
+                    enumList: ENUMS_PROVIDER.acceptedStatusFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -994,7 +1028,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -1030,7 +1064,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -1066,21 +1100,21 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'field',
                     description: 'Field to match - defaults to key',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedEntryFields
+                    enumList: ENUMS_PROVIDER.acceptedEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'fuzzy',
                     description: 'Do an exact match or a fuzzy match - defaults to false (exact match)',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.boolean
+                    enumList: ENUMS_PROVIDER.boolean
                 })
             ],
             unnamedArgumentList: [
@@ -1133,14 +1167,14 @@ function registerSlashCommands() {
                     description: 'Field to update - defaults to value',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedEntryFields
+                    enumList: ENUMS_PROVIDER.acceptedEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -1190,14 +1224,14 @@ function registerSlashCommands() {
                     description: 'Field to match - defaults to value',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedEntryFields
+                    enumList: ENUMS_PROVIDER.acceptedEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -1240,7 +1274,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -1290,7 +1324,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -1345,7 +1379,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -1398,21 +1432,21 @@ function registerSlashCommands() {
                     description: 'Field to match - defaults to title',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedAltEntryFields
+                    enumList: ENUMS_PROVIDER.acceptedAltEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'fuzzy',
                     description: 'Do an exact match or a fuzzy match - defaults to false (exact match)',
                     typeList: [ARGUMENT_TYPE.BOOLEAN],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.boolean
+                    enumList: ENUMS_PROVIDER.boolean
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -1472,14 +1506,14 @@ function registerSlashCommands() {
                     description: 'Field to match - defaults to title',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedAltEntryFields
+                    enumList: ENUMS_PROVIDER.acceptedAltEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             unnamedArgumentList: [
@@ -1536,14 +1570,14 @@ function registerSlashCommands() {
                     description: 'Field to match - defaults to title',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.acceptedAltEntryFields
+                    enumList: ENUMS_PROVIDER.acceptedAltEntryFields
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'isuser',
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
@@ -1593,7 +1627,7 @@ function registerSlashCommands() {
                     description: 'Whether to look for personas or characters - look for all by default',
                     typeList: [ARGUMENT_TYPE.STRING],
                     isRequired: false,
-                    enumProvider: ENUMS_PROVIDER.entityFilters
+                    enumList: ENUMS_PROVIDER.entityFilters
                 })
             ],
             helpString: `
