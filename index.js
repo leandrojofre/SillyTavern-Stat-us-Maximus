@@ -767,6 +767,12 @@ async function renderCharStatus(status) {
             .find('.fake-inputs-container')
             .data({avatar: status.avatar, uid, value_uid});
 
+        $entryBlock
+            .find('.chat-input-editor')
+            .each(function (idx, input) {
+                input.focus({ preventScroll: true });
+            });
+
         const entryValues = Object.entries(values);
 
         if (entryValues?.length > 1) {
