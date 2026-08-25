@@ -1,6 +1,11 @@
 # Stat-us Maximus
-This extension adds a prompt shortcut for your chats. Think of it as a Prompt Manager individual for each character, that is saved per char and only sent if the character is present (or always for individual chats). The extension is not automated by an AI in the background, it adds UI elements in chat to allow you to easily edit everything by hand, and it also gives you slash commands that allow you to edit every field of the status blocks, if you want to add automation/AI automation by yourself via ST Scripts.
-This is not focused for any task in particular, it's all just text, put what you want.
+The extension adds a prompt shortcut for all the chats, it works as a Prompt Manager individual for each character that is saved per chat and only sent if the character is present (or always for individual chats).
+
+The extension is not automated by an AI in the background, it adds UI elements in chat to allow you to easily edit everything by hand.
+
+It also provides slash commands that allow you to edit every field of the status blocks if you want to add automation/AI automation by yourself via ST Scripts.
+
+This is not focused for any task in particular. It's all just text, the user is free to give the usage desired (trackers, side prompts, take notes, etc).
 
 <img width="100%" alt="image" src="./source/assets/img/popup_menu.png" />
 <img width="100%" alt="image" src="./source/assets/img/in_chat_menu.png" />
@@ -22,10 +27,13 @@ This is not focused for any task in particular, it's all just text, put what you
 - You can set entries as private, adding them to the prompt only when the status owner is generating.
 
 ### Menus
-**Magic wand button** - From the magic wand button (left to the input bar), you can open a popup menu to manage every character status in existence.
-**Character Management menu** - From the Character Management menu, you can open a popup menu for the active chat characters statuses. You can also open a popup for your personas; one button for active persona, and another for all personas with status data.
-**Group Management menu** - In group chats, click the member avatar in the Current Members dropdown to open its status popup menu.
-**All chats** - In all chats, click the pen icon at the corner of the status table, placed in the last message of each character, to open its popup menu.
+`Magic wand button` - From the magic wand button (left to the input bar), you can open a popup menu to manage every character status in existence.
+
+`Character Management menu` - From the Character Management menu, you can open a popup menu for the active chat characters statuses. You can also open a popup for your personas; one button for active persona, and another for all personas with status data.
+
+`Group Management menu` - In group chats, click the member avatar in the Current Members dropdown to open its status popup menu.
+
+`All chats` - In all chats, click the pen icon at the corner of the status table, placed in the last message of each character, to open its popup menu.
 
 ### Slash Commands
 - `/stum-create-status` Creates Status data for the selected character, allows you to add data for non-present chat participants.
