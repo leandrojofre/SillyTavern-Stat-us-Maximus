@@ -329,6 +329,10 @@ async function getStatusPopupBlock(avatar, is_user = false) {
         .text(status.getCharacter().name);
 
     $statusBlock
+            .find(`.${htmlSuffix}-detached-mark`)
+            .toggleClass('d-none', !status.is_detached);
+
+    $statusBlock
         .find(`.${htmlSuffix}-avatar`)
         .attr('src', thumbnail + thumbnailSuffix)
         .attr('title', status.avatar);
