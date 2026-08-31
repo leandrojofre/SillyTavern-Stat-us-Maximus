@@ -329,6 +329,10 @@ async function getStatusPopupBlock(avatar, is_user = false) {
         .text(status.getCharacter().name);
 
     $statusBlock
+            .find(`.${htmlSuffix}-detached-mark`)
+            .toggleClass('d-none', !status.is_detached);
+
+    $statusBlock
         .find(`.${htmlSuffix}-avatar`)
         .attr('src', thumbnail + thumbnailSuffix)
         .attr('title', status.avatar);
@@ -513,7 +517,11 @@ async function onShortcutClick(e) {
         return await openSingleStatusPopup(user.avatar, {is_user: true});
     }
 
-    const members = StatUsMaximus.getStatuses();
+    const members = StatUsMaximus.getStatuses().sort((s1, s2) =>
+        (Number(s2.is_detached) - Number(s2.is_user))
+        - (Number(s1.is_detached) - Number(s1.is_user))
+    );
+
     const detachedStatuses = members
         .filter(status => status.is_detached);
 
