@@ -110,7 +110,7 @@ function getParticipant(charName, isUser, ignoreAvatars = []) {
             .getStatuses()
             .find(s => s.name === charName && s.is_detached);
 
-        return detached.getCharacter()
+        return detached?.getCharacter()
     }
 
     return isUser === 'true' ?
