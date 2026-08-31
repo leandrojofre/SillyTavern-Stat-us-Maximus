@@ -99,10 +99,18 @@ function getParticipant(charName, isUser, ignoreAvatars = []) {
     if (isUser === 'all') {
         const user = getUser(charName, {searchKey: 'name', ignoreAvatars});
 
-        if (!user)
-            return characters.find(char => char.name === charName && !ignoreAvatars.includes(char.avatar));
+        if (user) return user;
 
-        return user;
+        const character = characters
+            .find(char => char.name === charName && !ignoreAvatars.includes(char.avatar));
+
+        if (character) return character;
+
+        const detached = StatUsMaximus
+            .getStatuses()
+            .find(s => s.name === charName && s.is_detached);
+
+        return detached.getCharacter()
     }
 
     return isUser === 'true' ?
@@ -253,10 +261,11 @@ const ENUMS_STRINGS = {
 
 /**
  * @param {Character|UserCharacter} character
+ * @param {'is_user'|'is_detached'} something
  * @returns {boolean}
  */
-function isCharacterUser(character) {
-    return 'is_user' in character ? character.is_user : false;
+function isCharacterSomething(character, something) {
+    return something in character ? character[something] : false;
 }
 
 /**
@@ -303,7 +312,7 @@ async function commandCreateStatus(args) {
                 ignoreAvatars.push(character.avatar);
 
                 status = StatUsMaximus.addStatus(character.avatar, {
-                    is_user: isCharacterUser(character),
+                    is_user: isCharacterSomething(character, 'is_user'),
                 });
 
                 if (!status) break;
@@ -316,7 +325,7 @@ async function commandCreateStatus(args) {
             if (!character) throw new Error(`The character '${char}' could not be found`);
 
             status = StatUsMaximus.addStatus(character.avatar, {
-                is_user: isCharacterUser(character),
+                is_user: isCharacterSomething(character, 'is_user'),
             });
         }
 
