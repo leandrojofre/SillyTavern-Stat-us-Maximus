@@ -144,6 +144,7 @@ function onGenerationAfterCommands(...args) {
         if (!status) continue;
         if (!status.enabled) continue;
 
+        const isDetached = status.is_detached;
         let charIsGenerating = false;
 
         if (genType === 'impersonate' && status.is_user)
@@ -154,12 +155,18 @@ function onGenerationAfterCommands(...args) {
 
         const entries = Object.keys(status.entries)
         .map(uid => status.getEntry(uid))
-        .filter(entry => entry !== undefined)
         .filter(entry => {
-            if (status.is_detached) return true;
-            if (allowPrivate && !charIsGenerating && entry.private) return false;
+            const exists = entry !== undefined;
 
-            return entry.enabled;
+            if (!exists) return false;
+
+            const isEnabled = entry.enabled;
+            const isPrivate = allowPrivate && !charIsGenerating && entry.private;
+            const isVisible = isDetached || !isPrivate;
+
+            if (!isEnabled) return false;
+
+            return isVisible;
         })
         .sort((a, b) => a.display_position - b.display_position)
         .map(function(entry) {
