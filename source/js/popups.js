@@ -512,6 +512,7 @@ async function onShortcutClick(e) {
     };
 
     if (type === 'save') return saveMetadataSafe();
+    if (type === 'refresh') return StatUsMaximus.renderStatusesSafe();
 
     if (type === 'user') {
         const user = getUser();
