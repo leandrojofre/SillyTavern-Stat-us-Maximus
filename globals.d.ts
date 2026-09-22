@@ -90,6 +90,16 @@ declare namespace StatUsMaximus {
         name?: string;
     };
 
+    type ExtensionPrompt = {
+        avatar?: string;
+        value: string;
+        position: number;
+        depth: number;
+        scan: boolean;
+        role: number;
+        filter: () => boolean|Promise<boolean>
+    };
+
     type GlobalInterface = {
         Status: StatusClass;
         StatusEntry: StatusEntryClass;
@@ -109,6 +119,7 @@ declare namespace StatUsMaximus {
         FileManager: FileManager;
         ChatSettings: ChatSettings;
         comment_avatar: 'img/quill.png';
+        lastPrompts: Record<string, ExtensionPrompt>;
     };
 
     type ExtensionSettings = {

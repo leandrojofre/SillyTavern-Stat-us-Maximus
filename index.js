@@ -966,6 +966,7 @@ globalThis.StatUsMaximus = {
     comment_avatar: 'img/quill.png',
     FileManager: new FileManager(),
     ChatSettings: new ChatSettings(),
+    lastPrompts: {},
     EVENTS: {
         THUMBNAIL_UPDATE: `${metadataName}_thumbnail_update`,
     },

@@ -134,6 +134,7 @@ function onGenerationAfterCommands(...args) {
     if (user) characters.push(user);
 
     characters.push(...chars);
+    StatUsMaximus.lastPrompts = {};
 
     const replaceMacrosOptions = {newlines: true, macros: true, comments: true, macroParser: 'getValues'};
     const statuses = statusesAll.filter(status =>
@@ -207,8 +208,13 @@ function onGenerationAfterCommands(...args) {
             Position.IN_DEPTH,
             depthNormalized - depthOffset,
             true,
-            status.role
+            status.role,
         );
+
+        StatUsMaximus.lastPrompts[uuid] = {
+            ...extension_prompts[uuid],
+            avatar: status.avatar,
+        };
     }
 
     StatUsMaximus.log({ extension_prompts });
@@ -220,7 +226,7 @@ function onGenerationAfterCommands(...args) {
  * @param {string} newAvatar
  */
 async function onCharacterRenamed(currentChat, oldAvatar, newAvatar) {
-    StatUsMaximus.log(eventTypes.CHARACTER_RENAMED_IN_PAST_CHAT, currentChat, oldAvatar, newAvatar);
+    StatUsMaximus.log(eventTypes.CHARACTER_RENAMED_IN_PAST_CHAT, {currentChat, oldAvatar, newAvatar});
 
     const metadata = currentChat[0] ?? null;
 

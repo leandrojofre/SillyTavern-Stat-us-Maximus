@@ -468,4 +468,25 @@ function init() {
             return IDs.join(', ');
         },
     });
+
+    macros.register('lastStatus', {
+        category: macros.category.MISC,
+        description: 'Returns the text of the last used Status blocks.',
+        returns: 'Status blocks separated by newlines',
+        returnType: macros.valueType.STRING,
+        handler() {
+            let prompt = '';
+
+            for (const [uid, data] of Object.entries(StatUsMaximus.lastPrompts)) {
+                const statusText = String(data.value || '');
+
+                if (!statusText) continue;
+                if (prompt.length) prompt += '\n';
+
+                prompt += statusText;
+            }
+
+            return prompt;
+        },
+    })
 }
