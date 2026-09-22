@@ -834,9 +834,11 @@ async function renderStatuses({filter = '', filter_is_user = false, allowDetache
     const statuses = [];
 
     if (filter) {
-        statuses.push(...statusesAll.filter(s =>
-            filter === s.avatar && filter_is_user === s.is_user
-        ));
+        const statusFiltered = statusesAll.find((s) => {
+            return filter === s.avatar && filter_is_user === s.is_user
+        });
+
+        if (statusFiltered) statuses.push(statusFiltered);
     } else {
         const activeParticipants = getActiveParticipants([], {forceMutedIn: extensionSettings.showMutedMembersBlocks});
         const characters = [];
