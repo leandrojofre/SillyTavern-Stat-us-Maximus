@@ -259,11 +259,16 @@ class Status {
             is_user: false,
         };
 
-        const { avatar, is_user } = this;
-        const entity = getParticipant(avatar, {is_user});
-        const name = this.name || entity?.name;
+        const { avatar, is_user, name } = this;
+        const entity = getParticipant(avatar, {is_user}) || {
+            avatar,
+            name,
+            description: '',
+        };
 
-        return {...entity, is_user, name};
+        const charName = this.name || entity?.name;
+
+        return {...entity, is_user, name: charName};
     }
 
     /**
