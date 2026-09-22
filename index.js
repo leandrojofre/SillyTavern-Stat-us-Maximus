@@ -936,23 +936,31 @@ globalThis.StatUsMaximus = {
 
         if (!status) return false;
 
-        const bannedProperties = ['avatar', 'entries', 'is_detached'];
+        const bannedProperties = [
+            'avatar',
+            'name',
+            'is_user',
+            'is_detached',
+            'thumbnail',
+            'entries',
+        ];
+
         let newStatus = getStatus(newAvatar) || addStatus(newAvatar, {is_user: isUser});
 
         if (!newStatus) return false;
 
-        if (!onlyEntries) {
-            for (const key in status) {
-                if (!bannedProperties.includes(key)) newStatus.set(key, status[key]);
-            }
-        }
+        if (!onlyEntries)
+            for (const key in status)
+                if (!bannedProperties.includes(key))
+                    newStatus.set(key, status[key]);
 
         for (const uid in status.entries) {
             const entry = status.getEntry(Number(uid));
+
             if (entry) newStatus.addEntry(entry);
         }
 
-        return newStatus.set('is_user', isUser);
+        return newStatus;
     },
 
     comment_avatar: 'img/quill.png',

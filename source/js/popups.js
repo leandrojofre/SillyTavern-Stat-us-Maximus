@@ -100,13 +100,15 @@ async function popupRequestInput({actionLabel = 'Input a new value', defaultValu
 };
 
 /** Clones the status data of the selected `char`
-    @param {Character|UserCharacter} char
+    @param {Status} oldStatus
     @returns {Promise<{status: false|Status; keepOriginal: boolean; onlyEntries: boolean;}>}
 */
-async function cloneStatusPopup(char) {
+async function cloneStatusPopup(oldStatus) {
     const {
         characters
     } = context();
+
+    const statusCharacter = oldStatus.getCharacter();
 
     const users = Object
         .entries(powerUserSettings.personas)
@@ -115,13 +117,13 @@ async function cloneStatusPopup(char) {
     const participants = [
         ...users,
         ...characters
-    ].filter(c => c.avatar !== char.avatar);
+    ].filter(c => c.avatar !== statusCharacter.avatar);
 
     const $popupBlock = await HTML_TEMPLATES.get('popupStatusClone', {clone: true});
 
     $popupBlock
         .find('.transfer-popup-title')
-        .text(t`Clone ${char.name} stats`);
+        .text(t`Clone ${statusCharacter.name} stats`);
 
     const $select = $popupBlock.find('select');
     const $checkboxOnlyEntries = $popupBlock.find('input.transfer-only-entries');
@@ -152,7 +154,6 @@ async function cloneStatusPopup(char) {
         return failedResponse;
     }
 
-    const oldStatus = StatUsMaximus.getStatus(char.avatar);
     const isUser = users.some(p => p.avatar === target.avatar);
     const onlyEntries = $checkboxOnlyEntries.prop('checked');
     const keepOriginalData = $keepOriginalData.prop('checked');
@@ -163,7 +164,7 @@ async function cloneStatusPopup(char) {
         return failedResponse;
     }
 
-    const newStatus = StatUsMaximus.transferStatus(char.avatar, target.avatar, {onlyEntries, isUser});
+    const newStatus = StatUsMaximus.transferStatus(oldStatus.avatar, target.avatar, {onlyEntries, isUser});
 
     if (!newStatus) {
         toastr.error(t`An error occurred - The Status could not be cloned`, extensionName);

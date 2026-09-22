@@ -999,7 +999,7 @@ async function onTransferStatus(e) {
         status: newStatus,
         keepOriginal,
         onlyEntries
-    } = await cloneStatusPopup(status.getCharacter());
+    } = await cloneStatusPopup(status);
 
     if (!newStatus) return;
 
