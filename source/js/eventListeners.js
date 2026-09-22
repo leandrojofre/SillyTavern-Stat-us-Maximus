@@ -269,7 +269,7 @@ function registerEvents() {
     $chat.on('click', `.${htmlSuffix}-toolbar .kill-switch`, eventMethods.onToggleStatus);
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-pen`, eventMethods.onClickEditStatus);
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-arrows-rotate`, eventMethods.onRefreshBlock);
-    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-floppy-disk`, () => saveMetadataSafe);
+    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-floppy-disk`, () => saveMetadataSafe());
 
     $(document).on('click', 'body', eventMethods.onDocumentClick);
 
