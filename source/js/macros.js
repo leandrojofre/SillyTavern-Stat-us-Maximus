@@ -281,7 +281,7 @@ const CUSTOM_MACROS = {
                         innerText: String(numberClean)
                     });
 
-                    return `${numberInput.outerHTML}${span.outerHTML} ${buttonsHolder.outerHTML}`;
+                    return `${numberInput.outerHTML}${buttonsHolder.outerHTML} ${span.outerHTML}`;
                 },
                 unnamedArgs: [{
                     name: 'value',
