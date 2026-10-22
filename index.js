@@ -579,25 +579,35 @@ function isChatOpen() {
 /**
  * @param {string|boolean|number} value
  * @param {'string'|'boolean'|'number'|string?} [force]
- * @returns {string|boolean|number}
+ * @returns {any}
  */
 function parseValue(value, force) {
-    const allowed = ['string', 'boolean', 'number'];
-
-    if (!allowed.includes(typeof value)) return value;
+    /** @type {any} */
+    let parsed;
 
     if (force === 'string') return String(value);
     if (force === 'number') return Number(value);
-    if (force === 'boolean') return value === 'true';
+    if (force === 'boolean') return value === 'true' || value === true;
 
-    if (value === 'true' || value === 'false')
-        return value === 'true';
+    if (typeof value !== 'string') return value;
 
-    const number = Number(value);
+    try {
+        // @ts-ignore
+        parsed = JSON.parse(value);
+    } catch (error) {
+        parsed = value;
 
-    if (!isNaN(number)) return number;
+        if (parsed === 'true') parsed = true;
+        if (parsed === 'false') parsed = false;
+        if (parsed === 'null') parsed = null;
+        if (parsed === 'undefined') parsed = undefined;
 
-    return String(value);
+        const number = Number(parsed);
+
+        if (!isNaN(number) && /\d/.test(parsed)) parsed = number;
+    } finally {
+        return parsed;
+    }
 }
 
 /**
