@@ -627,7 +627,7 @@ async function onSelectSwitchValueList(e) {
 
     $entryBlock
         .find('.status-description')
-        .html(`<span class="d-inline">${valueClean}</span>`);
+        .html(`<span class="d-inline pos-relative">${valueClean}</span>`);
 
     $entryBlock.find('textarea.input-value-source').each((_, textarea) => {
         const $textarea = $(textarea);
