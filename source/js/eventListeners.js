@@ -207,7 +207,7 @@ function onGenerationAfterCommands(...args) {
             prompt,
             Position.IN_DEPTH,
             depthNormalized - depthOffset,
-            true,
+            status.scan_entries,
             status.role,
         );
 

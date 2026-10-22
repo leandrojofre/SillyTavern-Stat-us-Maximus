@@ -25,7 +25,7 @@ export {
 
 /** @type {StatusData} */
 const statusTemplate = Object.freeze({
-    dataVersion: 0,
+    data_version: 0,
     avatar: '',
     thumbnail: '',
     name: '',
@@ -38,6 +38,7 @@ const statusTemplate = Object.freeze({
     force_depth: -1,
     last_mes_id: -1,
     enabled: true,
+    scan_entries: true,
     is_user: false,
     is_detached: false,
     is_collapsed: false,
@@ -71,7 +72,7 @@ function createAvatarUIDForDetached(starterAvatar = '') {
  * @returns {StatusData}
  */
 function migrateV0Data(statusData) {
-    const dataVersion = statusData?.dataVersion ?? 0;
+    const dataVersion = statusData?.data_version ?? 0;
 
     if (dataVersion > 0) return statusData;
 
@@ -92,7 +93,7 @@ function migrateV0Data(statusData) {
     if ('forceDepth' in statusData)
         statusData.force_depth = statusData.forceDepth === '' ? -1 : Number(statusData.forceDepth ?? -1);
 
-    statusData.dataVersion = 1;
+    statusData.data_version = 1;
 
     return statusData;
 }
@@ -101,7 +102,7 @@ class Status {
     /** @type {StatusData} */ static template;
     /** @type {() => string} */ static createAvatarUID;
 
-    /** @type {number} */ dataVersion;
+    /** @type {number} */ data_version;
     /** @type {string} */ avatar;
     /** @type {string} */ thumbnail;
     /** @type {string} */ name;
@@ -114,6 +115,7 @@ class Status {
     /** @type {number} */ force_depth;
     /** @type {number} */ last_mes_id;
     /** @type {boolean} */ enabled;
+    /** @type {boolean} */ scan_entries;
     /** @type {boolean} */ is_user;
     /** @type {boolean} */ is_detached;
     /** @type {boolean} */ is_collapsed;
