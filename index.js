@@ -731,6 +731,10 @@ async function renderCharStatus(status) {
         .find(`.${htmlSuffix}-toolbar .menu_button`)
         .data({avatar: status.avatar});
 
+    statusBlock
+        .find(`.${htmlSuffix}-detached-mark`)
+        .toggleClass('d-none', !status.is_detached);
+
     const entries = Object
         .entries(status.entries)
         .sort(([uidA, entryA], [uidB, entryB]) => entryA.display_position - entryB.display_position);
