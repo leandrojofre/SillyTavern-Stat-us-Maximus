@@ -10,6 +10,7 @@ import {
     saveMetadataSafe,
     extensionSettings,
     parseValue,
+    unEscapeAll,
     getParticipant,
 } from '../../index.js';
 
@@ -44,6 +45,13 @@ const statusTemplate = Object.freeze({
     is_collapsed: false,
     entries: {}
 });
+
+const replaceMacrosOptions = {
+    newlines: true,
+    macros: true,
+    comments: true,
+    macroParser: 'getValues'
+};
 
 /**
  * @param {string} [starterAvatar]
@@ -285,6 +293,50 @@ class Status {
         );
 
         return this.thumbnail;
+    }
+
+    /**
+     * @param {Object} [options]
+     * @param {boolean} [options.allowPrivate]
+     * @param {boolean} [options.charIsGenerating]
+     * @returns {string}
+     */
+    getPrompt({allowPrivate = true, charIsGenerating = false} = {}) {
+        const entries = Object.keys(this.entries)
+        .map(uid => this.getEntry(uid))
+        .filter(entry => {
+            const exists = entry !== undefined;
+
+            if (!exists) return false;
+
+            const isEnabled = entry.enabled;
+            const isPrivate = allowPrivate && !charIsGenerating && entry.private;
+            const isVisible = this.is_detached || !isPrivate;
+
+            if (!isEnabled) return false;
+
+            return isVisible;
+        })
+        .sort((a, b) => a.display_position - b.display_position)
+        .map(function(entry) {
+            const { value_uid } = entry;
+
+            const key = entry.get('key') || '';
+            const separator = entry.get('separator') || '';
+            const value = entry.getValue(value_uid)?.value || '';
+
+            return `${key}${separator}${value}`;
+        })
+        .filter(entry => entry?.length);
+
+        if (!entries.length) return '';
+
+        const prompt = this.prefix + entries.join(this.separator) + this.suffix;
+
+        return unEscapeAll(prompt, {
+            ...replaceMacrosOptions,
+            character: this.getCharacter().name,
+        });
     }
 
     /**
