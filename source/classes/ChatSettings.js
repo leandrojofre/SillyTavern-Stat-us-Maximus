@@ -9,6 +9,8 @@ const defaultSettings = {
 };
 
 export class ChatSettings {
+    /** @type {Object} */ static defaultSettings;
+
     /** @type {string} */metadataKey;
 
     constructor () {
@@ -25,6 +27,18 @@ export class ChatSettings {
         chatMetadata[metadataKey] = currentMetadata;
 
         return true;
+    }
+
+    /**
+     * @returns {string[]}
+     */
+    keys() {
+        if (!this.update()) return;
+
+        const { chatMetadata } = context();
+        const { metadataKey } = this;
+
+        return Object.keys(chatMetadata[metadataKey]);
     }
 
     /**
@@ -55,3 +69,5 @@ export class ChatSettings {
         return chatMetadata[metadataKey][name];
     }
 }
+
+ChatSettings.defaultSettings = defaultSettings;

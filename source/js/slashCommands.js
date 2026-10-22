@@ -5,9 +5,11 @@ import {
     characters,
     context,
     getUser,
+    parseValue,
     powerUserSettings,
     saveMetadataSafe,
     metadataName,
+    htmlSuffix,
     unEscapeAll
 } from '../../index.js';
 
@@ -22,6 +24,7 @@ export {
 /** @typedef {StatUsMaximus.EntryData} EntryData */
 /** @typedef {StatUsMaximus.AltValueData} AltValueData */
 /** @typedef {StatUsMaximus.UserCharacter} UserCharacter */
+/** @typedef {StatUsMaximus.ChatSettingsClass} ChatSettingsClass */
 
 const {
     SlashCommandEnumValue
@@ -148,6 +151,11 @@ const ENUMS_PROVIDER = {
 
     personas: function() {
         return Object.values(powerUserSettings.personas).map(name => new SlashCommandEnumValue(name));
+    },
+
+    settingKeys: function() {
+        return StatUsMaximus.ChatSettings.keys()
+            .map(name => new SlashCommandEnumValue(name));
     },
 
     entities: () => [
@@ -1667,6 +1675,74 @@ function registerSlashCommands() {
                 <ul>
                     <li>
                         <pre><code>/stum-delete-chat-status</code></pre>
+                    </li>
+                </ul>
+            </div>`,
+        })
+    );
+
+    SlashCommandParser.addCommandObject(
+        SlashCommand.fromProps({
+            name: 'stum-change-setting',
+            /**
+             * @param {Object} args
+             * @param {string} [args.setting]
+             * @param {string} value
+             * @returns {string}
+             */
+            callback: function(args, value) {
+                try {
+                    const { setting = '' } = args;
+                    const settingKeys = StatUsMaximus.ChatSettings.keys();
+
+                    if (!settingKeys.includes(String(setting))) return '';
+
+                    // @ts-ignore
+                    const currentValue = StatUsMaximus.ChatSettings.get(setting);
+                    const newValue = parseValue(value);
+
+                    if (typeof newValue !== typeof currentValue) return '';
+
+                    const $input = $(`.${htmlSuffix}-right-menu-settings`).find(`:input[name="${setting}"]`);
+
+                    if ($input.attr('type') === 'checkbox') {
+                        $input.prop('checked', Boolean(newValue)).trigger('input');
+                    }
+                } catch (error) {
+                    StatUsMaximus.error(error);
+                } finally {
+                    return '';
+                }
+            },
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'setting',
+                    description: 'Keyword of the setting',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: true,
+                    enumProvider: ENUMS_PROVIDER.settingKeys
+                })
+            ],
+            unnamedArgumentList: [
+                SlashCommandArgument.fromProps({
+                    description: 'New value of the setting',
+                    isRequired: true,
+                    typeList: [
+                        ARGUMENT_TYPE.STRING,
+                        ARGUMENT_TYPE.BOOLEAN,
+                        ARGUMENT_TYPE.NUMBER,
+                    ]
+                })
+            ],
+            helpString: `
+            <div>
+                Allows to change the value of local chat settings.
+            </div>
+            <div>
+                <strong>Example</strong>
+                <ul>
+                    <li>
+                        <pre><code>/stum-change-setting setting="allow_private" false</code></pre>
                     </li>
                 </ul>
             </div>`,
