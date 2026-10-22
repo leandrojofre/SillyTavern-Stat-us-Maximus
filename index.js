@@ -1123,20 +1123,8 @@ function settingsNumberButton(event) {
 
 /**	Logs setting's values. */
 function displaySettings() {
-    debug(`Auto detect participants is ${extensionSettings.autoDetectParticipants ? 'enabled' : 'disabled'}`);
-    debug(`Always include unmuted group members is ${extensionSettings.alwaysIncludeUnmutedMembers ? 'enabled' : 'disabled'}`);
-    debug(`Force muted group members inclusion is ${extensionSettings.forceMutedMembersInclusion ? 'enabled' : 'disabled'}`);
-    debug(`Auto save metadata is ${extensionSettings.autoSaveMetadata ? 'enabled' : 'disabled'}`);
-    debug(`Alternative behavior for macro template buttons is ${extensionSettings.altMacroTemplateBehavior ? 'enabled' : 'disabled'}`);
-    debug(`Show input macros in chat is ${extensionSettings.editNumbersFromChat ? 'enabled' : 'disabled'}`);
-    debug(`Hide input labels is ${extensionSettings.hideInputLabels ? 'enabled' : 'disabled'}`);
-    debug(`Show whitespaces is ${extensionSettings.showWhiteSpaces ? 'enabled' : 'disabled'}`);
-    debug(`Show muted group member blocks is ${extensionSettings.showMutedMembersBlocks ? 'enabled' : 'disabled'}`);
-    debug(`Range input width is set to ${String(extensionSettings.rangeInputWidth)}`);
-    debug(`Min prompt depth is set to ${String(extensionSettings.minPromptDepth)}`);
-
-    debug(`Debug mode is ${extensionSettings.debug ? 'enabled' : 'disabled'}`);
-    debug(structuredClone(extensionSettings));
+    for (const [key, value] of Object.entries(extensionSettings))
+        debug(`[${key}] is set to: ${value}`);
 }
 
 /** Append settings menu on ST and set listeners. */
