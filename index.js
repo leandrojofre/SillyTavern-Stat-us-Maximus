@@ -866,7 +866,6 @@ async function renderStatuses({filter = '', filter_is_user = false, allowDetache
 
         characters.push(...activeParticipants.chars);
         characters.forEach(c => formattedChars.set(c.avatar, c['is_user']));
-
         statuses.push(...statusesAll.filter(s =>
             formattedChars.has(s.avatar) && formattedChars.get(s.avatar) === s.is_user
         ));
@@ -875,6 +874,13 @@ async function renderStatuses({filter = '', filter_is_user = false, allowDetache
     }
 
     statuses.push(...statusesDetached);
+    statuses.sort((statusA, statusB) => {
+        const userWeight = Number(statusA.is_user) - Number(statusB.is_user);
+        const detachedWeight = Number(statusA.is_detached) - Number(statusB.is_detached);
+        const avatarWeight = statusA.avatar.localeCompare(statusB.avatar);
+
+        return userWeight + detachedWeight + avatarWeight;
+    });
 
     for (const status of statuses)
         await renderCharStatus(status);
