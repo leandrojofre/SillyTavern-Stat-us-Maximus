@@ -137,7 +137,7 @@ async function cloneStatusPopup(oldStatus) {
     const popupResult = await callGenericPopup($popupBlock, POPUP_TYPE.CONFIRM, "", {
         wider: true,
         okButton: t`Confirm`,
-        cancelButton: t`Cancel`
+        cancelButton: t`Cancel`,
     });
 
     if (!popupResult) {
