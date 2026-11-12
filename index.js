@@ -579,25 +579,35 @@ function isChatOpen() {
 /**
  * @param {string|boolean|number} value
  * @param {'string'|'boolean'|'number'|string?} [force]
- * @returns {string|boolean|number}
+ * @returns {any}
  */
 function parseValue(value, force) {
-    const allowed = ['string', 'boolean', 'number'];
-
-    if (!allowed.includes(typeof value)) return value;
+    /** @type {any} */
+    let parsed;
 
     if (force === 'string') return String(value);
     if (force === 'number') return Number(value);
-    if (force === 'boolean') return value === 'true';
+    if (force === 'boolean') return value === 'true' || value === true;
 
-    if (value === 'true' || value === 'false')
-        return value === 'true';
+    if (typeof value !== 'string') return value;
 
-    const number = Number(value);
+    try {
+        // @ts-ignore
+        parsed = JSON.parse(value);
+    } catch (error) {
+        parsed = value;
 
-    if (!isNaN(number)) return number;
+        if (parsed === 'true') parsed = true;
+        if (parsed === 'false') parsed = false;
+        if (parsed === 'null') parsed = null;
+        if (parsed === 'undefined') parsed = undefined;
 
-    return String(value);
+        const number = Number(parsed);
+
+        if (!isNaN(number) && /\d/.test(parsed)) parsed = number;
+    } finally {
+        return parsed;
+    }
 }
 
 /**
@@ -710,12 +720,20 @@ async function renderCharStatus(status) {
         .data({avatar: status.avatar});
 
     statusBlock
-        .find(`.${htmlSuffix}-toolbar .kill-switch`)
+        .find(`.${htmlSuffix}-toolbar .enable-status`)
         .toggleClass('toggleEnabled', status.enabled);
+
+    statusBlock
+        .find(`.${htmlSuffix}-toolbar .scan-entries`)
+        .toggleClass('toggleEnabled', status.scan_entries);
 
     statusBlock
         .find(`.${htmlSuffix}-toolbar .menu_button`)
         .data({avatar: status.avatar});
+
+    statusBlock
+        .find(`.${htmlSuffix}-detached-mark`)
+        .toggleClass('d-none', !status.is_detached);
 
     const entries = Object
         .entries(status.entries)
@@ -740,9 +758,9 @@ async function renderCharStatus(status) {
         const valueClean = unEscapeAll(entry.get('value'), replaceMacrosOptions);
 
         $entryBlock.attr({'status-block-id': statusBlockId, uid});
-        $entryBlock.find('.status-title').toggleClass('empty', titleClean.length < 1).html(`<span class="d-inline">${titleClean}</span>`);
+        $entryBlock.find('.status-title').toggleClass('empty', titleClean.length < 1).html(`<span class="d-inline pos-relative">${titleClean}</span>`);
         $entryBlock.find('.status-separator').html(separatorClean);
-        $entryBlock.find('.status-description').html(`<span class="d-inline">${valueClean}</span>`);
+        $entryBlock.find('.status-description').html(`<span class="d-inline pos-relative">${valueClean}</span>`);
 
         $entryBlock
             .find('.private-lamp')
@@ -834,9 +852,11 @@ async function renderStatuses({filter = '', filter_is_user = false, allowDetache
     const statuses = [];
 
     if (filter) {
-        statuses.push(...statusesAll.filter(s =>
-            filter === s.avatar && filter_is_user === s.is_user
-        ));
+        const statusFiltered = statusesAll.find((s) => {
+            return filter === s.avatar && filter_is_user === s.is_user
+        });
+
+        if (statusFiltered) statuses.push(statusFiltered);
     } else {
         const activeParticipants = getActiveParticipants([], {forceMutedIn: extensionSettings.showMutedMembersBlocks});
         const characters = [];
@@ -846,7 +866,6 @@ async function renderStatuses({filter = '', filter_is_user = false, allowDetache
 
         characters.push(...activeParticipants.chars);
         characters.forEach(c => formattedChars.set(c.avatar, c['is_user']));
-
         statuses.push(...statusesAll.filter(s =>
             formattedChars.has(s.avatar) && formattedChars.get(s.avatar) === s.is_user
         ));
@@ -855,6 +874,13 @@ async function renderStatuses({filter = '', filter_is_user = false, allowDetache
     }
 
     statuses.push(...statusesDetached);
+    statuses.sort((statusA, statusB) => {
+        const userWeight = Number(statusA.is_user) - Number(statusB.is_user);
+        const detachedWeight = Number(statusA.is_detached) - Number(statusB.is_detached);
+        const avatarWeight = statusA.avatar.localeCompare(statusB.avatar);
+
+        return userWeight + detachedWeight + avatarWeight;
+    });
 
     for (const status of statuses)
         await renderCharStatus(status);
@@ -934,28 +960,37 @@ globalThis.StatUsMaximus = {
 
         if (!status) return false;
 
-        const bannedProperties = ['avatar', 'entries', 'is_detached'];
+        const bannedProperties = [
+            'avatar',
+            'name',
+            'is_user',
+            'is_detached',
+            'thumbnail',
+            'entries',
+        ];
+
         let newStatus = getStatus(newAvatar) || addStatus(newAvatar, {is_user: isUser});
 
         if (!newStatus) return false;
 
-        if (!onlyEntries) {
-            for (const key in status) {
-                if (!bannedProperties.includes(key)) newStatus.set(key, status[key]);
-            }
-        }
+        if (!onlyEntries)
+            for (const key in status)
+                if (!bannedProperties.includes(key))
+                    newStatus.set(key, status[key]);
 
         for (const uid in status.entries) {
             const entry = status.getEntry(Number(uid));
+
             if (entry) newStatus.addEntry(entry);
         }
 
-        return newStatus.set('is_user', isUser);
+        return newStatus;
     },
 
     comment_avatar: 'img/quill.png',
     FileManager: new FileManager(),
     ChatSettings: new ChatSettings(),
+    lastPrompts: {},
     EVENTS: {
         THUMBNAIL_UPDATE: `${metadataName}_thumbnail_update`,
     },
@@ -1088,20 +1123,8 @@ function settingsNumberButton(event) {
 
 /**	Logs setting's values. */
 function displaySettings() {
-    debug(`Auto detect participants is ${extensionSettings.autoDetectParticipants ? 'enabled' : 'disabled'}`);
-    debug(`Always include unmuted group members is ${extensionSettings.alwaysIncludeUnmutedMembers ? 'enabled' : 'disabled'}`);
-    debug(`Force muted group members inclusion is ${extensionSettings.forceMutedMembersInclusion ? 'enabled' : 'disabled'}`);
-    debug(`Auto save metadata is ${extensionSettings.autoSaveMetadata ? 'enabled' : 'disabled'}`);
-    debug(`Alternative behavior for macro template buttons is ${extensionSettings.altMacroTemplateBehavior ? 'enabled' : 'disabled'}`);
-    debug(`Show input macros in chat is ${extensionSettings.editNumbersFromChat ? 'enabled' : 'disabled'}`);
-    debug(`Hide input labels is ${extensionSettings.hideInputLabels ? 'enabled' : 'disabled'}`);
-    debug(`Show whitespaces is ${extensionSettings.showWhiteSpaces ? 'enabled' : 'disabled'}`);
-    debug(`Show muted group member blocks is ${extensionSettings.showMutedMembersBlocks ? 'enabled' : 'disabled'}`);
-    debug(`Range input width is set to ${String(extensionSettings.rangeInputWidth)}`);
-    debug(`Min prompt depth is set to ${String(extensionSettings.minPromptDepth)}`);
-
-    debug(`Debug mode is ${extensionSettings.debug ? 'enabled' : 'disabled'}`);
-    debug(structuredClone(extensionSettings));
+    for (const [key, value] of Object.entries(extensionSettings))
+        debug(`[${key}] is set to: ${value}`);
 }
 
 /** Append settings menu on ST and set listeners. */

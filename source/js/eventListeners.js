@@ -12,7 +12,6 @@ import {
     saveMetadataSafe,
     metadataName,
     htmlSuffix,
-    unEscapeAll,
     getCharFromMessage,
     settingsCallbacks,
 } from '../../index.js';
@@ -110,7 +109,7 @@ async function onChatChanged(...args) {
 function onGenerationAfterCommands(...args) {
     StatUsMaximus.log(eventTypes.GENERATION_AFTER_COMMANDS, args);
 
-    const [ genType ] = args;
+    const [ genType, { force_name2 = '' } ] = args;
     const { extensionPrompts: extension_prompts, characterId: chid, characters: allCharacters } = context();
     const { chars, user } = getActiveParticipants([], {forceMutedIn: extensionSettings.forceMutedMembersInclusion, onlyAvatars: true});
     const genHasOffset = genTypesWithOffset.includes(genType);
@@ -134,8 +133,8 @@ function onGenerationAfterCommands(...args) {
     if (user) characters.push(user);
 
     characters.push(...chars);
+    StatUsMaximus.lastPrompts = {};
 
-    const replaceMacrosOptions = {newlines: true, macros: true, comments: true, macroParser: 'getValues'};
     const statuses = statusesAll.filter(status =>
         status.is_detached || characters.some(c => checkCharacter(c, status))
     );
@@ -144,7 +143,6 @@ function onGenerationAfterCommands(...args) {
         if (!status) continue;
         if (!status.enabled) continue;
 
-        const isDetached = status.is_detached;
         let charIsGenerating = false;
 
         if (genType === 'impersonate' && status.is_user)
@@ -153,40 +151,11 @@ function onGenerationAfterCommands(...args) {
         else if (typeof chid === 'string' && allCharacters[chid].avatar === status.avatar)
             charIsGenerating = true;
 
-        const entries = Object.keys(status.entries)
-        .map(uid => status.getEntry(uid))
-        .filter(entry => {
-            const exists = entry !== undefined;
-
-            if (!exists) return false;
-
-            const isEnabled = entry.enabled;
-            const isPrivate = allowPrivate && !charIsGenerating && entry.private;
-            const isVisible = isDetached || !isPrivate;
-
-            if (!isEnabled) return false;
-
-            return isVisible;
-        })
-        .sort((a, b) => a.display_position - b.display_position)
-        .map(function(entry) {
-            const { value_uid } = entry;
-
-            const key = entry.get('key') || '';
-            const separator = entry.get('separator') || '';
-            const value = entry.getValue(value_uid)?.value || '';
-
-            return `${key}${separator}${value}`;
-        })
-        .filter(entry => entry?.length);
-
-        if (!entries.length) continue;
+        else if (force_name2 === status.name)
+            charIsGenerating = true;
 
         const uuid = `${metadataName}_${id}`;
-        const prompt = unEscapeAll(
-            status.prefix + entries.join(status.separator) + status.suffix,
-            {character: status.getCharacter().name, ...replaceMacrosOptions}
-        );
+        const prompt = status.getPrompt({allowPrivate, charIsGenerating});
 
         if (!prompt) continue;
 
@@ -206,9 +175,14 @@ function onGenerationAfterCommands(...args) {
             prompt,
             Position.IN_DEPTH,
             depthNormalized - depthOffset,
-            true,
-            status.role
+            status.scan_entries,
+            status.role,
         );
+
+        StatUsMaximus.lastPrompts[uuid] = {
+            ...extension_prompts[uuid],
+            avatar: status.avatar,
+        };
     }
 
     StatUsMaximus.log({ extension_prompts });
@@ -220,22 +194,22 @@ function onGenerationAfterCommands(...args) {
  * @param {string} newAvatar
  */
 async function onCharacterRenamed(currentChat, oldAvatar, newAvatar) {
-    StatUsMaximus.log(eventTypes.CHARACTER_RENAMED_IN_PAST_CHAT, currentChat, oldAvatar, newAvatar);
+    StatUsMaximus.log(eventTypes.CHARACTER_RENAMED_IN_PAST_CHAT, {currentChat, oldAvatar, newAvatar});
 
     const metadata = currentChat[0] ?? null;
 
     if (!metadata) return;
     if (!metadata[metadataName]) return;
 
-    metadata[metadataName] = metadata[metadataName].map((/** @type {Status} */stat) => {
-        if (String(stat.avatar) === String(oldAvatar)) {
-            StatUsMaximus.FileManager.imageDelete(stat.thumbnail);
+    metadata[metadataName] = metadata[metadataName].map((/** @type {Status} */status) => {
+        if (String(status.avatar) === String(oldAvatar)) {
+            StatUsMaximus.FileManager.imageDelete(status.thumbnail);
 
-            stat.avatar = String(newAvatar);
-            stat.thumbnail = '';
+            status.avatar = String(newAvatar);
+            status.thumbnail = '';
         }
 
-        return stat;
+        return status;
     });
 }
 
@@ -269,7 +243,7 @@ function registerEvents() {
     $chat.on('click', `.${htmlSuffix}-toolbar .kill-switch`, eventMethods.onToggleStatus);
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-pen`, eventMethods.onClickEditStatus);
     $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-arrows-rotate`, eventMethods.onRefreshBlock);
-    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-floppy-disk`, () => saveMetadataSafe);
+    $chat.on('click', `.${htmlSuffix}-toolbar .menu_button.fa-floppy-disk`, () => saveMetadataSafe());
 
     $(document).on('click', 'body', eventMethods.onDocumentClick);
 

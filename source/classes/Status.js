@@ -10,6 +10,7 @@ import {
     saveMetadataSafe,
     extensionSettings,
     parseValue,
+    unEscapeAll,
     getParticipant,
 } from '../../index.js';
 
@@ -25,7 +26,7 @@ export {
 
 /** @type {StatusData} */
 const statusTemplate = Object.freeze({
-    dataVersion: 0,
+    data_version: 0,
     avatar: '',
     thumbnail: '',
     name: '',
@@ -38,11 +39,19 @@ const statusTemplate = Object.freeze({
     force_depth: -1,
     last_mes_id: -1,
     enabled: true,
+    scan_entries: true,
     is_user: false,
     is_detached: false,
     is_collapsed: false,
     entries: {}
 });
+
+const replaceMacrosOptions = {
+    newlines: true,
+    macros: true,
+    comments: true,
+    macroParser: 'getValues'
+};
 
 /**
  * @param {string} [starterAvatar]
@@ -71,7 +80,7 @@ function createAvatarUIDForDetached(starterAvatar = '') {
  * @returns {StatusData}
  */
 function migrateV0Data(statusData) {
-    const dataVersion = statusData?.dataVersion ?? 0;
+    const dataVersion = statusData?.data_version ?? 0;
 
     if (dataVersion > 0) return statusData;
 
@@ -92,7 +101,7 @@ function migrateV0Data(statusData) {
     if ('forceDepth' in statusData)
         statusData.force_depth = statusData.forceDepth === '' ? -1 : Number(statusData.forceDepth ?? -1);
 
-    statusData.dataVersion = 1;
+    statusData.data_version = 1;
 
     return statusData;
 }
@@ -101,7 +110,7 @@ class Status {
     /** @type {StatusData} */ static template;
     /** @type {() => string} */ static createAvatarUID;
 
-    /** @type {number} */ dataVersion;
+    /** @type {number} */ data_version;
     /** @type {string} */ avatar;
     /** @type {string} */ thumbnail;
     /** @type {string} */ name;
@@ -114,6 +123,7 @@ class Status {
     /** @type {number} */ force_depth;
     /** @type {number} */ last_mes_id;
     /** @type {boolean} */ enabled;
+    /** @type {boolean} */ scan_entries;
     /** @type {boolean} */ is_user;
     /** @type {boolean} */ is_detached;
     /** @type {boolean} */ is_collapsed;
@@ -259,11 +269,16 @@ class Status {
             is_user: false,
         };
 
-        const { avatar, is_user } = this;
-        const entity = getParticipant(avatar, {is_user});
-        const name = this.name || entity?.name;
+        const { avatar, is_user, name } = this;
+        const entity = getParticipant(avatar, {is_user}) || {
+            avatar,
+            name,
+            description: '',
+        };
 
-        return {...entity, is_user, name};
+        const charName = this.name || entity?.name;
+
+        return {...entity, is_user, name: charName};
     }
 
     /**
@@ -278,6 +293,50 @@ class Status {
         );
 
         return this.thumbnail;
+    }
+
+    /**
+     * @param {Object} [options]
+     * @param {boolean} [options.allowPrivate]
+     * @param {boolean} [options.charIsGenerating]
+     * @returns {string}
+     */
+    getPrompt({allowPrivate = true, charIsGenerating = false} = {}) {
+        const entries = Object.keys(this.entries)
+        .map(uid => this.getEntry(uid))
+        .filter(entry => {
+            const exists = entry !== undefined;
+
+            if (!exists) return false;
+
+            const isEnabled = entry.enabled;
+            const isPrivate = allowPrivate && !charIsGenerating && entry.private;
+            const isVisible = this.is_detached || !isPrivate;
+
+            if (!isEnabled) return false;
+
+            return isVisible;
+        })
+        .sort((a, b) => a.display_position - b.display_position)
+        .map(function(entry) {
+            const { value_uid } = entry;
+
+            const key = entry.get('key') || '';
+            const separator = entry.get('separator') || '';
+            const value = entry.getValue(value_uid)?.value || '';
+
+            return `${key}${separator}${value}`;
+        })
+        .filter(entry => entry?.length);
+
+        if (!entries.length) return '';
+
+        const prompt = this.prefix + entries.join(this.separator) + this.suffix;
+
+        return unEscapeAll(prompt, {
+            ...replaceMacrosOptions,
+            character: this.getCharacter().name,
+        });
     }
 
     /**

@@ -92,6 +92,10 @@
         display: table;
     }
 
+    .pos-relative {
+        position: relative;
+    }
+
     .break-spaces {
         white-space: break-spaces;
     }
@@ -233,15 +237,6 @@
         text-wrap-mode: nowrap
     }
 
-    .disabled {
-        color: color-mix(in srgb, currentColor 40%, black);
-
-        .text-line,
-        .chat-input-editor {
-            pointer-events: none;
-        }
-    }
-
     .hover-highlight:not(.disabled):hover {
         filter: brightness(1.25) saturate(1.25);
         border-color: invert(var(--stat-us-border-color)) !important;
@@ -350,7 +345,7 @@
     }
 
     .disabled {
-        color: color-mix(in srgb, currentColor, black 25%);
+        filter: opacity(0.5);
 
         .stat-us-maximus-entry-paragraph {
             pointer-events: none;
@@ -384,9 +379,12 @@
         opacity: 0;
         margin: 0;
         padding: 0;
+        width: auto;
+        height: auto;
         border: none;
         background: transparent;
         caret-color: transparent;
+		white-space: nowrap;
     }
 
     .fake-selection {

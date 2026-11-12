@@ -28,7 +28,7 @@ declare namespace StatUsMaximus {
     };
 
     type StatusData = {
-        dataVersion?: number;
+        data_version?: number;
         avatar: string;
         thumbnail?: string;
         name?: string;
@@ -43,6 +43,7 @@ declare namespace StatUsMaximus {
         forceDepth?: string;
         last_mes_id?: number;
         enabled?: boolean;
+        scan_entries?: boolean;
         is_user?: boolean;
         is_detached?: boolean;
         is_collapsed?: boolean;
@@ -90,6 +91,16 @@ declare namespace StatUsMaximus {
         name?: string;
     };
 
+    type ExtensionPrompt = {
+        avatar?: string;
+        value: string;
+        position: number;
+        depth: number;
+        scan: boolean;
+        role: number;
+        filter: () => boolean|Promise<boolean>
+    };
+
     type GlobalInterface = {
         Status: StatusClass;
         StatusEntry: StatusEntryClass;
@@ -109,6 +120,7 @@ declare namespace StatUsMaximus {
         FileManager: FileManager;
         ChatSettings: ChatSettings;
         comment_avatar: 'img/quill.png';
+        lastPrompts: Record<string, ExtensionPrompt>;
     };
 
     type ExtensionSettings = {

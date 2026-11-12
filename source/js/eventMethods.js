@@ -268,10 +268,10 @@ async function onAvatarFileUpload(e) {
 
     const formData = new FormData(form);
     const file = formData.get('file');
-    const fileInstance = file instanceof File;
+    const isFileInstance = file instanceof File;
     let image;
 
-    if (!fileInstance) return;
+    if (!isFileInstance) return;
 
     if (powerUserSettings.never_resize_avatars) {
         image = file;
@@ -320,12 +320,13 @@ async function onAvatarFileUpload(e) {
  * @param {EventData<HTMLDivElement>} e
  */
 function onToggleStatus(e) {
-    const { $input, status } = getStatusFromInput(e.currentTarget);
+    const { $input, status, data } = getStatusFromInput(e.currentTarget);
+    const field = data.field || 'enabled';
 
     if (!status) return;
 
-    status.set('enabled', !status.enabled);
-    $input.toggleClass('toggleEnabled', status.enabled);
+    status.set(field, !status[field]);
+    $input.toggleClass('toggleEnabled', status[field]);
 }
 
 /**
@@ -627,7 +628,7 @@ async function onSelectSwitchValueList(e) {
 
     $entryBlock
         .find('.status-description')
-        .html(`<span class="d-inline">${valueClean}</span>`);
+        .html(`<span class="d-inline pos-relative">${valueClean}</span>`);
 
     $entryBlock.find('textarea.input-value-source').each((_, textarea) => {
         const $textarea = $(textarea);
@@ -999,7 +1000,7 @@ async function onTransferStatus(e) {
         status: newStatus,
         keepOriginal,
         onlyEntries
-    } = await cloneStatusPopup(status.getCharacter());
+    } = await cloneStatusPopup(status);
 
     if (!newStatus) return;
 
