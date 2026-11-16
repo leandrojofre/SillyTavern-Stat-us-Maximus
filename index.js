@@ -247,7 +247,7 @@ async function exportObjectToClipboard(obj = {}) {
 /**
  * @param {string?} [value]
  * @param {Object} [options]
- * @param {string?} [options.searchKey] - Default is `avatar`
+ * @param {(keyof UserCharacter | keyof Character)?} [options.searchKey] - Default is `avatar`
  * @param {string[]?} [options.ignoreAvatars] - Only used in search by `name`
  * @returns {UserCharacter|null}
  */
@@ -345,7 +345,7 @@ function getActiveParticipants(discard = [], {forceMutedIn = false, onlyAvatars 
 
 /**
  * @param {string} value
- * @param {{search_key?: string; is_user?: boolean}?} [options]
+ * @param {{search_key?: keyof Character | keyof UserCharacter; is_user?: boolean}?} [options]
  * @returns {Character|UserCharacter}
  */
 function getParticipant(value, {search_key = 'avatar', is_user = false} = {}) {
@@ -435,19 +435,22 @@ async function hidePopper(popperInstance, tooltip) {
  */
 function getCharFromMessage(mess_id) {
     const { chat } = context();
+
+    /** @type {ChatMessage} */
     const mes = chat[mess_id] ?? null;
 
     if (!mes) return null;
 
-    const { force_avatar, original_avatar, is_user } = mes;
+    const { force_avatar, original_avatar, name, is_user } = mes;
 
     try {
         const url = new URL(force_avatar, window.location.origin);
-        const fileName = url?.searchParams.get('file') ?? '';
+        const fileName = url?.searchParams?.get('file') ?? '';
         let entity;
 
         if (fileName) entity = getParticipant(fileName, {is_user});
         if (!entity) entity = getParticipant(original_avatar, {is_user});
+        if (!entity) entity = getParticipant(name, {search_key: 'name', is_user});
 
         return entity ?? null;
     } catch (err) {
